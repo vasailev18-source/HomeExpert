@@ -257,18 +257,28 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const windLoadTons = (windLoadKg * 1.4) / 1000;
   
   // 6. SEISMIC HORIZONTAL FORCE (СНиП II-7-81* & NCM F.02.02)
+  // Note: Seismic equivalent force is a horizontal shearing force causing lateral loads.
+  // It is analyzed separately for moments, shear, and edge stress checking,
+  // rather than added to vertical gravity dead weight on the soil.
   const seismicMassTons = deadLoadSubtotalTons + (0.5 * liveLoadTons) + (0.5 * snowLoadTons);
   const beta = 2.7;
   const seismicForceTons = seismicMassTons * reg.seismicCoeff * beta;
   
+  // Clean rounding for each components to prevent micro-decimal drifts
+  const wallWeightTonsRounded = Math.round(wallWeightTons * 10) / 10;
+  const slabWeightTonsRounded = Math.round(slabWeightTons * 10) / 10;
+  const roofWeightTonsRounded = Math.round(roofWeightTons * 10) / 10;
+  const liveLoadTonsRounded = Math.round(liveLoadTons * 10) / 10;
+  const snowLoadTonsRounded = Math.round(snowLoadTons * 10) / 10;
+  
   // 7. TOTAL FACTORED DESIGN WEIGHT FOR FOUNDATION (kN / tons)
-  const baseWeightTons = (deadLoadSubtotalTons * 1.15) + liveLoadTons + snowLoadTons + (seismicForceTons * 0.7);
-  const totalFactoredWeightTons = Math.ceil(baseWeightTons * 1.05); // margin
+  // Clean, transparent, exact math of vertical loads.
+  const totalFactoredWeightTons = Math.round((wallWeightTonsRounded + slabWeightTonsRounded + roofWeightTonsRounded + liveLoadTonsRounded + snowLoadTonsRounded) * 10) / 10;
   
   // 8. GROUND BEARING CAPACITY Verification
   const soilBearingCapacityKPa = soil.resistanceKPa;
   const totalFactoredForceKN = totalFactoredWeightTons * 9.81;
-  const bearingAreaRequiredM2 = (totalFactoredForceKN * input.safetyFactor) / soilBearingCapacityKPa;
+  const bearingAreaRequiredM2 = Math.round(((totalFactoredForceKN * input.safetyFactor) / soilBearingCapacityKPa) * 100) / 100;
   
   // 9. COUPLING WITH LAND SLOPE & WATER LEVEL PROPERTIES
   const slopeFrac = input.landSlope / 100;
@@ -479,13 +489,22 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   let slabIsRecommended = false;
   let slabReliability = 98;
   let slabComplexity = 75;
-  const slabPros = ["Идеален для любых сложных грунтов (глина, лёсс)", "Готовый черновой пол 1-го этажа с готовым утеплением", "Отличная жесткость и сейсмоустойчивость в 7-8 баллов"];
-  const slabCons = [
-    `Высочайшая смета: требуется ${Math.ceil(slabConcreteVolume)} м³ качественного бетона`,
-    `Требуются колоссальные объемы песка/ПГС для выравнивания клина уклона: ${Math.ceil(slabSandVolume)} м³ (${Math.round(sandGravelWeightSlabTons)} тонн)`,
-    "Исключает устройство погреба/подвала без уческого удорожания"
+  const slabPros = [
+    "Идеально подходит для сложных пучинистых и просадочных лессовых суглинков Молдовы",
+    "Готовый черновой пол 1-го этажа со встроенным энергоэффективным утеплением",
+    "Специальный теплотехнический расчет исключает промерзание и пучение пучинистого грунта под подошвой",
+    "Используется жесткий экструдированный пенополистирол (XPS толщиной 100 мм под всей плитой и 50 мм по торцам)",
+    "Высочайшая жесткость и подтвержденная сейсмоустойчивость в 7-8 баллов NCM"
   ];
-  const slabRisks = ["Риск повреждения коммуникаций в теле бетона при ошибке монтажа до заливки"];
+  const slabCons = [
+    `Высокая материалоемкость: требуется ${Math.ceil(slabConcreteVolume)} м³ конструкционного бетона C20/25`,
+    `Требуется качественное утепление жестким пенополистиролом XPS с прочностью на сжатие не менее 250-400 кПа (например, Carbon Eco или ТЕХНОНИКОЛЬ)`,
+    `Необходим большой объем выравнивающей песчано-гравийной подушки на уклонах: ${Math.ceil(slabSandVolume)} м³ (${Math.round(sandGravelWeightSlabTons)} тонн)`,
+    "Исключает простое устройство классического глубокого подвала/погреба"
+  ];
+  const slabRisks = [
+    "Требуется прецизионная разводка инженерных коммуникаций (канализация, водоснабжение) в теле плиты до приемки бетона"
+  ];
   
   if (input.soilType === SoilType.LOESS || input.soilType === SoilType.CLAY || input.groundwaterDepth < 1.5) {
     slabIsRecommended = true; // Плита - лучший выбор при геологии просадочного лёсса Молдовы
@@ -633,8 +652,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   
   options.push({
     id: "slab",
-    type: "Монолитная плита (плитный фундамент)",
-    nameRu: "Монолитная фундаментная плита",
+    type: "Утепленная шведская плита (УШП)",
+    nameRu: "Мелкозаглубленная утепленная шведская плита (УШП) по специальному теплотехническому расчету",
     isRecommended: slabIsRecommended,
     costMDL: slabCost.totalCostMDL,
     reliabilityScore: slabReliability,

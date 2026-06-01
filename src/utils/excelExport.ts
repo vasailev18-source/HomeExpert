@@ -260,7 +260,12 @@ export async function exportToExcel(
     { label: "Расчетное сопротивление грунта (R):", val: `${results.soilBearingCapacityKPa} кПа` },
     { label: "Требуемая расчетная площадь подошвы опирания:", val: `${results.bearingAreaRequiredM2.toFixed(2)} м²` },
     { label: "Ширина фундамента / Ленты / Свайного ростверка:", val: `${selectedOption.widthM} м (проектная по расчету)` },
-    { label: "Проектная глубина заложения фундамента:", val: `${selectedOption.depthM} м (ниже уровня промерзания по СНиП)` },
+    { 
+      label: "Проектная глубина заложения фундамента:", 
+      val: selectedOption.id === "slab"
+        ? `${selectedOption.depthM} м (мелкозаглубленная утепленная плита по специальному теплотехническому расчету, исключающему промерзание пучинистого грунта под подошвой)`
+        : `${selectedOption.depthM} м (ниже уровня промерзания по СНиП)` 
+    },
 
     // --- ГЕОТЕХНИЧЕСКИЕ РИСКИ (GEOTECHNICAL RISKS) ---
     { label: "--- ИНЖЕНЕРНО-ГЕОЛОГИЧЕСКИЕ И СЕЙСМИЧЕСКИЕ РИСКИ ГРУНТА ---", val: "" },

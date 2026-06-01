@@ -813,6 +813,32 @@ export default function App() {
     );
   };
 
+  const renderFrenchBalcony = (id: string) => {
+    return (
+      <div key={id} className="h-full flex flex-col justify-end items-center relative w-12 pointer-events-none">
+        {/* French Double Window (tall, elegant glass doors) */}
+        <div className="w-8 h-[23px] border-x border-t border-slate-500 bg-cyan-150/15 rounded-t flex p-[1px] gap-[1.5px] relative -bottom-0.5 shadow-xs">
+          <div className="w-1/2 border-r border-slate-400/30 h-full relative">
+            <div className="absolute inset-x-0 top-1/3 h-[1px] bg-slate-400/20" />
+            <div className="absolute inset-x-0 top-2/3 h-[1px] bg-slate-400/20" />
+          </div>
+          <div className="w-1/2 h-full relative">
+            <div className="absolute inset-x-0 top-1/3 h-[1px] bg-slate-400/20" />
+            <div className="absolute inset-x-0 top-2/3 h-[1px] bg-slate-400/20" />
+          </div>
+        </div>
+        {/* Detailed Dark Wrought-Iron Balcony Railing */}
+        <div className="absolute bottom-0 w-10.5 h-[11.5px] bg-slate-900/15 border border-slate-800 rounded-t-[2.5px] flex items-center justify-around px-0.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] select-none">
+          <div className="w-[1px] h-full bg-slate-700" />
+          <div className="w-[1px] h-full bg-slate-700" />
+          <div className="w-[1px] h-full bg-slate-700" />
+          <div className="w-[1px] h-full bg-slate-700" />
+          <div className="w-[1px] h-full bg-slate-700" />
+        </div>
+      </div>
+    );
+  };
+
   const renderWindow = (id: string, className = "w-7 h-4") => {
     const w = getWindowStyle(roofType);
     if (w.panes === 1) {
@@ -1516,28 +1542,31 @@ export default function App() {
                     {/* 1. Mansard Layer (Drawn if exists e.g. .5, .6, .7 floors) */}
                     {(floors === 1.5 || floors === 1.6 || floors === 1.7 || floors === 2.5 || floors === 3.5) && (
                       <div 
-                        className="w-full h-[24px] border-b border-dashed border-slate-300 relative flex items-center justify-between px-[22px] overflow-hidden transition-all duration-300 backdrop-blur-[0.5px]"
+                        className="w-full h-[24px] border-b border-dashed border-slate-300 relative flex items-center justify-between px-[14px] overflow-hidden transition-all duration-300 backdrop-blur-[0.5px]"
                         style={{
                           clipPath: 'polygon(12% 0%, 88% 0%, 100% 100%, 0% 100%)'
                         }}
                       >
                         {roofType === RoofType.FLAT_PVC ? (
                           <>
-                            {renderWindow("attic-l", "w-6 h-4 mb-[1px]")}
-                            {renderWindow("attic-r", "w-6 h-4 mb-[1px]")}
+                            {renderWindow("attic-l", "w-5 h-4 mb-[1px]")}
+                            {renderWindow("attic-c", "w-5 h-4 mb-[1px]")}
+                            {renderWindow("attic-r", "w-5 h-4 mb-[1px]")}
                           </>
                         ) : roofType === RoofType.SHED_BOARD ? (
                           <>
-                            {renderWindow("attic-l", "w-6 h-4 mb-[1px]")}
-                            {renderWindow("attic-r", "w-6 h-4 mb-[1px]")}
+                            {renderWindow("attic-l", "w-5 h-4 mb-[1px]")}
+                            {renderWindow("attic-c", "w-5 h-4 mb-[1px]")}
+                            {renderWindow("attic-r", "w-5 h-4 mb-[1px]")}
                           </>
                         ) : (
                           <>
                             {renderFrenchDormer("attic-l")}
+                            {renderFrenchDormer("attic-c")}
                             {renderFrenchDormer("attic-r")}
                           </>
                         )}
-                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[5px] font-bold text-slate-800/60 select-none tracking-wider bg-white/35 px-1 rounded-t-xs">МАНСАРДА</span>
+                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[4.5px] font-bold text-slate-800/60 select-none tracking-wider bg-white/35 px-1 rounded-t-xs">МАНСАРДА</span>
                       </div>
                     )}
 
@@ -1545,7 +1574,7 @@ export default function App() {
                     {(floors >= 3) && (
                       <div className="w-full h-[30px] border-b border-slate-300/40 relative flex items-center justify-between px-3.5 transition-all duration-300 backdrop-blur-[0.3px]">
                         {renderWindow("3-l", "w-8 h-5 mb-[1px]")}
-                        {renderWindow("3-c", "w-8 h-5 mb-[1px]")}
+                        {renderFrenchBalcony("3-c")}
                         {renderWindow("3-r", "w-8 h-5 mb-[1px]")}
                         <span className="absolute bottom-0 right-1 text-[5px] font-mono font-black text-slate-800/40 select-none bg-white/20 px-0.5 rounded-sm">3 ЭТ</span>
                       </div>
@@ -1555,23 +1584,7 @@ export default function App() {
                     {(floors >= 2) && (
                       <div className="w-full h-[30px] border-b border-slate-300/40 relative flex items-center justify-between px-3.5 transition-all duration-300 backdrop-blur-[0.3px]">
                         {renderWindow("2-l", "w-8 h-5 mb-[1px]")}
-
-                        {/* Central visual French Balcony */}
-                        <div className="h-full flex flex-col justify-end items-center relative w-12">
-                          {/* French Double Window behind bar */}
-                          <div className="w-8 h-[22px] border-x border-t border-slate-400 bg-sky-100/30 rounded-t flex p-[1px] gap-[1px] relative -bottom-0.5">
-                            <div className="w-1/2 border-r border-slate-350/50" />
-                            <div className="w-1/2" />
-                          </div>
-                          {/* Decorative Balcony Railings */}
-                          <div className="absolute bottom-0 w-10 h-[10px] bg-white/50 border-t border-x border-slate-600 rounded-t-xs flex items-center justify-around px-0.5 shadow-sm select-none">
-                            <div className="w-[1px] h-full bg-slate-500" />
-                            <div className="w-[1px] h-full bg-slate-500" />
-                            <div className="w-[1px] h-full bg-slate-500" />
-                            <div className="w-[1px] h-full bg-slate-500" />
-                          </div>
-                        </div>
-
+                        {renderFrenchBalcony("2-c")}
                         {renderWindow("2-r", "w-8 h-5 mb-[1px]")}
                         <span className="absolute bottom-0 right-1 text-[5px] font-mono font-black text-slate-800/40 select-none bg-white/20 px-0.5 rounded-sm">2 ЭТ</span>
                       </div>
@@ -1854,7 +1867,7 @@ export default function App() {
             <div className="mt-3.5 p-3 rounded-2xl bg-amber-50/50 border border-amber-100 leading-normal text-[10.5px] text-amber-900 flex gap-2">
               <span className="text-base select-none">💡</span>
               <p>
-                <strong>Опорная калькуляция:</strong> Расчет автоматически учитывает повышенный риск пучения просадочных суглинков РМ и предписывает установку сейсмопоясов, дренажного отвода и заложение ниже СНиП-уровня промерзания для долговечной службы.
+                <strong>Опорная калькуляция:</strong> Расчет автоматически учитывает повышенный риск пучения просадочных суглинков РМ и предписывает установку сейсмопоясов, дренажного отвода {activeFndId === "slab" ? "и заложение мелкозаглубленной утепленной шведской плиты (УШП) по специальному теплотехническому расчету, предотвращающему промерзание грунта под плитой" : "и заложение ниже СНиП-уровня промерзания для долговечной службы"}.
               </p>
             </div>
           </div>
