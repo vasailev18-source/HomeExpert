@@ -1,0 +1,6 @@
+{
+  "name": "AI Foundation Expert Moldova",
+  "description": "Pre-project foundation calculator and engineering AI advisor in accordance with building codes of the Republic of Moldova.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
