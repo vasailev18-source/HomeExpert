@@ -637,6 +637,90 @@ export function getCategoryDetailedItems(
       }
       break;
     }
+    case "12": { // НДС
+      const val = c.vatMDL || 0;
+      if (val > 0) {
+        items.push({
+          name: "Налог на добавленную стоимость (НДС 20%)",
+          qty: 1,
+          unit: "компл",
+          rate: val,
+          total: val,
+          type: "material",
+          desc: "Государственный налог Республики Молдова, обязательный при закупке сертифицированных готовых смесей и аренде механизмов."
+        });
+      }
+      break;
+    }
+    case "13": { // Проектирование КЖ/АР
+      const val = c.designCostMDL || 0;
+      if (val > 0) {
+        items.push({
+          name: "Разработка рабочей документации разделов АР + КЖ",
+          qty: 1,
+          unit: "компл",
+          rate: val,
+          total: val,
+          type: "labor",
+          desc: "Чертежи армирования, схемы раскладки опалубки, узлы сопряжений, прочностные расчеты в СП ЛИРА согласно NCM."
+        });
+      }
+      break;
+    }
+    case "14": { // Геология
+      const val = c.geologyCostMDL || 0;
+      if (val > 0) {
+        items.push({
+          name: "Бурение 2-х разведочных инженерных скважин по 6 метров",
+          qty: 2,
+          unit: "скважина",
+          rate: Math.round(val / 2),
+          total: val,
+          type: "machinery",
+          desc: "Полевые изыскания ударно-канатного бурения, извлечение монолитов почвы для определения модуля деформации E и УГВ."
+        });
+      }
+      break;
+    }
+    case "15": { // Экспертиза
+      const val = c.expertiseCostMDL || 0;
+      if (val > 0) {
+        items.push({
+          name: "Вневедомственная или государственная экспертиза и согласование проекта",
+          qty: 1,
+          unit: "компл",
+          rate: val,
+          total: val,
+          type: "material",
+          desc: "Контрольное заключение сертифицированного верификатора проектов РМ по механической прочности."
+        });
+      }
+      break;
+    }
+    case "16": { // Надзор
+      const val = c.supervisionCostMDL || 0;
+      if (val > 0) {
+        items.push({
+          name: "Авторский надзор ГИПа (разработчика проекта)",
+          qty: 1,
+          unit: "усл. ед.",
+          rate: Math.round(val / 2),
+          total: Math.round(val / 2),
+          type: "labor",
+          desc: "Выезд инженера на объект, аудит армирования перед приемкой смеси, подписание акта скрытых работ."
+        });
+        items.push({
+          name: "Технический надзор аттестованного специалиста заказчика",
+          qty: 1,
+          unit: "усл. ед.",
+          rate: Math.round(val / 2),
+          total: Math.round(val / 2),
+          type: "labor",
+          desc: "Независимый контроль качества укладки бетонной смеси, соответствия рабочей документации и отбора кубиков прочности."
+        });
+      }
+      break;
+    }
   }
 
   return items;
@@ -673,12 +757,18 @@ export default function App() {
   const [hasBasement, setHasBasement] = useState<boolean>(false);
   const [landSlope, setLandSlope] = useState<number>(0);
 
+  // Dynamic Budget and Professional bidding toggles
+  const [includeVAT, setIncludeVAT] = useState<boolean>(true);
+  const [includeSubDesign, setIncludeSubDesign] = useState<boolean>(true);
+  const [includeSupervision, setIncludeSupervision] = useState<boolean>(true);
+  const [projectReservePercent, setProjectReservePercent] = useState<number>(12);
+
   // Active Foundation Option ID selected for detail view
   const [activeFndId, setActiveFndId] = useState<string>("slab");
 
   // Active expanded budget category codes (Fully open by default for comprehensive detail)
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<string[]>([
-    "01", "02", "03", "04", "05", "06", "07", "08", "09", "10"
+    "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16"
   ]);
 
   // Excel Export State
@@ -755,10 +845,23 @@ export default function App() {
     futureFlooringExtension,
     hasBasement,
     landSlope,
-    totalArea: Math.max(0.1, width) * Math.max(0.1, length) * Math.max(1, Math.min(4, floors))
+    totalArea: Math.max(0.1, width) * Math.max(0.1, length) * Math.max(1, Math.min(4, floors)),
+    includeVAT,
+    includeSubDesign,
+    includeSupervision,
+    projectReservePercent
   };
 
   const results: CalculationResults = calculateFoundation(currentInput);
+
+  // Active validation safeguards & structural engineering blockers
+  if (results.settlementTotalMM > results.settlementLimitMM) {
+    validationErrors.push(`🚨 ПРЕВЫШЕН ЛИМИТ ОСАДКИ: Расчётная осадка S (${results.settlementTotalMM} мм) превосходит предельно допустимую S_limit (${results.settlementLimitMM} мм) по нормам NCM F.02.02-2008. СТРОИТЕЛЬСТВО НЕ ПРИЕМЛЕМО БЕЗ УКРЕПЛЕНИЯ.`);
+  }
+
+  if (region === MoldovaRegion.SOUTH && wallMaterial === BuildingWallMaterial.KOTELET) {
+    validationErrors.push("🚨 СЕЙСМИЧЕСКАЯ БЛОКИРОВКА (НЕ ПРИЕМЛЕМО ДЛЯ СТРОИТЕЛЬСТВА): В сейсмозоне у очага Вранчи силой 8 баллов (Юг) категорически запрещено возведение стен из хрупкой каменной кладки котельца без жесткого монолитного каркаса и на свайно-ростверковом фундаменте!");
+  }
 
   // Sync recommended option when results change so that detailing is correct
   useEffect(() => {
@@ -766,7 +869,7 @@ export default function App() {
     if (recommended) {
       setActiveFndId(recommended.id);
     }
-  }, [region, width, length, floors, wallMaterial, slabMaterial, roofType, soilType, groundwaterDepth, futureFlooringExtension, hasBasement, landSlope]);
+  }, [region, width, length, floors, wallMaterial, slabMaterial, roofType, soilType, groundwaterDepth, futureFlooringExtension, hasBasement, landSlope, includeVAT, includeSubDesign, includeSupervision, projectReservePercent]);
 
   const selectedOption = results.options.find(o => o.id === activeFndId) || results.options[0];
 
@@ -1435,10 +1538,85 @@ export default function App() {
                 value={safetyFactor}
                 onChange={(e) => setSafetyFactor(parseFloat(e.target.value))}
               />
-              <div className="flex justify-between text-[9px] text-slate-400 font-medium mt-1">
+              <div className="flex justify-between text-[9px] text-slate-450 font-medium mt-1">
                 <span>1.5 (Минимальный)</span>
                 <span>2.0 (Стандарт РМ)</span>
                 <span>2.5 (Сверхнадежный)</span>
+              </div>
+            </div>
+
+            {/* Custom Tender & Cost settings block */}
+            <div className="mt-5 pt-4 border-t border-slate-100 space-y-3.5">
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Sliders className="w-3.5 h-3.5 text-slate-400" /> Сметный расчёт и налоги
+              </h4>
+
+              <label className="flex items-center justify-between cursor-pointer group select-none">
+                <div className="flex flex-col pr-2">
+                  <span className="text-[11px] font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
+                    Налог НДС 20% в Молдове
+                  </span>
+                  <span className="text-[9px] text-slate-400">Включить НДС на готовый бетон и работу</span>
+                </div>
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-blue-600 rounded-md cursor-pointer shrink-0"
+                  checked={includeVAT}
+                  onChange={(e) => setIncludeVAT(e.target.checked)}
+                />
+              </label>
+
+              <label className="flex items-center justify-between cursor-pointer group select-none">
+                <div className="flex flex-col pr-2">
+                  <span className="text-[11px] font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
+                    Проектирование и Геология
+                  </span>
+                  <span className="text-[9px] text-slate-400">АР/КЖ проект + 2 гео-скважины по 6м</span>
+                </div>
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-blue-600 rounded-md cursor-pointer shrink-0"
+                  checked={includeSubDesign}
+                  onChange={(e) => setIncludeSubDesign(e.target.checked)}
+                />
+              </label>
+
+              <label className="flex items-center justify-between cursor-pointer group select-none">
+                <div className="flex flex-col pr-2">
+                  <span className="text-[11px] font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
+                    Контроль, Экспертиза и Надзор
+                  </span>
+                  <span className="text-[9px] text-slate-400">Авторский + Технический надзор РМ</span>
+                </div>
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-blue-600 rounded-md cursor-pointer shrink-0"
+                  checked={includeSupervision}
+                  onChange={(e) => setIncludeSupervision(e.target.checked)}
+                />
+              </label>
+
+              <div className="pt-1.5">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[11px] font-semibold text-slate-500">Коэффициент проектного резерва</span>
+                  <span className="text-xs font-bold font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded-md border border-indigo-100">
+                    {projectReservePercent}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="20"
+                  step="1"
+                  className="w-full accent-indigo-600 cursor-pointer h-1 bg-slate-200 rounded-full appearance-none"
+                  value={projectReservePercent}
+                  onChange={(e) => setProjectReservePercent(parseInt(e.target.value))}
+                />
+                <div className="flex justify-between text-[8px] text-slate-400 font-medium">
+                  <span>5% (Низкий риск)</span>
+                  <span>12% (Норма РМ)</span>
+                  <span>20% (Высокий пучинистый)</span>
+                </div>
               </div>
             </div>
           </div>
@@ -2420,6 +2598,46 @@ export default function App() {
                             cost: selectedOption.costEstimate.pileDrillingCostMDL || 0,
                             showIf: selectedOption.id === "piles" && (selectedOption.costEstimate.pileDrillingCostMDL || 0) > 0,
                             className: "bg-teal-50/15"
+                          },
+                          {
+                            id: "12",
+                            name: "12. Налог на добавленную стоимость (НДС 20% РМ)",
+                            desc: "Обязательный сбор в бюджет Республики Молдова на строительные работы и сертифицированные смеси",
+                            cost: selectedOption.costEstimate.vatMDL || 0,
+                            showIf: !!includeVAT,
+                            className: "bg-red-50/10"
+                          },
+                          {
+                            id: "13",
+                            name: "13. Раздел проектирования КЖ/АР",
+                            desc: "Полная разработка рабочих проектов: архитектурные и железобетонные спецификации контура",
+                            cost: selectedOption.costEstimate.designCostMDL || 0,
+                            showIf: !!includeSubDesign,
+                            className: "bg-indigo-50/10"
+                          },
+                          {
+                            id: "14",
+                            name: "14. Ревизионная инженерная геология",
+                            desc: "Ударно-канатное бурение 2 скважин по 6 метров, лаб. определение модуля Е и высоты УГВ",
+                            cost: selectedOption.costEstimate.geologyCostMDL || 0,
+                            showIf: !!includeSubDesign,
+                            className: "bg-indigo-50/10"
+                          },
+                          {
+                            id: "15",
+                            name: "15. Экспертиза технического соответствия",
+                            desc: "Контрольное прохождение верификации чертежей и проектных нормативов КЖ/АР лицензированным госорганом",
+                            cost: selectedOption.costEstimate.expertiseCostMDL || 0,
+                            showIf: !!includeSupervision,
+                            className: "bg-slate-100/10"
+                          },
+                          {
+                            id: "16",
+                            name: "16. Авторский и Технический надзор",
+                            desc: "Подписание актов скрытых контуров армирования разработчиком проекта и техническим инспектором",
+                            cost: selectedOption.costEstimate.supervisionCostMDL || 0,
+                            showIf: !!includeSupervision,
+                            className: "bg-slate-100/10"
                           }
                         ];
 
@@ -2633,6 +2851,36 @@ export default function App() {
                           name: "11. Бурение скважин под сваи",
                           costKey: "pileDrillingCostMDL",
                           showIf: results.options.some(o => o.id === "piles" && (o.costEstimate.pileDrillingCostMDL || 0) > 0),
+                        },
+                        {
+                          id: "12",
+                          name: "12. Налог на добавленную стоимость (НДС 20% РМ)",
+                          costKey: "vatMDL",
+                          showIf: !!includeVAT,
+                        },
+                        {
+                          id: "13",
+                          name: "13. Раздел проектирования КЖ/АР",
+                          costKey: "designCostMDL",
+                          showIf: !!includeSubDesign,
+                        },
+                        {
+                          id: "14",
+                          name: "14. Ревизионная инженерная геология",
+                          costKey: "geologyCostMDL",
+                          showIf: !!includeSubDesign,
+                        },
+                        {
+                          id: "15",
+                          name: "15. Экспертиза технического соответствия",
+                          costKey: "expertiseCostMDL",
+                          showIf: !!includeSupervision,
+                        },
+                        {
+                          id: "16",
+                          name: "16. Авторский и Технический надзор",
+                          costKey: "supervisionCostMDL",
+                          showIf: !!includeSupervision,
                         }
                       ];
 

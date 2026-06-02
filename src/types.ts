@@ -71,6 +71,7 @@ export enum SoilType {
   CLAY = "CLAY",               // Глина (Argilă)
   LOESS = "LOESS",             // Лёсс / Просадочный суглинок (Cernoziom lëssoid)
   FILLED = "FILLED",           // Насыпной грунт (Pământ de umplutură)
+  ROCK = "ROCK",               // Скальный грунт (Rocă stâncoasă)
 }
 
 export interface SoilDetails {
@@ -120,6 +121,12 @@ export interface CalculatorInput {
   
   // Basement choice
   hasBasement: boolean;
+
+  // Budget parameters
+  includeVAT?: boolean;
+  includeSubDesign?: boolean;
+  includeSupervision?: boolean;
+  projectReservePercent?: number;
 }
 
 // Calculated weights, pressures, sizing, specifications, and costs
@@ -144,6 +151,29 @@ export interface MaterialRequirement {
   drainageGeotextileM2?: number;
   drainageStoneM3?: number;
   drainageWellsCount?: number;
+  drainageWells400Count?: number; // d400 sediment inspection wells
+  drainageCollectorWell?: number; // Main collections well pcs (KS-10 concrete rings)
+  drainageSubmersiblePump?: number; // Drainage pump pcs
+  
+  // Engineering Networks
+  engineeringNetWaterIntakeLengthM?: number; // Water intake HDPE length in m
+  engineeringNetSewerageOutletsPcs?: number; // Sewerage discharge outlets
+  engineeringNetPowerDuctLengthM?: number; // Corrugated electrical duct length
+  engineeringNetWeakDuctLengthM?: number; // Weak-current PVC conduit length
+  engineeringNetSpareDuctLengthM?: number; // Spare HDPE conduit length
+  
+  // Grounding safety loop
+  groundingSteelStripM?: number; // Steel strip length in m
+  groundingEarthRodsPcs?: number; // Earth vertical electrodes count
+  groundingClampsPcs?: number; // Connection clamps
+
+  // Backfill Compaction
+  backfillVolumeM3?: number; // retaining wall pockets volume
+  backfillCompactionCoeff?: number; // compaction coefficient
+  backfillCompactionRuns?: number; // vibrating plate passes equivalent
+  
+  // Waterproof protection
+  waterproofProtMembraneM2?: number; // Dimpled insulation protection membrane m2
 
   // Rough floor on ground (черновой пол по грунту) parameters
   roughFloorConcreteM3?: number;
@@ -172,10 +202,23 @@ export interface CostEstimate {
   roughFloorCostMDL?: number; // Integrated rough concrete floor cost breakdown
   pileDrillingCostMDL?: number; // Explicit drilling cost for piles in MDL
   
+  // Advanced engineering costs (Moldovan Market rates)
+  engineeringNetworksCostMDL?: number; // d110 sewer conduits, PE water pipelines, conduits
+  groundingSystemCostMDL?: number; // hot-dip galvanized strip safety contour
+  backfillCompactionCostMDL?: number; // backfilling excavation pockets with layered compaction
+  waterproofProtectionCostMDL?: number; // dimpled HDPE protective membrane sheet + profiles
+  
   materialsSubtotalMDL: number;
   constructionLaborCostMDL: number;
   machineryLogisticsCostMDL: number;
   engineeringReserveMDL: number;
+
+  // Professional bidding and design costs (NCM/Moldova market)
+  vatMDL?: number;
+  designCostMDL?: number;
+  geologyCostMDL?: number;
+  supervisionCostMDL?: number;
+  expertiseCostMDL?: number;
   
   totalCostMDL: number;
 }

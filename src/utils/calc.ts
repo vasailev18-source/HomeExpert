@@ -273,6 +273,25 @@ export const SOIL_DATA: Record<SoilType, SoilDetails> = {
     description: "Насыпной или бытовой грунт. Крайне малая прочность, высокий риск неравномерных осадок. Требуется ТИСЭ с уширением, сваи ниже насыпи или полная структурная замена грунта.",
     heavingRisk: 0.6,
     collapsibilityRisk: 0.8
+  },
+  [SoilType.ROCK]: {
+    id: SoilType.ROCK,
+    name: "Скальный грунт прочный (Rocă stâncoasă)",
+    resistanceKPa: 650,
+    Rmin: 500,
+    Ravg: 650,
+    Rmax: 800,
+    Emin: 80,
+    Eavg: 120,
+    Emax: 160,
+    density: 2500,
+    poissonRatio: 0.22,
+    settlementCoeff: 0.55,
+    frostHeaveSensitivity: "Низкая",
+    groundwaterSensitivity: "Низкая",
+    description: "Сверхпрочный скальный известняк, аргиллиты или известковый ракушечник Молдовы. Идеальное надежное основание для любых зданий. Морозное пучение отсутствует полностью. Осадки практически нулевые.",
+    heavingRisk: 0.0,
+    collapsibilityRisk: 0.0
   }
 };
 
@@ -295,6 +314,27 @@ export const COST_RATES = {
   GEOTEXTILE_MDL_M2: 32,      // Геотекстиль Typar SF40 плотностью 120-150 г/м²
   CRUSHED_STONE_MDL_M3: 680,  // Щебень гранитный фракции 20-40 мм с карьера Ватич/Оргеев
   INSPECTION_WELL_MDL_PCS: 1350, // Смотровой дренажный ревизионный колодец d315 с крышкой
+  DRAIN_WELL_400_MDL_PCS: 2400,  // Усиленный смотровой колодец d400 для осадочных фракций
+  DRAIN_COLLECTOR_WELL_MDL_PCS: 4800, // Сборный железобетонный колодец из колец КС-10 с люком
+  DRAIN_PUMP_MDL_PCS: 2200,      // Погружной дренажный насос с поплавковым выключателем
+  
+  // Инженерные сети (ввод/выпуск коммуникаций):
+  NET_WATER_HDPE_MDL_M: 45,      // Водоснабжение: ПНД труба d32 PN10 + утеплитель
+  NET_SEWER_PVC_MDL_M: 120,      // Канализация: ПВХ труба d110SN4 + муфты стыковки
+  NET_POWER_CONDUIT_MDL_M: 35,   // Электроснабжение: двустенный гофрированный ПНД-канал d50
+  NET_WEAK_CONDUIT_MDL_M: 18,    // Слаботочная сеть: защитная труба ПВХ d25
+  NET_SPARE_CONDUIT_MDL_M: 35,   // Резервный ввод: толстостенная гильза ПНД d50
+  
+  // Контур защитного заземления:
+  GROUNDING_STRIP_MDL_M: 95,     // Горячеоцинкованная стальная полоса 40х4мм с монтажом в траншею
+  GROUNDING_ROD_MDL_PCS: 450,    // Вертикальные электроды (стальные омедненные штыри d16 L=3м)
+  GROUNDING_CLAMP_MDL_PCS: 110,   // Соединительные латунные зажимы / шинные клеммы
+  
+  // Обратная засыпания пазух:
+  BACKFILL_SOIL_MDL_M3: 180,     // Доставка супеси/ПГС мелкого, послойная проливка и уплотнение виброплитой
+  
+  // Защита гидроизоляции:
+  MEMBRANE_PROFILED_MDL_M2: 75,  // Профилированная мембрана HDPE Planter/Delta с крепежом
   
   LABOR_PERCENT: 0.45,        // Оплата строительной бригады (45% от материалов)
   MACHINERY_PERCENT: 0.15,    // Спецтехника (экскаватор JCB, бетононасос, трамбовка) - 15%
@@ -465,6 +505,10 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
       soilConcreteMultiplier = 1.35;
       soilRebarMultiplier = 1.40;
       break;
+    case SoilType.ROCK:
+      soilConcreteMultiplier = 0.80; // highly stable solid bedrock
+      soilRebarMultiplier = 0.75;    // requires substantially less reinforcement for foundation stability
+      break;
   }
 
   // Dynamic Seismic structural multipliers (increases rebar by up to 30% for South high seismic risk Vrancea zone)
@@ -532,7 +576,10 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const clampPerimeterStrip = 2 * (requiredStripWidthM - 0.08) + 2 * (avgTotalHeight - 0.08) + 0.25; // периметр хомута
   const rebarTransverseKgStrip = clampsCountStrip * clampPerimeterStrip * 0.395; // 0.395 кг/м для d8
   
-  const reinforcementBarKgStrip = Math.round((rebarLongitudinalKgStrip + rebarTransverseKgStrip) * soilRebarMultiplier);
+  // Повысим армирование до реальных структурных норм РМ (с завышением под сейсмику Вранча)
+  const baseRebarStrip = rebarLongitudinalKgStrip + rebarTransverseKgStrip;
+  const seismicMinRebarStrip = stripConcreteVolumeM3 * 58; // минимум 58 кг на м3 бетона для армированного жесткого ребра
+  const reinforcementBarKgStrip = Math.round(Math.max(baseRebarStrip, seismicMinRebarStrip) * soilRebarMultiplier);
   const rebarBindingCostStripMDL = Math.round(reinforcementBarKgStrip * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
   
   // 1.6 Гидроизоляция и утепление
@@ -581,7 +628,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     : 0;
     
   // Локальный расчет бюджета
-  const stripCost = compileDetailedBudget(stripMaterials, excavationCostStripMDL, rebarBindingCostStripMDL, drainageCostMDL, slopeComplicationCostStripMDL);
+  const stripCost = compileDetailedBudget(stripMaterials, excavationCostStripMDL, rebarBindingCostStripMDL, drainageCostMDL, slopeComplicationCostStripMDL, input);
   
   const seismicPoints = reg.seismicCoeff === 0.08 ? 6.5 : reg.seismicCoeff === 0.16 ? 7 : 8;
 
@@ -656,7 +703,33 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const rebarBindingCostSlabMDL = Math.round(reinforcementBarKgSlab * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
   
   const slabWaterproofM2 = footingArea * 1.15; // гидроизоляция под подошву клином с нахлестом
-  const slabInsulationM3 = (footingArea * 0.10) + (perimeter * 0.4 * 0.05); // утеплитель под всей плитой 100мм + торец цоколя
+  
+  // ТЕПЛОТЕХНИЧЕСКИЙ РАСЧЁТ ТОЛЩИНЫ XPS (NCM L.02.01-2012 / СП 23-101-24)
+  // Динамическое определение ГСОП (градусо-сутки отопительного периода в РМ)
+  let ddst = 2850; // Кишинёв (Центр РМ)
+  if (input.region === MoldovaRegion.NORTH) {
+    ddst = 3100; // Бельцы (Север РМ)
+  } else if (input.region === MoldovaRegion.SOUTH) {
+    ddst = 2650; // Кагул (Юг РМ)
+  }
+  
+  // Нормируемый температурный напор и требуемое теплосопротивление R_req (м²·К/Вт)
+  const reqThermalResistance = 1.2 + (ddst * 0.0006); // Диапазон от 2.79 до 3.06 м²·К/Вт для классов класса энергоэффективности
+  
+  // Теплопроводность XPS плит при влажностном режиме эксплуатации B в РМ: λ_Б = 0.034 Вт/(м·К)
+  const lambdaXps = 0.034;
+  
+  // Расчетная толщина утеплителя, округляемая вверх с коммерческим шагом 50 мм (5 см)
+  let computedXpsThicknessM = reqThermalResistance * lambdaXps; // ~0.095м - 0.104м
+  computedXpsThicknessM = Math.ceil(computedXpsThicknessM / 0.05) * 0.05;
+  if (computedXpsThicknessM < 0.10) {
+    computedXpsThicknessM = 0.10; // Минимальный проектный лимит для плит типа УШП по СНиП РМ
+  }
+  
+  // Боковое утепление торцов плиты (выполняет роль демпфера промерзания слепых зон на цоколе)
+  const computedEdgeXpsThicknessM = Math.max(0.05, Math.ceil((computedXpsThicknessM / 2) / 0.05) * 0.05);
+  
+  const slabInsulationM3 = (footingArea * computedXpsThicknessM) + (perimeter * 0.4 * computedEdgeXpsThicknessM); 
   
   const slabMaterials: MaterialRequirement = {
     concreteVolumeM3: Math.ceil(slabConcreteVolume * 10) / 10,
@@ -692,7 +765,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     ? Math.round(footingArea * (input.landSlope / 100) * 1500)
     : 0;
     
-  const slabCost = compileDetailedBudget(slabMaterials, excavationCostSlabMDL, rebarBindingCostSlabMDL, drainageCostMDL, slopeComplicationCostSlabMDL);
+  const slabCost = compileDetailedBudget(slabMaterials, excavationCostSlabMDL, rebarBindingCostSlabMDL, drainageCostMDL, slopeComplicationCostSlabMDL, input);
   
   let slabIsRecommended = false;
   let slabComplexity = 75;
@@ -826,7 +899,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     ? Math.round(perimeter * (input.landSlope / 100) * 400)
     : 0;
     
-  const pileCost = compileDetailedBudget(pileMaterials, excavationCostPileMDL, rebarBindingCostPileMDL, drainageCostMDL, slopeComplicationCostPileMDL);
+  const pileCost = compileDetailedBudget(pileMaterials, excavationCostPileMDL, rebarBindingCostPileMDL, drainageCostMDL, slopeComplicationCostPileMDL, input);
   
   let pileIsRecommended = false;
   
@@ -957,6 +1030,66 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   } else {
     floodingPercent = 5;
   }
+
+  // --- SETTLEMENT ENGINE (Phase 7) ---
+  // Characteristic vertical load in kN (including self-weight and live/climatic loads):
+  const characteristicLoadKN = (Gk_dead_total + Qk_live + Qk_snow + Qk_wind) * 9.81;
+  // Effective active area of the foundation elements in contact with the soil
+  const activeAreaM2 = Math.max(bearingAreaRequiredM2 * 1.1, input.width * input.length * 0.15); 
+  const p_contact_kPa = Math.min(soilBearingCapacityKPa, characteristicLoadKN / activeAreaM2);
+  const nu = soil.poissonRatio;
+  const E_avg_kPa = soil.Eavg * 1000; // deformation modulus in kPa (1 MPa = 1000 kPa)
+  const omega = soil.settlementCoeff; // settlement coefficient
+  const b_eq = Math.min(3.0, Math.sqrt(activeAreaM2)); // equivalent width of the loaded zone
+
+  // Presence of shallow groundwater table (GWT < 1.0m) degrades structural parameters of clay/silt soils
+  let Kd = 1.0;
+  if (input.groundwaterDepth < 1.0) {
+    if (input.soilType === SoilType.CLAY || input.soilType === SoilType.LOAM || input.soilType === SoilType.LOESS) {
+      Kd = 1.45; // significant degradation of silty clay mineral aggregates
+    } else if (input.soilType === SoilType.FILLED) {
+      Kd = 1.60;
+    } else if (input.soilType === SoilType.SILTY_SAND || input.soilType === SoilType.SANDY_LOAM) {
+      Kd = 1.30;
+    }
+  }
+
+  let settlementTotalMM = 0;
+  if (input.soilType === SoilType.ROCK) {
+    // Rocky solid ground: very small settlement (1.5 to 3.0 mm typical) and zero differential risk
+    settlementTotalMM = Math.round((1.5 + Math.min(1.5, (characteristicLoadKN / 3000) * 1.5)) * 100) / 100;
+  } else {
+    // S = p * b * (1 - nu^2) * omega / E (in meters) multiplied by 1000 to get mm, then by groundwater factor Kd
+    const rawSettlement = (p_contact_kPa * b_eq * (1 - nu * nu) * omega / E_avg_kPa) * 1000 * Kd;
+    settlementTotalMM = Math.round(rawSettlement * 100) / 100;
+
+    // Silt and anthropogenic soils (FILLED) suffer large non-engineered settlements under vertical loading
+    if (input.soilType === SoilType.FILLED && settlementTotalMM < 105) {
+      settlementTotalMM = Math.round((105 + Math.min(45, (characteristicLoadKN / 1200) * 20)) * 100) / 100;
+    }
+  }
+  
+  // Differential settlement homogeneity ratio: ROCK is completely uniform (0), FILLED is highly erratic (0.60)
+  const homogeneityCoeff = input.soilType === SoilType.ROCK ? 0.0 : input.soilType === SoilType.FILLED ? 0.60 : input.soilType === SoilType.LOESS ? 0.40 : 0.25;
+  const settlementDiffMM = input.soilType === SoilType.ROCK ? 0.0 : Math.round(settlementTotalMM * homogeneityCoeff * 100) / 100;
+  const length_mm = input.length * 1000;
+  const settlementUnequal = Math.round((settlementDiffMM / length_mm) * 100000) / 100000;
+  
+  // Settlement limits specified in NCM EN 1997-1/Eurocode 7 based on structural stiffness
+  let settlementLimitMM = 100;
+  if (input.wallMaterial === BuildingWallMaterial.GASOBETON) {
+    settlementLimitMM = 80; // gasobeton blocks are fragile and susceptible to cracking
+  } else if (input.wallMaterial === BuildingWallMaterial.FRAME) {
+    settlementLimitMM = 150; // flexible timber/steel frame structures have high compliance
+  } else if (input.wallMaterial === BuildingWallMaterial.BRICK || input.wallMaterial === BuildingWallMaterial.KOTELET) {
+    settlementLimitMM = 100; // standard masonry/stone structures
+  }
+  
+  const settlementRiskCoeff = Math.round((settlementTotalMM / settlementLimitMM) * 100) / 100;
+  const requiresGeotechnicalSurvey = settlementRiskCoeff > 0.6 || 
+                                     input.soilType === SoilType.FILLED || 
+                                     input.soilType === SoilType.LOESS || 
+                                     input.landSlope > 8.0;
   
   return {
     input,
@@ -974,6 +1107,17 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     seismicMassCombinationTons: Math.round(seismicMassCombinationTons * 10) / 10,
     bearingAreaRequiredM2: Math.round(bearingAreaRequiredM2 * 10) / 10,
     soilBearingCapacityKPa,
+    seismicPGA,
+    seismicImportanceFactor,
+    seismicGroundTypeFactor,
+    seismicBehaviorFactor,
+    seismicAmplification,
+    settlementTotalMM,
+    settlementDiffMM,
+    settlementUnequal,
+    settlementRiskCoeff,
+    settlementLimitMM,
+    requiresGeotechnicalSurvey,
     options,
     frostHeavingPercent,
     collapsibilityPercent,
@@ -984,13 +1128,94 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
 /**
  * Advanced detailed budget compiling to nearest hundred.
  */
+/**
+ * Advanced detailed budget compiling to nearest hundred.
+ */
 function compileDetailedBudget(
   m: MaterialRequirement, 
   excavationCostMDL: number, 
   rebarBindingCostMDL: number, 
-  drainageCostMDL: number,
-  slopeComplicationCostMDL: number
+  drainageCostMDLUnused: number,
+  slopeComplicationCostMDL: number,
+  input?: CalculatorInput
 ): CostEstimate {
+  // Extract configuration parameters or defaults
+  const perimeter = input ? 2 * (input.width + input.length) : 50;
+  
+  // 1. ADVANCED DRAINAGE SYSTEM CALCULATIONS (ALWAYS SPECIFIED FOR PERMANENT MOISTURE PROTECTION)
+  m.hasDrainage = true;
+  m.drainagePipeM = Math.ceil(perimeter + 6);
+  m.drainageGeotextileM2 = Math.ceil(m.drainagePipeM * 1.6);
+  m.drainageStoneM3 = Math.ceil(m.drainagePipeM * 0.40 * 0.35);
+  m.drainageWellsCount = 4; // Corner cleanouts d315
+  m.drainageWells400Count = 2; // Heavy cleanouts d400
+  m.drainageCollectorWell = 1; // Sump collector well (KS-10 concrete rings)
+  m.drainageSubmersiblePump = 1; // Automatic sump pump
+
+  const detailedDrainageCostMDL = Math.round(
+    (m.drainagePipeM * COST_RATES.DRAIN_PIPE_MDL_M) +
+    (m.drainageGeotextileM2 * COST_RATES.GEOTEXTILE_MDL_M2) +
+    (m.drainageStoneM3 * COST_RATES.CRUSHED_STONE_MDL_M3) +
+    (m.drainageWellsCount * COST_RATES.INSPECTION_WELL_MDL_PCS) +
+    (m.drainageWells400Count * COST_RATES.DRAIN_WELL_400_MDL_PCS) +
+    (m.drainageCollectorWell * COST_RATES.DRAIN_COLLECTOR_WELL_MDL_PCS) +
+    (m.drainageSubmersiblePump * COST_RATES.DRAIN_PUMP_MDL_PCS) +
+    (m.drainagePipeM * 160) // Heavy labor for excavation trenching and assembly work
+  );
+
+  // 2. ENGINEERING UTILITY TRUNKS (ENGINEERING_NETWORKS)
+  m.engineeringNetWaterIntakeLengthM = 10;
+  m.engineeringNetSewerageOutletsPcs = 3;
+  m.engineeringNetPowerDuctLengthM = 15;
+  m.engineeringNetWeakDuctLengthM = 15;
+  m.engineeringNetSpareDuctLengthM = 10;
+
+  const engineeringNetworksCostMDL = Math.round(
+    (m.engineeringNetWaterIntakeLengthM * COST_RATES.NET_WATER_HDPE_MDL_M) +
+    (m.engineeringNetSewerageOutletsPcs * 12 * COST_RATES.NET_SEWER_PVC_MDL_M) +
+    (m.engineeringNetPowerDuctLengthM * COST_RATES.NET_POWER_CONDUIT_MDL_M) +
+    (m.engineeringNetWeakDuctLengthM * COST_RATES.NET_WEAK_CONDUIT_MDL_M) +
+    (m.engineeringNetSpareDuctLengthM * COST_RATES.NET_SPARE_CONDUIT_MDL_M) +
+    4000 // Specialized labor for utility sleeve positioning and seals
+  );
+
+  // 3. GROUNDING LOOP HARNESS (GROUNDING_SYSTEM)
+  m.groundingSteelStripM = Math.ceil(perimeter + 10);
+  m.groundingEarthRodsPcs = 4;
+  m.groundingClampsPcs = 6;
+
+  const groundingSystemCostMDL = Math.round(
+    (m.groundingSteelStripM * COST_RATES.GROUNDING_STRIP_MDL_M) +
+    (m.groundingEarthRodsPcs * COST_RATES.GROUNDING_ROD_MDL_PCS) +
+    (m.groundingClampsPcs * COST_RATES.GROUNDING_CLAMP_MDL_PCS) +
+    3000 // Electrical terminal coupling and trench laying labor
+  );
+
+  // 4. RETAINING WALL CAVITY BACKFILL & COMPACTION
+  m.backfillCompactionCoeff = 1.15;
+  m.backfillCompactionRuns = 5;
+  const excavationVol = m.excavationVolumeM3 || 50;
+  const concreteVol = m.concreteVolumeM3 || 25;
+  m.backfillVolumeM3 = Math.round(Math.max(15, excavationVol - concreteVol * 0.6));
+
+  const backfillCompactionCostMDL = Math.round(
+    m.backfillVolumeM3 * COST_RATES.BACKFILL_SOIL_MDL_M3
+  );
+
+  // 5. WATERPROOFING DEFENSE WRAP (WATERPROOF_PROTECTION)
+  let heightWrap = 0.5; // default for Slab
+  if (m.formworkM2 && m.formworkM2 > 100) {
+    heightWrap = 1.2; // deep Strip
+  } else if (m.pileCount) {
+    heightWrap = 0.6; // Pile grill
+  }
+  m.waterproofProtMembraneM2 = Math.ceil(perimeter * heightWrap * 1.05);
+
+  const waterproofProtectionCostMDL = Math.round(
+    m.waterproofProtMembraneM2 * COST_RATES.MEMBRANE_PROFILED_MDL_M2
+  );
+
+  // Core material pricing sums
   const concreteCostMDL = Math.round(m.concreteVolumeM3 * COST_RATES.CONCRETE_MDL_M3);
   const steelCostMDL = Math.round(m.reinforcementBarKg * COST_RATES.STEEL_MDL_KG);
   const sandCushionCostMDL = Math.round(m.sandGravelM3 * COST_RATES.SAND_GRAVEL_MDL_M3);
@@ -1019,10 +1244,29 @@ function compileDetailedBudget(
   // Добавление отдельного учета бурения свай пог.м
   const pileDrillingCostMDL = Math.round((m.pileDrillingM || 0) * COST_RATES.PILE_DRILLING_MDL_M);
   
-  const subtotalWithSlopeDrain = materialsSubtotalMDL + constructionLaborCostMDL + machineryLogisticsCostMDL + drainageCostMDL + slopeComplicationCostMDL + roughFloorCostMDL + pileDrillingCostMDL;
-  const engineeringReserveMDL = Math.round(subtotalWithSlopeDrain * 0.12);
+  const subtotalWithSlopeDrain = materialsSubtotalMDL + constructionLaborCostMDL + machineryLogisticsCostMDL + detailedDrainageCostMDL + slopeComplicationCostMDL + roughFloorCostMDL + pileDrillingCostMDL + engineeringNetworksCostMDL + groundingSystemCostMDL + backfillCompactionCostMDL + waterproofProtectionCostMDL;
   
-  const totalCostMDL = subtotalWithSlopeDrain + engineeringReserveMDL;
+  // 1. VAT (20%) - Moldovan tax on materials and construction works
+  const useVAT = input?.includeVAT !== false;
+  const vatMDL = useVAT ? Math.round(subtotalWithSlopeDrain * 0.20) : 0;
+  
+  // 2. Professional elements (Design, Geotechnical Drilling, Expertise, and Supervision)
+  const useDesign = input?.includeSubDesign !== false;
+  const designCostMDL = useDesign ? 14000 : 0;
+  const geologyCostMDL = useDesign ? 9500 : 0;
+  
+  const useSupervision = input?.includeSupervision !== false;
+  const supervisionCostMDL = useSupervision ? 8000 : 0;
+  const expertiseCostMDL = useSupervision ? 4000 : 0;
+  
+  // 3. Project Reserve (10-15%)
+  const reservePercent = input?.projectReservePercent !== undefined 
+    ? (input.projectReservePercent / 100) 
+    : (input?.soilType === SoilType.LOESS || input?.soilType === SoilType.FILLED || input?.soilType === SoilType.CLAY ? 0.15 : 0.10);
+    
+  const engineeringReserveMDL = Math.round((subtotalWithSlopeDrain + vatMDL) * reservePercent);
+  
+  const totalCostMDL = subtotalWithSlopeDrain + vatMDL + designCostMDL + geologyCostMDL + supervisionCostMDL + expertiseCostMDL + engineeringReserveMDL;
   
   return {
     concreteCostMDL: roundToHundred(concreteCostMDL),
@@ -1033,14 +1277,27 @@ function compileDetailedBudget(
     
     excavationCostMDL: roundToHundred(excavationCostMDL),
     rebarBindingCostMDL: roundToHundred(rebarBindingCostMDL),
-    drainageCostMDL: roundToHundred(drainageCostMDL),
+    drainageCostMDL: roundToHundred(detailedDrainageCostMDL),
     slopeComplicationCostMDL: roundToHundred(slopeComplicationCostMDL),
     roughFloorCostMDL: roundToHundred(roughFloorCostMDL),
     pileDrillingCostMDL: roundToHundred(pileDrillingCostMDL),
     
+    // Industrial grade additional cost entries
+    engineeringNetworksCostMDL: roundToHundred(engineeringNetworksCostMDL),
+    groundingSystemCostMDL: roundToHundred(groundingSystemCostMDL),
+    backfillCompactionCostMDL: roundToHundred(backfillCompactionCostMDL),
+    waterproofProtectionCostMDL: roundToHundred(waterproofProtectionCostMDL),
+    
     materialsSubtotalMDL: roundToHundred(materialsSubtotalMDL),
     constructionLaborCostMDL: roundToHundred(constructionLaborCostMDL),
     machineryLogisticsCostMDL: roundToHundred(machineryLogisticsCostMDL),
+    
+    vatMDL: roundToHundred(vatMDL),
+    designCostMDL: roundToHundred(designCostMDL),
+    geologyCostMDL: roundToHundred(geologyCostMDL),
+    supervisionCostMDL: roundToHundred(supervisionCostMDL),
+    expertiseCostMDL: roundToHundred(expertiseCostMDL),
+    
     engineeringReserveMDL: roundToHundred(engineeringReserveMDL),
     totalCostMDL: roundToHundred(totalCostMDL)
   };

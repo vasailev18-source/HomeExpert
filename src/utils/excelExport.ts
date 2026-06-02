@@ -13,10 +13,14 @@ export function getRegionLabel(region: string): string {
 
 export function getSoilLabel(soilType: string): string {
   switch (soilType) {
-    case "LOAM": return "Суглинок ( типичная прочность ~180 КПа )";
-    case "CLAY": return "Глина уплотнённая ( ~160 КПа, умеренная усадка )";
-    case "SAND": return "Песок средний ( ~220 КПа, отличная дренируемость )";
-    case "LOESS": return "Лёсс / Просадочный суглинок ( ~110 КПа, опасный )";
+    case "SAND": return "Песок средней крупности ( ~280 кПа, отличная несущая способность, непучинистый )";
+    case "SILTY_SAND": return "Песок пылеватый ( ~180 кПа, склонность к плывунам при замачивании )";
+    case "SANDY_LOAM": return "Супесь ( ~150 кПа, умеренное пучение )";
+    case "LOAM": return "Суглинок ( ~200 кПа, типичный грунт Республики Молдова, пучинистый )";
+    case "CLAY": return "Глина пластичная ( ~160 кПа, высокая пучинистость и задержка влаги )";
+    case "LOESS": return "Лёссовый просадочный ( ~110 кПа, экстремальный риск просадки при замачивании )";
+    case "FILLED": return "Насыпной / Техногенный ( ~70 кПа, крайне малая прочность, неравномерность )";
+    case "ROCK": return "Скальный прочный ( ~650 кПа, сверхвысокая прочность, просадка = 0 )";
     default: return soilType;
   }
 }
@@ -531,6 +535,41 @@ export function addOptionSheet(
         : "Не требуется для выбранного типа фундамента",
       cost: selectedOption.costEstimate.pileDrillingCostMDL || 0,
       showIf: selectedOption.id === "piles" && (selectedOption.costEstimate.pileDrillingCostMDL || 0) > 0
+    },
+    {
+      id: "12",
+      name: "12. Налог на добавленную стоимость (НДС 20% РМ)",
+      desc: "Обязательный сбор в бюджет Республики Молдова на строительные материалы и сертифицированные готовые бетонные смеси",
+      cost: selectedOption.costEstimate.vatMDL || 0,
+      showIf: selectedOption.costEstimate.vatMDL !== undefined && selectedOption.costEstimate.vatMDL > 0
+    },
+    {
+      id: "13",
+      name: "13. Раздел проектирования КЖ/АР",
+      desc: "Полная разработка рабочих проектов: архитектурные и железобетонные чертежи контура",
+      cost: selectedOption.costEstimate.designCostMDL || 0,
+      showIf: selectedOption.costEstimate.designCostMDL !== undefined && selectedOption.costEstimate.designCostMDL > 0
+    },
+    {
+      id: "14",
+      name: "14. Ревизионная инженерная геология",
+      desc: "Ударно-канатное бурение 2 скважин по 6 метров, лаб. определение модуля Е и высоты УГВ",
+      cost: selectedOption.costEstimate.geologyCostMDL || 0,
+      showIf: selectedOption.costEstimate.geologyCostMDL !== undefined && selectedOption.costEstimate.geologyCostMDL > 0
+    },
+    {
+      id: "15",
+      name: "15. Экспертиза технического соответствия",
+      desc: "Контрольное прохождение верификации чертежей и проектных нормативов КЖ/АР лицензированным госорганом",
+      cost: selectedOption.costEstimate.expertiseCostMDL || 0,
+      showIf: selectedOption.costEstimate.expertiseCostMDL !== undefined && selectedOption.costEstimate.expertiseCostMDL > 0
+    },
+    {
+      id: "16",
+      name: "16. Авторский и Технический надзор",
+      desc: "Подписание актов скрытых контуров армирования разработчиком проекта и техническим инспектором",
+      cost: selectedOption.costEstimate.supervisionCostMDL || 0,
+      showIf: selectedOption.costEstimate.supervisionCostMDL !== undefined && selectedOption.costEstimate.supervisionCostMDL > 0
     }
   ];
 
@@ -1209,200 +1248,4 @@ export async function exportToExcel(
   saveAs(blob, fileName);
 }
 
-export async function exportAllToExcel(
-  input: CalculatorInput,
-  results: CalculationResults,
-  landSlope: number,
-  groundwaterDepth: number,
-  detailedItemsFetcher: (catId: string, opt: any, slope: number, gw: number) => any[]
-) {
-  const workbook = new ExcelJS.Workbook();
-
-  // Create Settings worksheet first
-  addSettingsSheet(workbook, input.safetyFactor || 1.3);
-  addGeologySheet(workbook);
-  addSeismicSheet(workbook);
-
-  // 1. Create a comparisons sheet first
-  const compSheet = workbook.addWorksheet("Сводное сравнение");
-  compSheet.views = [{ showGridLines: true }];
-
-  // Column Setup for Summary
-  compSheet.getColumn(1).width = 5;   // Spacer
-  compSheet.getColumn(2).width = 30;  // Тип фундамента
-  compSheet.getColumn(3).width = 25;  // Стоимость MDL (формула)
-  compSheet.getColumn(4).width = 18;  // Стоимость EUR (формула)
-  compSheet.getColumn(5).width = 16;  // Надежность
-  compSheet.getColumn(6).width = 18;  // Сложность
-  compSheet.getColumn(7).width = 75;  // Ключевые преимущества
-
-  // Title Block
-  compSheet.mergeCells("B2:G2");
-  const titleCell = compSheet.getCell("B2");
-  titleCell.value = "ИНЖЕНЕРНЫЙ СРАВНИТЕЛЬНЫЙ АНАЛИЗ ВСЕХ ВАРИАНТОВ ФУНДАМЕНТА САПР";
-  titleCell.font = { name: "Calibri", size: 14, bold: true, color: { argb: "FFFFFFFF" } };
-  titleCell.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF0F172A" } // Dark Slate
-  };
-  titleCell.alignment = { horizontal: "center", vertical: "middle" };
-  compSheet.getRow(2).height = 36;
-
-  // Subheader general info
-  compSheet.mergeCells("B4:G4");
-  const subHeader = compSheet.getCell("B4");
-  subHeader.value = `ПРОЕКТНЫЕ ПАРАМЕТРЫ ЗДАНИЯ: ${input.width}м x ${input.length}м (Этажность: ${input.floors}, Стены: ${getWallLabel(input.wallMaterial).split(" (")[0]}, Грунт: ${getSoilLabel(input.soilType).split(" (")[0]})`;
-  subHeader.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF475569" } };
-  subHeader.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FFE2E8F0" }
-  };
-  subHeader.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
-  compSheet.getRow(4).height = 24;
-
-  // Headers for comparison table
-  const compHeaders = [
-    { col: "B", val: "Тип фундамента", align: "left" },
-    { col: "C", val: "Стоимость (MDL)", align: "right" },
-    { col: "D", val: "Стоимость (EUR)", align: "right" },
-    { col: "E", val: "Надежность %", align: "center" },
-    { col: "F", val: "Сложность %", align: "center" },
-    { col: "G", val: "Ключевые преимущества и технические нюансы", align: "left" }
-  ];
-
-  compHeaders.forEach(h => {
-    const c = compSheet.getCell(`${h.col}6`);
-    c.value = h.val;
-    c.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FFFFFFFF" } };
-    c.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FF1E3A8A" } // Deep Slate Blue
-    };
-    c.alignment = { horizontal: h.align as any, vertical: "middle", indent: h.align === "left" ? 1 : 0 };
-    c.border = {
-      top: { style: "thin", color: { argb: "FF94A3B8" } },
-      bottom: { style: "medium", color: { argb: "FF1E293B" } },
-      left: { style: "thin", color: { argb: "FFCBD5E1" } },
-      right: { style: "thin", color: { argb: "FFCBD5E1" } }
-    };
-  });
-  compSheet.getRow(6).height = 26;
-
-  const optionConfigs = [
-    { id: "slab", sheetName: "Плита УШП", desc: "Универсальная энергоэффективная плита со встроенным черновым полом и утеплением Penoplex XPS. Идеальна для ровных участков Республики Молдова с высоким уровнем сейсмики." },
-    { id: "strip", sheetName: "Ленточный фундамент", desc: "Классический ленточный армированный фундамент глубокого заложения (ниже промерзания). Стабилен на склонах Moldovei, но требует отдельного устройства чернового пола." },
-    { id: "piles", sheetName: "Свайно-ростверковый", desc: "Ударно-буровой кустовой фундамент. Предельная экономия материалов, но повышенный риск при непредвиденных пучениях лессовых суглинков РМ (СНиП)." }
-  ];
-
-  let rowIdx = 7;
-  for (const cfg of optionConfigs) {
-    const opt = results.options.find(o => o.id === cfg.id) || results.options[0];
-
-    // Add detailed option sheet!
-    const { grandTotalRow, eurRow } = addOptionSheet(
-      workbook,
-      cfg.sheetName,
-      input,
-      results,
-      opt,
-      landSlope,
-      groundwaterDepth,
-      detailedItemsFetcher
-    );
-
-    // Write link and dynamic formulas on Comparison sheet
-    const nameCell = compSheet.getCell(`B${rowIdx}`);
-    nameCell.value = {
-      text: opt.nameRu,
-      hyperlink: `#'${cfg.sheetName}'!A1`
-    };
-    nameCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF2563EB" }, underline: "single" };
-    nameCell.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
-
-    const mdlCell = compSheet.getCell(`C${rowIdx}`);
-    mdlCell.value = {
-      formula: `='${cfg.sheetName}'!G${grandTotalRow}`,
-      result: opt.costMDL
-    };
-    mdlCell.numFmt = "#,##0";
-    mdlCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF0F172A" } };
-    mdlCell.alignment = { horizontal: "right", vertical: "middle" };
-
-    const eurCell = compSheet.getCell(`D${rowIdx}`);
-    eurCell.value = {
-      formula: `='${cfg.sheetName}'!G${eurRow}`,
-      result: Math.round(opt.costMDL / 19.8)
-    };
-    eurCell.numFmt = "€#,##0";
-    eurCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF475569" } };
-    eurCell.alignment = { horizontal: "right", vertical: "middle" };
-
-    const relCell = compSheet.getCell(`E${rowIdx}`);
-    relCell.value = opt.reliabilityScore / 100;
-    relCell.numFmt = "0%";
-    relCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: opt.reliabilityScore >= 90 ? "FF10B981" : "FFD97706" } };
-    relCell.alignment = { horizontal: "center", vertical: "middle" };
-
-    const compCell = compSheet.getCell(`F${rowIdx}`);
-    compCell.value = opt.complexityScore / 100;
-    compCell.numFmt = "0%";
-    compCell.font = { name: "Calibri", size: 10, color: { argb: "FF475569" } };
-    compCell.alignment = { horizontal: "center", vertical: "middle" };
-
-    const descCell = compSheet.getCell(`G${rowIdx}`);
-    descCell.value = cfg.desc;
-    descCell.font = { name: "Calibri", size: 9, color: { argb: "FF475569" } };
-    descCell.alignment = { horizontal: "left", vertical: "middle", wrapText: true, indent: 1 };
-
-    // Row layout classes
-    ["B", "C", "D", "E", "F", "G"].forEach(col => {
-      const c = compSheet.getCell(`${col}${rowIdx}`);
-      c.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: rowIdx % 2 === 1 ? "FFF8FAFC" : "FFFFFFFF" }
-      };
-      c.border = {
-        bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
-        left: { style: "thin", color: { argb: "FFE2E8F0" } },
-        right: { style: "thin", color: { argb: "FFE2E8F0" } }
-      };
-    });
-
-    compSheet.getRow(rowIdx).height = 42;
-    rowIdx++;
-  }
-
-  // Engineering verdict spacing
-  rowIdx += 2;
-  compSheet.mergeCells(`B${rowIdx}:G${rowIdx}`);
-  const notesHeader = compSheet.getCell(`B${rowIdx}`);
-  notesHeader.value = "ИНЖЕНЕРНОЕ СРАВНЕНИЕ И ФИНАНСОВЫЙ ВЕРДИКТ В РЕСПУБЛИКЕ МОЛДОВА:";
-  notesHeader.font = { name: "Calibri", size: 11, bold: true, color: { argb: "FF1E3A8A" } };
-  notesHeader.alignment = { vertical: "middle" };
-  compSheet.getRow(rowIdx).height = 24;
-
-  rowIdx++;
-  compSheet.mergeCells(`B${rowIdx}:G${rowIdx + 4}`);
-  const notesText = compSheet.getCell(`B${rowIdx}`);
-  notesText.value = 
-    "• Сметные расчеты полностью интерактивно связаны с формулами. Вы можете перейти на любой лист фундамента (кликая по ссылочным названиям слева или вкладкам снизу), изменить стоимость материала/работы в столбце F (Цена MDL), и все итоговые значения на данном листе сравнения пересчитаются автоматически!\n" +
-    "• Монолитная Плита (УШП) является самым надежным решением (95% надежности), так как исключает риски неравномерной осадки просадочных или насыпных суглинков Молдовы и включает в смету черновой пол.\n" +
-    "• Ленточный фундамент экономичнее плиты на крутых склонах (>5%), так как позволяет ступенчатую заливку ступеней без выравнивания всего пятна здания.\n" +
-    "• Свайно-ростверковый вариант имеет максимальную дешевизну элементов, но требует детального паспорта геологического бурения под свайным кустом во избежание деформации ростверка от силы морозного пучения.";
-  notesText.font = { name: "Calibri", size: 9.5, italic: true, color: { argb: "FF475569" } };
-  notesText.alignment = { wrapText: true, vertical: "top" };
-  compSheet.getRow(rowIdx).height = 100;
-
-  // Create Diagnostics worksheet last
-  addDiagnosticsSheet(workbook, input, results);
-
-  // Render and download workbook
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const fileName = `Sravnitelnaya_Smeta_Fundamentov_${input.width}x${input.length}.xlsx`;
-  saveAs(blob, fileName);
-}
+export { exportAllToExcel } from "./excelExportAll";
