@@ -141,10 +141,78 @@ export const ROOF_DATA: Record<RoofType, RoofDetails> = {
 
 // 5. Soil Details
 export const SOIL_DATA: Record<SoilType, SoilDetails> = {
+  [SoilType.SAND]: {
+    id: SoilType.SAND,
+    name: "Песок средней крупности (Nisip mediu)",
+    resistanceKPa: 280,
+    Rmin: 200,
+    Ravg: 280,
+    Rmax: 350,
+    Emin: 30,
+    Eavg: 40,
+    Emax: 50,
+    density: 1800,
+    poissonRatio: 0.30,
+    settlementCoeff: 0.79,
+    frostHeaveSensitivity: "Низкая",
+    groundwaterSensitivity: "Низкая",
+    description: "Прекрасный непучинистый дренирующий грунт. Высокая несущая способность, минимальные осадки. Встречается в долинах рек Днестр и Прут.",
+    heavingRisk: 0.1,
+    collapsibilityRisk: 0.0
+  },
+  [SoilType.SILTY_SAND]: {
+    id: SoilType.SILTY_SAND,
+    name: "Песок пылеватый (Nisip fin/lutos)",
+    resistanceKPa: 180,
+    Rmin: 125,
+    Ravg: 180,
+    Rmax: 240,
+    Emin: 15,
+    Eavg: 22,
+    Emax: 28,
+    density: 1650,
+    poissonRatio: 0.33,
+    settlementCoeff: 0.82,
+    frostHeaveSensitivity: "Умеренная",
+    groundwaterSensitivity: "Умеренная",
+    description: "Пылеватый песчаный грунт с примесью ила. Подвержен водонасыщению со значительной потерей несущей способности. Требует эффективного перехватывающего дренажа.",
+    heavingRisk: 0.35,
+    collapsibilityRisk: 0.1
+  },
+  [SoilType.SANDY_LOAM]: {
+    id: SoilType.SANDY_LOAM,
+    name: "Супесь (Nisip lutos)",
+    resistanceKPa: 150,
+    Rmin: 100,
+    Ravg: 150,
+    Rmax: 200,
+    Emin: 12,
+    Eavg: 18,
+    Emax: 24,
+    density: 1700,
+    poissonRatio: 0.35,
+    settlementCoeff: 0.84,
+    frostHeaveSensitivity: "Умеренная",
+    groundwaterSensitivity: "Умеренная",
+    description: "Смесь песка, пыли и глины. Имеет умеренную несущую способность. Склонен к пучению при насыщении влагой.",
+    heavingRisk: 0.4,
+    collapsibilityRisk: 0.1
+  },
   [SoilType.LOAM]: {
     id: SoilType.LOAM,
     name: "Суглинок (Luto-argilos)",
-    resistanceKPa: 200, // 2.0 kg/cm2
+    resistanceKPa: 200,
+    Rmin: 130,
+    Ravg: 200,
+    Rmax: 270,
+    Emin: 10,
+    Eavg: 15,
+    Emax: 22,
+    density: 1850,
+    poissonRatio: 0.37,
+    settlementCoeff: 0.86,
+    frostHeaveSensitivity: "Высокая",
+    groundwaterSensitivity: "Высокая",
     description: "Наиболее распространенный грунт в Молдове. Имеет умеренную несущую способность. Склонен к морозному пучению при высоком УГВ.",
     heavingRisk: 0.5,
     collapsibilityRisk: 0.2
@@ -152,26 +220,59 @@ export const SOIL_DATA: Record<SoilType, SoilDetails> = {
   [SoilType.CLAY]: {
     id: SoilType.CLAY,
     name: "Глина пластичная (Argilă)",
-    resistanceKPa: 150, // 1.5 kg/cm2
-    description: "Тяжелый пучинистый грунт. Хорошо держит воду. Склонен к значительным деформациям при замачивании. Требует утепления отмостки.",
+    resistanceKPa: 160,
+    Rmin: 110,
+    Ravg: 160,
+    Rmax: 220,
+    Emin: 7,
+    Eavg: 12,
+    Emax: 18,
+    density: 1950,
+    poissonRatio: 0.42,
+    settlementCoeff: 0.88,
+    frostHeaveSensitivity: "Высокая",
+    groundwaterSensitivity: "Высокая",
+    description: "Тяжелый пучинистый грунт. Хорошо держит воду. Склонен к значительным деформациям при замачивании. Требует обязательного утепления отмостки плитами XPS.",
     heavingRisk: 0.9,
     collapsibilityRisk: 0.4
-  },
-  [SoilType.SAND]: {
-    id: SoilType.SAND,
-    name: "Песок средней крупности (Nisip mediu)",
-    resistanceKPa: 280, // 2.8 kg/cm2
-    description: "Прекрасный непучинистый дренирующий грунт. Высокая несущая способность, минимальные осадки. Встречается в долинах рек Днестр и Прут.",
-    heavingRisk: 0.1,
-    collapsibilityRisk: 0.0
   },
   [SoilType.LOESS]: {
     id: SoilType.LOESS,
     name: "Лёссовый просадочный грунт (Cernoziom lëssoid, I-II тип)",
-    resistanceKPa: 110, // 1.1 kg/cm2 - dangerous!
-    description: "Специфический лессовый суглинок юга и центра Молдовы. Несущая способность резко падает при замачивании! Происходит резкая просадка основания.",
+    resistanceKPa: 110,
+    Rmin: 60,
+    Ravg: 110,
+    Rmax: 150,
+    Emin: 5,
+    Eavg: 9,
+    Emax: 14,
+    density: 1500,
+    poissonRatio: 0.32,
+    settlementCoeff: 0.85,
+    frostHeaveSensitivity: "Умеренная",
+    groundwaterSensitivity: "Высокая",
+    description: "Специфический лессовый суглинок юга и центра Молдовы. Несущая способность резко падает при замачивании! Происходит резкая просадка основания на глубину деформации.",
     heavingRisk: 0.4,
     collapsibilityRisk: 0.9
+  },
+  [SoilType.FILLED]: {
+    id: SoilType.FILLED,
+    name: "Насыпной грунт / Техногенный (Pământ de umplutură)",
+    resistanceKPa: 70,
+    Rmin: 40,
+    Ravg: 70,
+    Rmax: 100,
+    Emin: 2,
+    Eavg: 5,
+    Emax: 8,
+    density: 1450,
+    poissonRatio: 0.35,
+    settlementCoeff: 0.90,
+    frostHeaveSensitivity: "Умеренная",
+    groundwaterSensitivity: "Высокая",
+    description: "Насыпной или бытовой грунт. Крайне малая прочность, высокий риск неравномерных осадок. Требуется ТИСЭ с уширением, сваи ниже насыпи или полная структурная замена грунта.",
+    heavingRisk: 0.6,
+    collapsibilityRisk: 0.8
   }
 };
 
@@ -187,6 +288,7 @@ export const COST_RATES = {
   // Дополнительные детализированные расценки РМ 2026:
   EXCAVATION_MDL_M3: 155,     // Разработка грунта спецтехникой JCB с ручной подчисткой дна траншеи/котлована
   REBAR_BINDING_LABOR_MDL_KG: 4.5, // Работа по вязке арматурных каркасов и установке фиксаторов
+  PILE_DRILLING_MDL_M: 280,   // Стоимость бурения скважины d300-350мм за пог.м (включая аренду бурояма)
   
   // Дренажный комплекс (защита от грунтовых вод):
   DRAIN_PIPE_MDL_M: 85,       // Дренажная перфорированная труба d110 в геотекстильном фильтре
@@ -242,43 +344,132 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   
   const deadLoadSubtotalTons = wallWeightTons + slabWeightTons + roofWeightTons;
   
-  // 4. Calculate LIVE / SERVICE LOAD
+  // --- EUROCODE & NCM-COMPLIANT CHARACTERISTIC LOAD VALUES (G_k, Q_k) ---
+  const Gk_wall = wallWeightTons;
+  const Gk_slab = slabWeightTons;
+  const Gk_roof = roofWeightTons;
+  const Gk_dead_total = Gk_wall + Gk_slab + Gk_roof;
+
+  // --- EUROCODE & NCM-COMPLIANT DESIGN PERMANENT LOADS (G_d) ---
+  // Applying individual safety factors from default reference data
+  const Gd_wall = Gk_wall * 1.2; // gamma_f = 1.2 for timber/light blocks outer structures
+  const Gd_slab = Gk_slab * 1.24; // gamma_f = 1.24 weighted average (structure 1.2, heavy finishes/screeds 1.3)
+  const Gd_roof = Gk_roof * 1.26; // gamma_f = 1.26 weighted average (timber rafters 1.2, tile/layers 1.3)
+  const Gd_dead_total = Gd_wall + Gd_slab + Gd_roof;
+
+  // 4. Calculate LIVE / SERVICE LOAD (Characteristic: Qk_live)
   // Household service load is 150 kg/m2 (1.5 kPa) as per NCM G.01.01
   const liveLoadPerM2 = 150; // kg/m2
   const liveLoadKg = footingArea * liveLoadPerM2 * (structuralFloors);
-  const liveLoadTons = (liveLoadKg * 1.3) / 1000;
-  
-  // 5. Calculate CLIMATIC LOADS (Snow & Wind)
+  const Qk_live = liveLoadKg / 1000; // Characteristic live load in tons
+  const Qd_live = Qk_live * 1.4; // Design live load with safety factor gamma_f = 1.4
+
+  // 5. Calculate CLIMATIC LOADS (Snow & Wind) (Characteristic: Qk_snow, Qk_wind)
   const snowLoadKg = footingArea * (reg.snowLoad * 100);
-  const snowLoadTons = (snowLoadKg * 1.4) / 1000; // 1.4 design factor
-  
+  const Qk_snow = snowLoadKg / 1000; // Characteristic snow load in tons
+  const Qd_snow = Qk_snow * 1.4; // Design snow load with safety factor gamma_f = 1.4
+
   const windArea = Math.max(input.width, input.length) * totalWallHeight;
   const windLoadKg = windArea * (reg.windLoad * 100);
-  const windLoadTons = (windLoadKg * 1.4) / 1000;
+  const Qk_wind = windLoadKg / 1000; // Characteristic wind load in tons
+  const Qd_wind = Qk_wind * 1.4; // Design wind load with safety factor gamma_f = 1.4
+
+  // 6. EUROCODE 0 / NCM EN 1990 DESIGN LOAD COMBINATIONS (ULS / ПС1)
+  // Scenario A (Snow Dominant): Full Design Snow + Reduced Wind (psi0 = 0.6) + Reduced Imposed/Live (psi0 = 0.7)
+  const scenarioASnowDominantTons = Gd_dead_total + Qd_snow + (0.6 * Qd_wind) + (0.7 * Qd_live);
+
+  // Scenario B (Live Load Dominant): Full Design Imposed/Live Load + Reduced Snow (psi0 = 0.5) + Reduced Wind (psi0 = 0.6)
+  const scenarioBLiveDominantTons = Gd_dead_total + Qd_live + (0.5 * Qd_snow) + (0.6 * Qd_wind);
+
+  // ACCIDENTAL/SEISMIC COMBINATION (NCM EN 1998 / Eurocode 8) for Effective Seismic Mass
+  // E_d,AE = G_k + psi_2 * Q_k (psi_2 = 0.3 for Live Load, psi_2 = 0.0 for Snow/Wind)
+  const seismicMassCombinationTons = Gk_dead_total + (0.3 * Qk_live) + (0.0 * Qk_snow) + (0.0 * Qk_wind);
+
+  // Dynamic Seismic Parameters for Republic of Moldova from NCM EN 1998 & Eurocode 8
+  const seismicPGA = input.region === MoldovaRegion.NORTH ? 0.08 : input.region === MoldovaRegion.CENTER ? 0.16 : 0.24;
+  const seismicImportanceFactor = 1.0;
   
-  // 6. SEISMIC HORIZONTAL FORCE (СНиП II-7-81* & NCM F.02.02)
-  // Note: Seismic equivalent force is a horizontal shearing force causing lateral loads.
-  // It is analyzed separately for moments, shear, and edge stress checking,
-  // rather than added to vertical gravity dead weight on the soil.
-  const seismicMassTons = deadLoadSubtotalTons + (0.5 * liveLoadTons) + (0.5 * snowLoadTons);
-  const beta = 2.7;
-  const seismicForceTons = seismicMassTons * reg.seismicCoeff * beta;
+  // S Parameter (Ground Type Factor) depending on geotechnical category
+  let seismicGroundTypeFactor = 1.40; // Default C/D
+  if (soil.id === SoilType.SAND) {
+    seismicGroundTypeFactor = 1.25; // Type B
+  } else if (soil.id === SoilType.SILTY_SAND || soil.id === SoilType.SANDY_LOAM) {
+    seismicGroundTypeFactor = 1.35; // Type C
+  } else if (soil.id === SoilType.FILLED) {
+    seismicGroundTypeFactor = 1.60; // Type E/S
+  }
+
+  // q Parameter (Behavior Factor) depending on ductility of wall structural type
+  let seismicBehaviorFactor = 2.0;
+  if (input.wallMaterial === BuildingWallMaterial.FRAME) {
+    seismicBehaviorFactor = 3.0; // High structural ductility
+  } else if (input.wallMaterial === BuildingWallMaterial.KOTELET) {
+    seismicBehaviorFactor = 1.5; // Brittle stone masonry columns
+  } else if (input.wallMaterial === BuildingWallMaterial.KERAMZIT) {
+    seismicBehaviorFactor = 1.8;
+  }
   
-  // Clean rounding for each components to prevent micro-decimal drifts
-  const wallWeightTonsRounded = Math.round(wallWeightTons * 10) / 10;
-  const slabWeightTonsRounded = Math.round(slabWeightTons * 10) / 10;
-  const roofWeightTonsRounded = Math.round(roofWeightTons * 10) / 10;
-  const liveLoadTonsRounded = Math.round(liveLoadTons * 10) / 10;
-  const snowLoadTonsRounded = Math.round(snowLoadTons * 10) / 10;
+  // Beta (Spectral Acceleration Amplification Factor)
+  const seismicAmplification = 2.5 * (seismicGroundTypeFactor / seismicBehaviorFactor);
   
-  // 7. TOTAL FACTORED DESIGN WEIGHT FOR FOUNDATION (kN / tons)
-  // Clean, transparent, exact math of vertical loads.
-  const totalFactoredWeightTons = Math.round((wallWeightTonsRounded + slabWeightTonsRounded + roofWeightTonsRounded + liveLoadTonsRounded + snowLoadTonsRounded) * 10) / 10;
+  // Dynamic horizontal seismic shear force (in tons)
+  const seismicForceTons = seismicMassCombinationTons * seismicPGA * seismicImportanceFactor * seismicAmplification;
   
-  // 8. GROUND BEARING CAPACITY Verification
+  // Clean rounding of characteristic values for display
+  const wallWeightTonsRounded = Math.round(Gk_wall * 10) / 10;
+  const slabWeightTonsRounded = Math.round(Gk_slab * 10) / 10;
+  const roofWeightTonsRounded = Math.round(Gk_roof * 10) / 10;
+  const liveLoadTonsRounded = Math.round(Qk_live * 10) / 10;
+  const snowLoadTonsRounded = Math.round(Qk_snow * 10) / 10;
+  
+  // 7. TOTAL FACTORED DESIGN WEIGHT FOR FOUNDATION (ULS envelope)
+  const totalFactoredWeightTons = Math.round(Math.max(scenarioASnowDominantTons, scenarioBLiveDominantTons) * 10) / 10;
+  
+  // 8. GROUND BEARING CAPACITY Verification (incorporating Seismic eccentricity impact)
   const soilBearingCapacityKPa = soil.resistanceKPa;
   const totalFactoredForceKN = totalFactoredWeightTons * 9.81;
-  const bearingAreaRequiredM2 = Math.round(((totalFactoredForceKN * input.safetyFactor) / soilBearingCapacityKPa) * 100) / 100;
+  
+  // Eccentricity bearing area expansion for anti-seismic calculations (NCM EN 1997-1)
+  const seismicBearingAreaMultiplier = 1.0 + (seismicForceTons / totalFactoredWeightTons) * (seismicPGA >= 0.16 ? 0.38 : 0.22);
+  const bearingAreaRequiredM2 = Math.round(((totalFactoredForceKN * input.safetyFactor * seismicBearingAreaMultiplier) / soilBearingCapacityKPa) * 100) / 100;
+  
+  // Geotechnical and Structural Material Multipliers
+  let soilConcreteMultiplier = 1.0;
+  let soilRebarMultiplier = 1.0;
+  switch (input.soilType) {
+    case SoilType.SAND:
+      soilConcreteMultiplier = 0.90;
+      soilRebarMultiplier = 0.85;
+      break;
+    case SoilType.SILTY_SAND:
+      soilConcreteMultiplier = 1.05;
+      soilRebarMultiplier = 1.05;
+      break;
+    case SoilType.SANDY_LOAM:
+      soilConcreteMultiplier = 1.0;
+      soilRebarMultiplier = 1.0;
+      break;
+    case SoilType.LOAM:
+      soilConcreteMultiplier = 1.0;
+      soilRebarMultiplier = 1.0;
+      break;
+    case SoilType.CLAY:
+      soilConcreteMultiplier = 1.10;
+      soilRebarMultiplier = 1.15;
+      break;
+    case SoilType.LOESS:
+      soilConcreteMultiplier = 1.20;
+      soilRebarMultiplier = 1.25;
+      break;
+    case SoilType.FILLED:
+      soilConcreteMultiplier = 1.35;
+      soilRebarMultiplier = 1.40;
+      break;
+  }
+
+  // Dynamic Seismic structural multipliers (increases rebar by up to 30% for South high seismic risk Vrancea zone)
+  const seismicRebarMultiplier = seismicPGA === 0.24 ? 1.30 : seismicPGA === 0.16 ? 1.15 : 1.0;
+  const seismicSlabThicknessIncrease = seismicPGA === 0.24 ? 0.05 : seismicPGA === 0.16 ? 0.02 : 0.0;
   
   // 9. COUPLING WITH LAND SLOPE & WATER LEVEL PROPERTIES
   const slopeFrac = input.landSlope / 100;
@@ -314,7 +505,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   
   // 1.1 Бетон ручного заложения на монолитные стены и подошву
   const L_total = perimeter * 1.35; // Длина всех стен включая капитальные внутренние перегородки
-  const stripConcreteVolumeM3 = L_total * requiredStripWidthM * avgTotalHeight;
+  const stripConcreteVolumeM3 = L_total * requiredStripWidthM * avgTotalHeight * soilConcreteMultiplier;
   
   // 1.2 Опалубка деревянная (внутренняя и внешняя грани цоколя плюс верхняя часть траншеи)
   const formworkHeight = stripHeightAboveGroundM + (heightDiff / 2) + 0.20; // Высота щитов
@@ -341,7 +532,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const clampPerimeterStrip = 2 * (requiredStripWidthM - 0.08) + 2 * (avgTotalHeight - 0.08) + 0.25; // периметр хомута
   const rebarTransverseKgStrip = clampsCountStrip * clampPerimeterStrip * 0.395; // 0.395 кг/м для d8
   
-  const reinforcementBarKgStrip = Math.round(rebarLongitudinalKgStrip + rebarTransverseKgStrip);
+  const reinforcementBarKgStrip = Math.round((rebarLongitudinalKgStrip + rebarTransverseKgStrip) * soilRebarMultiplier);
   const rebarBindingCostStripMDL = Math.round(reinforcementBarKgStrip * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
   
   // 1.6 Гидроизоляция и утепление
@@ -392,8 +583,27 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   // Локальный расчет бюджета
   const stripCost = compileDetailedBudget(stripMaterials, excavationCostStripMDL, rebarBindingCostStripMDL, drainageCostMDL, slopeComplicationCostStripMDL);
   
+  const seismicPoints = reg.seismicCoeff === 0.08 ? 6.5 : reg.seismicCoeff === 0.16 ? 7 : 8;
+
+  // Criteria-weighted reliability (Seismic=0.2, Frost=0.15, GWT=0.15, Coll collapsible=0.2, Maintain=0.15, Reserve=0.15)
+  let stripSeismic = seismicPoints === 8 ? 75 : seismicPoints === 7 ? 85 : 92;
+  let stripFrost = (input.soilType === SoilType.CLAY || input.soilType === SoilType.LOAM) ? 80 : 92;
+  if (input.groundwaterDepth < 1.5) stripFrost -= 10;
+  let stripGroundwater = input.groundwaterDepth < 1.5 ? 55 : 85;
+  let stripCollapsible = (input.soilType === SoilType.LOESS || input.soilType === SoilType.FILLED) ? (input.soilType === SoilType.FILLED ? 40 : 55) : 90;
+  let stripRepair = 85;
+  let stripReserve = soil.resistanceKPa >= 200 ? 95 : soil.resistanceKPa >= 150 ? 88 : 75;
+
+  let stripReliability = Math.round(
+    stripSeismic * 0.20 +
+    stripFrost * 0.15 +
+    stripGroundwater * 0.15 +
+    stripCollapsible * 0.20 +
+    stripRepair * 0.15 +
+    stripReserve * 0.15
+  );
+
   let stripIsRecommended = false;
-  let stripReliability = 85;
   let stripComplexity = 60;
   const stripPros = ["Капитальный классический вариант", "Надежность подтверждена десятилетиями", "Возможность легкого обустройства подпола или цоколя"];
   const stripCons = [
@@ -404,12 +614,10 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const stripRisks: string[] = [];
   
   if (input.soilType === SoilType.LOESS) {
-    stripReliability -= 25;
     stripCons.push("Требуется широкая подошва при замачивании лёсса");
     stripRisks.push("Риск неравномерной просадки при аварийной утечке воды");
   }
   if (input.groundwaterDepth < (stripDepthM + 0.3)) {
-    stripReliability -= 15;
     stripRisks.push("Опасность затопления траншеи при строительстве, ослабление грунта основания");
   }
   
@@ -419,7 +627,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   // При уклоне на плитный фундамент идет гигантский перерасход бетона на ростверк/цоколь и уплотненный песок для выравнивания
   const plinthHeightDiff = heightDiff / 2;
   const slabPlinthConcreteVolumeM3 = perimeter * 0.30 * plinthHeightDiff;
-  const slabConcreteVolume = (footingArea * slabDepthM) + slabPlinthConcreteVolumeM3;
+  const slabConcreteVolume = ((footingArea * slabDepthM) + slabPlinthConcreteVolumeM3) * soilConcreteMultiplier;
   
   // Огромная выравнивающая perne de nisip (песчано-гравийная подушка клином для ровной плоскости)
   const slabSandVolume = footingArea * (0.15 + plinthHeightDiff);
@@ -444,7 +652,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   
   // Фиксаторы шага сеток ("лягушки" из d8 А240, 1 шт на 1 м²)
   const rebarTransverseKgSlab = footingArea * 1.0 * 0.8 * 0.395; // 0.8м арматуры d8 на каждую лягушку
-  const reinforcementBarKgSlab = Math.round(rebarLongitudinalKgSlab + rebarTransverseKgSlab);
+  const reinforcementBarKgSlab = Math.round((rebarLongitudinalKgSlab + rebarTransverseKgSlab) * soilRebarMultiplier);
   const rebarBindingCostSlabMDL = Math.round(reinforcementBarKgSlab * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
   
   const slabWaterproofM2 = footingArea * 1.15; // гидроизоляция под подошву клином с нахлестом
@@ -487,8 +695,26 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const slabCost = compileDetailedBudget(slabMaterials, excavationCostSlabMDL, rebarBindingCostSlabMDL, drainageCostMDL, slopeComplicationCostSlabMDL);
   
   let slabIsRecommended = false;
-  let slabReliability = 98;
   let slabComplexity = 75;
+
+  // Criteria-weighted reliability for Slab (Seismic=0.2, Frost=0.15, GWT=0.15, Collapsible=0.2, Maintain=0.15, Reserve=0.15)
+  let slabSeismic = 98; 
+  let slabFrost = (input.soilType === SoilType.CLAY || input.soilType === SoilType.LOAM) ? 94 : 96;
+  if (input.groundwaterDepth < 1.5) slabFrost -= 2;
+  let slabGroundwater = input.groundwaterDepth < 1.5 ? 94 : 97;
+  let slabCollapsible = (input.soilType === SoilType.LOESS || input.soilType === SoilType.FILLED) ? 95 : 98;
+  let slabRepair = 60; // Hard to repair integrated pipes
+  let slabReserve = soil.resistanceKPa >= 200 ? 99 : soil.resistanceKPa >= 150 ? 98 : 95;
+
+  let slabReliability = Math.round(
+    slabSeismic * 0.20 +
+    slabFrost * 0.15 +
+    slabGroundwater * 0.15 +
+    slabCollapsible * 0.20 +
+    slabRepair * 0.15 +
+    slabReserve * 0.15
+  );
+
   const slabPros = [
     "Идеально подходит для сложных пучинистых и просадочных лессовых суглинков Молдовы",
     "Готовый черновой пол 1-го этажа со встроенным энергоэффективным утеплением",
@@ -508,11 +734,11 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   
   if (input.soilType === SoilType.LOESS || input.soilType === SoilType.CLAY || input.groundwaterDepth < 1.5) {
     slabIsRecommended = true; // Плита - лучший выбор при геологии просадочного лёсса Молдовы
-    slabReliability = 99;
   }
   
   // --- OPTION 3: СВАЙНО-РОСТВЕРКОВЫЙ (Pile & Grade Beam) ---
-  const pileCount = Math.ceil(perimeter / 1.5) + (structuralFloors > 1 ? 4 : 2);
+  const basePileCount = Math.ceil(perimeter / 1.5) + (structuralFloors > 1 ? 4 : 2);
+  const pileCount = input.soilType === SoilType.FILLED ? Math.ceil(basePileCount * 1.35) : basePileCount;
   
   // На уклоне сваи бурятся на стандартную глубину, но часть ростверка приподнимается над землей (низкое удорожание!)
   const singlePileVolume = Math.PI * 0.15 * 0.15 * 2.2;
@@ -521,7 +747,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const beamHeightM = 0.45;
   const beamWidthM = 0.40;
   const beamVolume = perimeter * beamWidthM * beamHeightM * (1 + slopeFrac * 0.4);
-  const pileStripConcreteVolume = pilesConcreteVolume + beamVolume;
+  const pileStripConcreteVolume = (pilesConcreteVolume + beamVolume) * soilConcreteMultiplier;
   
   // Объем разработки земли (бурение свайных шахт d300мм + неглубокая траншея ростверка 20см)
   const excavationPileShaftsM3 = pileCount * Math.PI * 0.15 * 0.15 * 2.2;
@@ -549,7 +775,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   
   const rebarLongitudinalKgPile = rebarLongVerticalPileKg + rebarLongHorizontalBeamKg;
   const rebarTransverseKgPile = rebarTransverseSpiralPileKg + rebarTransverseBeamKg;
-  const reinforcementBarKgPile = Math.round(rebarLongitudinalKgPile + rebarTransverseKgPile);
+  const reinforcementBarKgPile = Math.round((rebarLongitudinalKgPile + rebarTransverseKgPile) * soilRebarMultiplier);
   const rebarBindingCostPileMDL = Math.round(reinforcementBarKgPile * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
   
   const pileWaterproofM2 = perimeter * (beamWidthM + 2 * beamHeightM);
@@ -588,7 +814,11 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     roughFloorConcreteM3: Math.ceil(rFloorConcreteM3Pile * 10) / 10,
     roughFloorRebarKg: Math.round(rFloorRebarKgPile),
     roughFloorSandM3: Math.ceil(rFloorSandM3Pile * 10) / 10,
-    roughFloorWaterproofingM2: Math.ceil(rFloorWaterproofingM2Pile)
+    roughFloorWaterproofingM2: Math.ceil(rFloorWaterproofingM2Pile),
+
+    // Pile drilling specifications
+    pileCount,
+    pileDrillingM: Math.round(pileCount * 2.2 * 10) / 10
   };
   
   // Миноритари за уклон на сваях
@@ -599,7 +829,24 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const pileCost = compileDetailedBudget(pileMaterials, excavationCostPileMDL, rebarBindingCostPileMDL, drainageCostMDL, slopeComplicationCostPileMDL);
   
   let pileIsRecommended = false;
-  let pileReliability = 80;
+  
+  // Criteria-weighted reliability (Seismic=0.2, Frost=0.15, GWT=0.15, Coll collapsible=0.2, Maintain=0.15, Reserve=0.15)
+  let pileSeismic = seismicPoints === 8 ? 65 : seismicPoints === 7 ? 75 : 85; // vulnerable to lateral shear on loose soils
+  let pileFrost = 95; // very deep base below frost line
+  let pileGroundwater = input.groundwaterDepth < 1.5 ? 85 : 92;
+  let pileCollapsible = (input.soilType === SoilType.LOESS || input.soilType === SoilType.FILLED) ? 60 : 85;
+  let pileRepair = 80;
+  let pileReserve = soil.resistanceKPa >= 200 ? 85 : soil.resistanceKPa >= 150 ? 78 : 65;
+
+  let pileReliability = Math.round(
+    pileSeismic * 0.20 +
+    pileFrost * 0.15 +
+    pileGroundwater * 0.15 +
+    pileCollapsible * 0.20 +
+    pileRepair * 0.15 +
+    pileReserve * 0.15
+  );
+
   let pileComplexity = 55;
   const pilePros = [
     "Минимальный расход бетона и арматуры (экономия по смете до 40%!)",
@@ -617,10 +864,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     if (!slabIsRecommended) {
       pileIsRecommended = true;
     }
-    pileReliability = 90;
   }
   if (input.soilType === SoilType.LOESS) {
-    pileReliability -= 20;
     pileRisks.push("Просадка грунта может оголить сваи, вызвав потерю сцепления по бокам");
   }
   
@@ -719,11 +964,14 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     slabWeightTons: Math.round(slabWeightTons * 10) / 10,
     roofWeightTons: Math.round(roofWeightTons * 10) / 10,
     deadLoadSubtotalTons: Math.round(deadLoadSubtotalTons * 10) / 10,
-    liveLoadTons: Math.round(liveLoadTons * 10) / 10,
-    snowLoadTons: Math.round(snowLoadTons * 10) / 10,
-    windLoadTons: Math.round(windLoadTons * 10) / 10,
+    liveLoadTons: Math.round(Qk_live * 10) / 10,
+    snowLoadTons: Math.round(Qk_snow * 10) / 10,
+    windLoadTons: Math.round(Qk_wind * 10) / 10,
     seismicForceTons: Math.round(seismicForceTons * 10) / 10,
     totalFactoredWeightTons,
+    scenarioASnowDominantTons: Math.round(scenarioASnowDominantTons * 10) / 10,
+    scenarioBLiveDominantTons: Math.round(scenarioBLiveDominantTons * 10) / 10,
+    seismicMassCombinationTons: Math.round(seismicMassCombinationTons * 10) / 10,
     bearingAreaRequiredM2: Math.round(bearingAreaRequiredM2 * 10) / 10,
     soilBearingCapacityKPa,
     options,
@@ -768,7 +1016,10 @@ function compileDetailedBudget(
   
   const roughFloorCostMDL = rFloorConcreteCost + rFloorSteelCost + rFloorSandCost + rFloorWaterproofCost + rFloorLaborCost;
   
-  const subtotalWithSlopeDrain = materialsSubtotalMDL + constructionLaborCostMDL + machineryLogisticsCostMDL + drainageCostMDL + slopeComplicationCostMDL + roughFloorCostMDL;
+  // Добавление отдельного учета бурения свай пог.м
+  const pileDrillingCostMDL = Math.round((m.pileDrillingM || 0) * COST_RATES.PILE_DRILLING_MDL_M);
+  
+  const subtotalWithSlopeDrain = materialsSubtotalMDL + constructionLaborCostMDL + machineryLogisticsCostMDL + drainageCostMDL + slopeComplicationCostMDL + roughFloorCostMDL + pileDrillingCostMDL;
   const engineeringReserveMDL = Math.round(subtotalWithSlopeDrain * 0.12);
   
   const totalCostMDL = subtotalWithSlopeDrain + engineeringReserveMDL;
@@ -785,6 +1036,7 @@ function compileDetailedBudget(
     drainageCostMDL: roundToHundred(drainageCostMDL),
     slopeComplicationCostMDL: roundToHundred(slopeComplicationCostMDL),
     roughFloorCostMDL: roundToHundred(roughFloorCostMDL),
+    pileDrillingCostMDL: roundToHundred(pileDrillingCostMDL),
     
     materialsSubtotalMDL: roundToHundred(materialsSubtotalMDL),
     constructionLaborCostMDL: roundToHundred(constructionLaborCostMDL),

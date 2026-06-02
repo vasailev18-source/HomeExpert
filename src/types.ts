@@ -64,16 +64,30 @@ export interface RoofDetails {
 }
 
 export enum SoilType {
-  LOAM = "LOAM", // Суглинок (default)
-  CLAY = "CLAY", // Глина
-  SAND = "SAND", // Песок средний
-  LOESS = "LOESS", // Лёсс / Просадочный суглинок (collapsible)
+  SAND = "SAND",               // Песок средний (Nisip mediu)
+  SILTY_SAND = "SILTY_SAND",   // Песок пылеватый (Nisip fin/lutos)
+  SANDY_LOAM = "SANDY_LOAM",   // Супесь (Nisip lutos)
+  LOAM = "LOAM",               // Суглинок (Luto-argilos)
+  CLAY = "CLAY",               // Глина (Argilă)
+  LOESS = "LOESS",             // Лёсс / Просадочный суглинок (Cernoziom lëssoid)
+  FILLED = "FILLED",           // Насыпной грунт (Pământ de umplutură)
 }
 
 export interface SoilDetails {
   id: SoilType;
   name: string;
-  resistanceKPa: number; // R in kPa (kN/m2)
+  resistanceKPa: number; // R average in kPa
+  Rmin: number;          // Minimum bearing capacity (kPa)
+  Ravg: number;          // Average bearing capacity (kPa)
+  Rmax: number;          // Maximum bearing capacity (kPa)
+  Emin: number;          // Minimum soil deformation modulus in MPa
+  Eavg: number;          // Average soil deformation modulus in MPa
+  Emax: number;          // Maximum soil deformation modulus in MPa
+  density: number;       // Soil bulk density in kg/m3
+  poissonRatio: number;  // Poisson ratio
+  settlementCoeff: number; // Dimensionless settlement coefficient omega
+  frostHeaveSensitivity: string;  // "Низкая" | "Умеренная" | "Высокая"
+  groundwaterSensitivity: string; // "Низкая" | "Умеренная" | "Высокая"
   description: string;
   heavingRisk: number; // value from 0 to 1
   collapsibilityRisk: number; // value from 0 to 1
@@ -137,6 +151,10 @@ export interface MaterialRequirement {
   roughFloorSandM3?: number;
   roughFloorWaterproofingM2?: number;
   roughFloorAreaM2?: number;
+
+  // Pile specific details
+  pileCount?: number;
+  pileDrillingM?: number;
 }
 
 export interface CostEstimate {
@@ -152,6 +170,7 @@ export interface CostEstimate {
   drainageCostMDL?: number; // Perimeter drainage pipe, wells, geo, backfill
   slopeComplicationCostMDL?: number; // Slope work, stepping, retaining structures
   roughFloorCostMDL?: number; // Integrated rough concrete floor cost breakdown
+  pileDrillingCostMDL?: number; // Explicit drilling cost for piles in MDL
   
   materialsSubtotalMDL: number;
   constructionLaborCostMDL: number;
@@ -196,15 +215,33 @@ export interface CalculationResults {
   
   // Seismic equivalent shearing force
   seismicForceTons: number;
+  seismicPGA: number;            // Peak ground acceleration (g)
+  seismicImportanceFactor: number; // Gamma_I NCM/Eurocode
+  seismicGroundTypeFactor: number; // S parameter
+  seismicBehaviorFactor: number;   // q parameter
+  seismicAmplification: number;    // Beta spectral amplification
   
   // Final composite Design Weight (including future loads if toggle is active)
   totalFactoredWeightTons: number;
-  
+
+  // Eurocode & NCM-specific load combinations
+  scenarioASnowDominantTons: number; // Scenario A: Snow Dominant
+  scenarioBLiveDominantTons: number; // Scenario B: Live Load Dominant
+  seismicMassCombinationTons: number; // Accidental/Seismic Mass Combination
+
   // Required bearing area
   bearingAreaRequiredM2: number;
   
   // Ground resistance R
   soilBearingCapacityKPa: number;
+  
+  // Settlement Analysis Metrics (Stage 5)
+  settlementTotalMM: number;       // S total (mm)
+  settlementDiffMM: number;        // Delta S differential (mm)
+  settlementUnequal: number;       // i (dimensionless fraction, mm/mm)
+  settlementRiskCoeff: number;     // Kr risk factor (S / S_limit)
+  settlementLimitMM: number;       // S_limit (mm)
+  requiresGeotechnicalSurvey: boolean;
   
   // Foundation options comparisons
   options: FoundationOption[];
