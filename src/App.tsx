@@ -167,7 +167,8 @@ export function getCategoryDetailedItems(
   catId: string,
   opt: any,
   landSlope: number,
-  groundwaterDepth: number
+  groundwaterDepth: number,
+  results?: any
 ): DetailedItem[] {
   const m = opt.materials;
   const c = opt.costEstimate;
@@ -722,6 +723,118 @@ export function getCategoryDetailedItems(
       }
       break;
     }
+    case "curing": {
+      if (!results || !results.concreteCuring) break;
+      const mList = results.concreteCuring.materials || [];
+      const wList = results.concreteCuring.works || [];
+      items.push(...mList.map((x: any) => ({
+        name: x.name,
+        qty: x.qty,
+        unit: x.unit,
+        rate: x.rate || x.cost || 0,
+        total: x.cost,
+        type: "material" as const,
+        desc: x.desc || "Повышает качество бетона"
+      })));
+      items.push(...wList.map((x: any) => ({
+        name: x.name,
+        qty: x.qty,
+        unit: x.unit,
+        rate: x.rate || x.cost || 0,
+        total: x.cost,
+        type: "labor" as const,
+        desc: x.desc || "СМР ухода"
+      })));
+      break;
+    }
+    case "backfill": {
+      if (!results || !results.backfill) break;
+      const mList = results.backfill.materials || [];
+      const wList = results.backfill.works || [];
+      items.push(...mList.map((x: any) => ({
+        name: x.name,
+        qty: x.qty,
+        unit: x.unit,
+        rate: x.rate || x.cost || 0,
+        total: x.cost,
+        type: "material" as const,
+        desc: x.desc || "Засыпной состав"
+      })));
+      items.push(...wList.map((x: any) => ({
+        name: x.name,
+        qty: x.qty,
+        unit: x.unit,
+        rate: x.rate || x.cost || 0,
+        total: x.cost,
+        type: "labor" as const,
+        desc: x.desc || "Работа по засыпке"
+      })));
+      break;
+    }
+    case "blind_area": {
+      if (!results || !results.blindArea) break;
+      const mList = results.blindArea.materials || [];
+      const wList = results.blindArea.works || [];
+      items.push(...mList.map((x: any) => ({
+        name: x.name,
+        qty: x.qty,
+        unit: x.unit,
+        rate: x.rate || x.cost || 0,
+        total: x.cost,
+        type: "material" as const,
+        desc: x.desc || "XPS/пленки"
+      })));
+      items.push(...wList.map((x: any) => ({
+        name: x.name,
+        qty: x.qty,
+        unit: x.unit,
+        rate: x.rate || x.cost || 0,
+        total: x.cost,
+        type: "labor" as const,
+        desc: x.desc || "Заливка и устройство"
+      })));
+      break;
+    }
+    case "utility_water": {
+      if (!results || !results.utilities?.water) break;
+      const mList = results.utilities.water.materials || [];
+      const wList = results.utilities.water.works || [];
+      items.push(...mList.map((x: any) => ({ name: x.name, qty: x.qty, unit: x.unit, rate: x.rate || x.cost || 0, total: x.cost, type: "material" as const, desc: x.desc })));
+      items.push(...wList.map((x: any) => ({ name: x.name, qty: x.qty, unit: x.unit, rate: x.rate || x.cost || 0, total: x.cost, type: "labor" as const, desc: x.desc })));
+      break;
+    }
+    case "utility_sewer": {
+      if (!results || !results.utilities?.sewer) break;
+      const mList = results.utilities.sewer.materials || [];
+      const wList = results.utilities.sewer.works || [];
+      items.push(...mList.map((x: any) => ({ name: x.name, qty: x.qty, unit: x.unit, rate: x.rate || x.cost || 0, total: x.cost, type: "material" as const, desc: x.desc })));
+      items.push(...wList.map((x: any) => ({ name: x.name, qty: x.qty, unit: x.unit, rate: x.rate || x.cost || 0, total: x.cost, type: "labor" as const, desc: x.desc })));
+      break;
+    }
+    case "utility_power": {
+      if (!results || !results.utilities?.power) break;
+      const mList = results.utilities.power.materials || [];
+      const wList = results.utilities.power.works || [];
+      items.push(...mList.map((x: any) => ({ name: x.name, qty: x.qty, unit: x.unit, rate: x.rate || x.cost || 0, total: x.cost, type: "material" as const, desc: x.desc })));
+      items.push(...wList.map((x: any) => ({ name: x.name, qty: x.qty, unit: x.unit, rate: x.rate || x.cost || 0, total: x.cost, type: "labor" as const, desc: x.desc })));
+      break;
+    }
+    case "utility_low": {
+      if (!results || !results.utilities?.lowCurrent) break;
+      const mList = results.utilities.lowCurrent.materials || [];
+      const wList = results.utilities.lowCurrent.works || [];
+      items.push(...mList.map((x: any) => ({ name: x.name, qty: x.qty, unit: x.unit, rate: x.rate || x.cost || 0, total: x.cost, type: "material" as const, desc: x.desc })));
+      items.push(...wList.map((x: any) => ({ name: x.name, qty: x.qty, unit: x.unit, rate: x.rate || x.cost || 0, total: x.cost, type: "labor" as const, desc: x.desc })));
+      break;
+    }
+    case "utility_reserve": {
+      if (!results || !results.utilities?.spareSleeves) break;
+      const mList = results.utilities.spareSleeves.materials || [];
+      const wList = results.utilities.spareSleeves.works || [];
+      items.push(...mList.map((x: any) => ({ name: x.name, qty: x.qty, unit: x.unit, rate: x.rate || x.cost || 0, total: x.cost, type: "material" as const, desc: x.desc })));
+      items.push(...wList.map((x: any) => ({ name: x.name, qty: x.qty, unit: x.unit, rate: x.rate || x.cost || 0, total: x.cost, type: "labor" as const, desc: x.desc })));
+      break;
+    }
   }
 
   return items;
@@ -778,6 +891,9 @@ export default function App() {
   // Budget view mode ('single' or 'compare' all side-by-side/stacked with comments)
   const [budgetViewMode, setBudgetViewMode] = useState<'single' | 'compare'>('single');
 
+  // Sub-tab state for advanced decision support engine
+  const [activeEngTab, setActiveEngTab] = useState<'risks' | 'geology' | 'utilities' | 'tech_ops' | 'explainable'>('risks');
+
   // Chat Interface States
   const [chatInput, setChatInput] = useState<string>("");
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
@@ -802,6 +918,115 @@ export default function App() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // CENTRAL SCOPE MANAGEMENT & ESTIMATE FILTERING ENGINE
+  const [scopeSettings, setScopeSettings] = useState<Record<string, {
+    included: boolean;
+    purchased: boolean;
+    completed: boolean;
+    ownerSupplied: boolean;
+    optional: boolean;
+  }>>(() => {
+    const ids = [
+      "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16",
+      "curing", "backfill", "blind_area", "utility_water", "utility_sewer", "utility_power", "utility_low", "utility_reserve"
+    ];
+    const initial: Record<string, any> = {};
+    ids.forEach(id => {
+      initial[id] = {
+        included: true,
+        purchased: false,
+        completed: false,
+        ownerSupplied: false,
+        optional: false
+      };
+    });
+    return initial;
+  });
+
+  const [sectionsActive, setSectionsActive] = useState<Record<string, boolean>>({
+    earthwork: true,
+    foundation_base: true,
+    geotextile: true,
+    pgs: true,
+    sewer: true,
+    water: true,
+    power: true,
+    low_current: true,
+    insulation: true,
+    reinforcement: true,
+    formwork: true,
+    concrete: true,
+    curing: true,
+    waterproofing: true,
+    waterproofing_protection: true,
+    drainage: true,
+    backfill: true,
+    blind_area: true,
+    landscaping: true
+  });
+
+  const [costFilter, setCostFilter] = useState<'all' | 'not_purchased' | 'not_completed' | 'mandatory' | 'optional' | 'utilities' | 'materials' | 'works' | 'machinery'>('all');
+
+  const toggleScopeProp = (id: string, prop: 'included' | 'purchased' | 'completed' | 'ownerSupplied' | 'optional') => {
+    setScopeSettings(prev => {
+      const current = prev[id] || { included: true, purchased: false, completed: false, ownerSupplied: false, optional: false };
+      const updated = { ...current, [prop]: !current[prop] };
+      
+      // Mutual exclusion rules:
+      if (prop === 'purchased' && updated.purchased) {
+        updated.completed = false;
+        updated.ownerSupplied = false;
+      }
+      if (prop === 'completed' && updated.completed) {
+        updated.purchased = false;
+      }
+      if (prop === 'ownerSupplied' && updated.ownerSupplied) {
+        updated.purchased = false;
+      }
+      
+      return { ...prev, [id]: updated };
+    });
+  };
+
+  const toggleSectionActive = (secKey: string) => {
+    setSectionsActive(prev => {
+      const newVal = !prev[secKey];
+      const updated = { ...prev, [secKey]: newVal };
+      
+      const mappings: Record<string, string[]> = {
+        earthwork: ["04", "11"],
+        foundation_base: ["06"],
+        sewer: ["utility_sewer"],
+        water: ["utility_water"],
+        power: ["utility_power"],
+        low_current: ["utility_low"],
+        reinforcement: ["02", "03"],
+        formwork: ["05"],
+        concrete: ["01"],
+        curing: ["curing"],
+        drainage: ["08"],
+        backfill: ["backfill"],
+        blind_area: ["blind_area"],
+        landscaping: ["utility_reserve"]
+      };
+
+      const idsToUpdate = mappings[secKey];
+      if (idsToUpdate) {
+        setScopeSettings(oldScope => {
+          const nextScope = { ...oldScope };
+          idsToUpdate.forEach(id => {
+            if (nextScope[id]) {
+              nextScope[id] = { ...nextScope[id], included: newVal };
+            }
+          });
+          return nextScope;
+        });
+      }
+
+      return updated;
+    });
+  };
 
   // 7. INPUTS CONTROL (VALIDATION SUITE)
   const validationErrors: string[] = [];
@@ -873,6 +1098,228 @@ export default function App() {
   }, [region, width, length, floors, wallMaterial, slabMaterial, roofType, soilType, groundwaterDepth, futureFlooringExtension, hasBasement, landSlope, includeVAT, includeSubDesign, includeSupervision, projectReservePercent]);
 
   const selectedOption = results.options.find(o => o.id === activeFndId) || results.options[0];
+
+  const scopeMetrics = React.useMemo(() => {
+    if (!selectedOption) return null;
+    
+    const computeItemCosts = (id: string, opt: any) => {
+      let rawM = 0;
+      let rawW = 0;
+
+      if (id === "curing") {
+        const materialsList = results.concreteCuring?.materials || [];
+        rawM = materialsList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        const worksList = results.concreteCuring?.works || [];
+        rawW = worksList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+      } else if (id === "backfill") {
+        const materialsList = results.backfill?.materials || [];
+        rawM = materialsList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        const worksList = results.backfill?.works || [];
+        rawW = worksList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        if (rawW === 0 && (results.backfill?.totalCostMDL || 0) > rawM) {
+          rawW = (results.backfill?.totalCostMDL || 0) - rawM;
+        }
+      } else if (id === "blind_area") {
+        const materialsList = results.blindArea?.materials || [];
+        rawM = materialsList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        const worksList = results.blindArea?.works || [];
+        rawW = worksList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        if (rawW === 0 && (results.blindArea?.totalCostMDL || 0) > rawM) {
+          rawW = (results.blindArea?.totalCostMDL || 0) - rawM;
+        }
+      } else if (id === "utility_water") {
+        const materialsList = results.utilities?.water?.materials || [];
+        rawM = materialsList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        const worksList = results.utilities?.water?.works || [];
+        rawW = worksList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        if (rawW === 0 && (results.utilities?.water?.costMDL || 0) > rawM) {
+          rawW = (results.utilities?.water?.costMDL || 0) - rawM;
+        }
+      } else if (id === "utility_sewer") {
+        const materialsList = results.utilities?.sewer?.materials || [];
+        rawM = materialsList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        const worksList = results.utilities?.sewer?.works || [];
+        rawW = worksList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        if (rawW === 0 && (results.utilities?.sewer?.costMDL || 0) > rawM) {
+          rawW = (results.utilities?.sewer?.costMDL || 0) - rawM;
+        }
+      } else if (id === "utility_power") {
+        const materialsList = results.utilities?.power?.materials || [];
+        rawM = materialsList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        const worksList = results.utilities?.power?.works || [];
+        rawW = worksList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        if (rawW === 0 && (results.utilities?.power?.costMDL || 0) > rawM) {
+          rawW = (results.utilities?.power?.costMDL || 0) - rawM;
+        }
+      } else if (id === "utility_low") {
+        const materialsList = results.utilities?.lowCurrent?.materials || [];
+        rawM = materialsList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        const worksList = results.utilities?.lowCurrent?.works || [];
+        rawW = worksList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        if (rawW === 0 && (results.utilities?.lowCurrent?.costMDL || 0) > rawM) {
+          rawW = (results.utilities?.lowCurrent?.costMDL || 0) - rawM;
+        }
+      } else if (id === "utility_reserve") {
+        const materialsList = results.utilities?.spareSleeves?.materials || [];
+        rawM = materialsList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        const worksList = results.utilities?.spareSleeves?.works || [];
+        rawW = worksList.reduce((sum: number, item: any) => sum + (item.cost || 0), 0);
+        if (rawW === 0 && (results.utilities?.spareSleeves?.costMDL || 0) > rawM) {
+          rawW = (results.utilities?.spareSleeves?.costMDL || 0) - rawM;
+        }
+      } else if (id === "12") {
+        rawM = opt.costEstimate.vatMDL || 0;
+        rawW = 0;
+      } else {
+        const detailedItems = getCategoryDetailedItems(id, opt, landSlope, groundwaterDepth, results);
+        detailedItems.forEach(item => {
+          const isGeotextileMatch = !sectionsActive.geotextile && 
+            (item.name.toLowerCase().includes("геотекстиль") || item.name.toLowerCase().includes("typar") || item.name.toLowerCase().includes("фильтрующего"));
+          const isPgsMatch = !sectionsActive.pgs && 
+            (item.name.toLowerCase().includes("пгс") || item.name.toLowerCase().includes("песчано-гравийной") || item.name.toLowerCase().includes("гравийно-песчаный"));
+          const isInsulationMatch = !sectionsActive.insulation && 
+            (item.name.toLowerCase().includes("xps") || item.name.toLowerCase().includes("утепления") || item.name.toLowerCase().includes("плит") || item.name.toLowerCase().includes("пенополистирола") || item.name.toLowerCase().includes("penoplex"));
+          const isWaterproofingMatch = !sectionsActive.waterproofing && 
+            (item.name.toLowerCase().includes("битумного") || item.name.toLowerCase().includes("гидроизоляцион") || item.name.toLowerCase().includes("мастики") || item.name.toLowerCase().includes("рулонн") || item.name.toLowerCase().includes("наплавляем") || item.name.toLowerCase().includes("герметизации"));
+          const isProtectionMatch = !sectionsActive.waterproofing_protection && 
+            (item.name.toLowerCase().includes("клей-пена") || item.name.toLowerCase().includes("дюбел") || item.name.toLowerCase().includes("мембрана") || item.name.toLowerCase().includes("профиль") || item.name.toLowerCase().includes("полиуретановая"));
+
+          if (isGeotextileMatch || isPgsMatch || isInsulationMatch || isWaterproofingMatch || isProtectionMatch) {
+            return;
+          }
+
+          if (item.type === "material" || item.type === "delivery") {
+            rawM += (item.total || 0);
+          } else {
+            rawW += (item.total || 0);
+          }
+        });
+
+        // Fallback for lump sums if raw aggregates are 0
+        const keyMap: Record<string, string> = {
+          "01": "concreteCostMDL",
+          "02": "steelCostMDL",
+          "03": "rebarBindingCostMDL",
+          "04": "excavationCostMDL",
+          "05": "formworkCostMDL",
+          "06": "sandCushionCostMDL",
+          "07": "waterproofInsulationCostMDL",
+          "08": "drainageCostMDL",
+          "09": "slopeComplicationCostMDL",
+          "10": "roughFloorCostMDL",
+          "11": "pileDrillingCostMDL",
+          "13": "designCostMDL",
+          "14": "geologyCostMDL",
+          "15": "expertiseCostMDL",
+          "16": "supervisionCostMDL",
+        };
+        const field = keyMap[id];
+        if (field) {
+          const lumpCost = opt.costEstimate[field] || 0;
+          if (lumpCost > 0 && (rawM + rawW) === 0) {
+            if (["03", "04", "09", "11", "13", "14", "15", "16"].includes(id)) {
+              rawW = lumpCost;
+            } else {
+              rawM = lumpCost;
+            }
+          }
+        }
+      }
+
+      return { rawM, rawW };
+    };
+
+    let totalProjectCost = 0;
+    let totalToPurchase = 0;
+    let totalWorksRemaining = 0;
+    let totalAlreadyPurchased = 0;
+    let totalAlreadyCompleted = 0;
+    let totalOwnerSuppliedSavings = 0;
+    let totalOptionalCost = 0;
+
+    const allPosIds = [
+      "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11",
+      "curing", "backfill", "blind_area",
+      "utility_water", "utility_sewer", "utility_power", "utility_low", "utility_reserve",
+      "13", "14", "15", "16"
+    ];
+
+    allPosIds.forEach(id => {
+      if (id === "08" && !selectedOption.materials.hasDrainage) return;
+      if (id === "09" && landSlope === 0) return;
+      if (id === "10" && selectedOption.costEstimate.roughFloorCostMDL === undefined) return;
+      if (id === "11" && selectedOption.id !== "piles") return;
+      if (id === "13" && !includeSubDesign) return;
+      if (id === "16" && !includeSupervision) return;
+
+      const { rawM, rawW } = computeItemCosts(id, selectedOption);
+      const scope = scopeSettings[id] || { included: true, purchased: false, completed: false, ownerSupplied: false, optional: false };
+
+      if (!scope.included) {
+        return;
+      }
+
+      const itemTotalRaw = rawM + rawW;
+
+      if (scope.optional) {
+        totalOptionalCost += itemTotalRaw;
+        return;
+      }
+
+      totalProjectCost += itemTotalRaw;
+
+      if (scope.ownerSupplied) {
+        totalOwnerSuppliedSavings += rawM;
+      } else if (scope.purchased) {
+        totalAlreadyPurchased += rawM;
+      } else {
+        totalToPurchase += rawM;
+      }
+
+      if (scope.completed) {
+        totalAlreadyCompleted += rawW;
+      } else {
+        totalWorksRemaining += rawW;
+      }
+    });
+
+    const scopeVAT = scopeSettings["12"] || { included: true, purchased: false, completed: false, ownerSupplied: false, optional: false };
+    if (includeVAT && scopeVAT.included) {
+      const vatProject = Math.round(totalProjectCost * 0.20);
+      if (!scopeVAT.optional) {
+        totalProjectCost += vatProject;
+        if (scopeVAT.purchased) {
+          totalAlreadyPurchased += vatProject;
+        } else if (scopeVAT.completed) {
+          totalAlreadyCompleted += vatProject;
+        } else {
+          totalToPurchase += vatProject;
+        }
+      } else {
+        totalOptionalCost += vatProject;
+      }
+    }
+
+    const activeBudgetCost = totalToPurchase + totalWorksRemaining;
+    const completedCost = totalAlreadyCompleted + totalAlreadyPurchased;
+    const progressPercent = totalProjectCost > 0
+      ? Math.min(100, Math.round((completedCost / totalProjectCost) * 100))
+      : 0;
+
+    return {
+      totalProjectCost,
+      totalToPurchase,
+      totalWorksRemaining,
+      totalAlreadyPurchased,
+      totalAlreadyCompleted,
+      totalOwnerSuppliedSavings,
+      activeBudgetCost,
+      totalOptionalCost,
+      progressPercent,
+      completedCost,
+      computeItemCosts
+    };
+  }, [selectedOption, results, scopeSettings, sectionsActive, landSlope, includeVAT, includeSubDesign, includeSupervision]);
 
   // Visual helper styles for wall materials to fit Moldovan architectural blueprint style
   const getWallPatternStyle = (material: BuildingWallMaterial) => {
@@ -1834,7 +2281,7 @@ export default function App() {
               {/* Soil strata visual simulation layers */}
               <div className="w-full relative space-y-[1.5px] text-[10px] text-slate-550 z-10 mt-[215px]">
                 {/* DYNAMIC CONCRETE FOUNDATION DRAWINGS */}
-                {activeFndId === "slab" && (
+                {["slab", "classic_slab", "ribbed_slab"].includes(activeFndId) && (
                   <div 
                     className="absolute left-1/2 -translate-x-1/2 bg-slate-300 border-2 border-slate-400/80 rounded-b-md shadow-md z-20 transition-all duration-300 flex flex-col items-center justify-center overflow-hidden"
                     style={{
@@ -1851,7 +2298,7 @@ export default function App() {
                   </div>
                 )}
 
-                {activeFndId === "strip" && (
+                {["strip", "mzlf", "strip_with_slab"].includes(activeFndId) && (
                   <>
                     {/* Left Trench Strip */}
                     <div 
@@ -1886,7 +2333,7 @@ export default function App() {
                   </>
                 )}
 
-                {activeFndId === "piles" && (
+                {["piles", "drilled_piles", "tise", "column_footing"].includes(activeFndId) && (
                   <>
                     {/* Horizontal Rostverk Beam */}
                     <div 
@@ -1907,7 +2354,7 @@ export default function App() {
                         top: "9px",
                         left: "calc(50% - 84px)",
                         width: "10px",
-                        height: `${getSoilDepthPx(2.2) - 9}px`
+                        height: `${getSoilDepthPx(selectedOption.depthM) - 9}px`
                       }}
                     />
                     {/* Central Pile */}
@@ -1917,23 +2364,23 @@ export default function App() {
                         top: "9px",
                         left: "calc(50% - 5px)",
                         width: "10px",
-                        height: `${getSoilDepthPx(2.2) - 9}px`
+                        height: `${getSoilDepthPx(selectedOption.depthM) - 9}px`
                       }}
                     />
                     {/* Right Pile */}
                     <div 
-                      className="absolute bg-slate-300 border-x-2 border-b-2 border-slate-400/80 rounded-b-sm shadow-sm z-20 transition-all duration-300"
+                      className="absolute bg-slate-350 border-x-2 border-b-2 border-slate-400/80 rounded-b-sm shadow-sm z-20 transition-all duration-300"
                       style={{
                         top: "9px",
                         left: "calc(50% + 74px)",
                         width: "10px",
-                        height: `${getSoilDepthPx(2.2) - 9}px`
+                        height: `${getSoilDepthPx(selectedOption.depthM) - 9}px`
                       }}
                     />
                     {/* Label */}
                     <div className="absolute left-1/2 -translate-x-1/2 z-20" style={{ top: "18px" }}>
                       <span className="text-[7.5px] font-black text-slate-700 bg-white/95 border border-slate-350 px-1.5 py-0.5 rounded shadow-xs uppercase select-none">
-                        СВАИ L=2.2м
+                        ОПОРЫ L={selectedOption.depthM}м
                       </span>
                     </div>
                   </>
@@ -2256,7 +2703,17 @@ export default function App() {
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] font-semibold text-slate-400 block">Локальная смета:</span>
-                  <span className="text-base font-extrabold text-blue-600 font-mono">{selectedOption.costMDL.toLocaleString()} MDL</span>
+                  {scopeMetrics && scopeMetrics.activeBudgetCost !== selectedOption.costMDL ? (
+                    <div className="flex flex-col items-end">
+                      <span className="text-xs text-slate-400 line-through">{(selectedOption.costMDL).toLocaleString()} MDL</span>
+                      <span className="text-base font-extrabold text-blue-600 font-mono">
+                        {scopeMetrics.activeBudgetCost.toLocaleString()} MDL
+                      </span>
+                      <span className="text-[8.5px] font-bold text-blue-500 bg-blue-50 px-1 py-0.5 rounded-md mt-0.5">С учётом настроек и статусов</span>
+                    </div>
+                  ) : (
+                    <span className="text-base font-extrabold text-blue-600 font-mono">{selectedOption.costMDL.toLocaleString()} MDL</span>
+                  )}
                 </div>
               </div>
 
@@ -2504,182 +2961,494 @@ export default function App() {
               </div>
 
               {budgetViewMode === 'single' ? (
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl overflow-hidden text-xs">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-100/90 text-[10px] text-slate-500 font-bold uppercase border-b border-slate-200">
-                        <th className="py-2.5 px-3">Код/Категория работ</th>
-                        <th className="py-2.5 px-3">Описание затрат</th>
-                        <th className="py-2.5 px-3 text-right">Стоимость (MDL)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-150 text-[11px] text-slate-700">
-                      {(() => {
-                        const budgetCategories = [
-                          {
-                            id: "01",
-                            name: "01. Бетон М300 (C20/25)",
-                            desc: `Закупка и доставка готовой ж/б смеси миксером (${selectedOption.materials.concreteVolumeM3 || 0} м³)`,
-                            cost: selectedOption.costEstimate.concreteCostMDL || 0,
-                            showIf: true
-                          },
-                          {
-                            id: "02",
-                            name: "02. Арматурный прокат",
-                            desc: `Поставка стержней класса A500C/A240 (${selectedOption.materials.reinforcementBarKg || 0} кг)`,
-                            cost: selectedOption.costEstimate.steelCostMDL || 0,
-                            showIf: true
-                          },
-                          {
-                            id: "03",
-                            name: "03. Вязка каркасов и работы",
-                            desc: "Монтаж, увязка узлов проволокой, установка фиксаторов защитного слоя",
-                            cost: selectedOption.costEstimate.rebarBindingCostMDL || 0,
-                            showIf: true
-                          },
-                          {
-                            id: "04",
-                            name: "04. Разработка грунта (JCB)",
-                            desc: `Копка траншей/бурение, профилирование дна, зачистка (${selectedOption.materials.excavationVolumeM3 || 0} м³)`,
-                            cost: selectedOption.costEstimate.excavationCostMDL || 0,
-                            showIf: true
-                          },
-                          {
-                            id: "05",
-                            name: "05. Щитовая опалубка",
-                            desc: `Аренда щитов, обрезная доска хвойных пород, шпильки и шурупы (${selectedOption.materials.formworkM2 || 0} м²)`,
-                            cost: selectedOption.costEstimate.formworkCostMDL || 0,
-                            showIf: true
-                          },
-                          {
-                            id: "06",
-                            name: "06. Устройство подушки",
-                            desc: `Песчано-гравийная смесь с уплотнением (${selectedOption.materials.sandGravelM3 || 0} м³)`,
-                            cost: selectedOption.costEstimate.sandCushionCostMDL || 0,
-                            showIf: true
-                          },
-                          {
-                            id: "07",
-                            name: "07. Изоляция и XPS цоколя",
-                            desc: `Монтаж влагозащиты и плит утепления Penoplex XPS (${selectedOption.materials.waterproofingM2 || 0} м²)`,
-                            cost: selectedOption.costEstimate.waterproofInsulationCostMDL || 0,
-                            showIf: true
-                          },
-                          {
-                            id: "08",
-                            name: "08. Дренажная система",
-                            desc: `Трубы d110, геотекстиль, гранитный щебень, ${selectedOption.materials.drainageWellsCount || 4} смотровых колодца`,
-                            cost: selectedOption.costEstimate.drainageCostMDL || 0,
-                            showIf: !!selectedOption.materials.hasDrainage,
-                            className: "bg-blue-50/20"
-                          },
-                          {
-                            id: "09",
-                            name: "09. Уступные компенсаторы",
-                            desc: `Сложность рельефа ${landSlope}%, ступенчатая опалубка, подгонка уровней`,
-                            cost: selectedOption.costEstimate.slopeComplicationCostMDL || 0,
-                            showIf: landSlope > 0,
-                            className: "bg-amber-50/20"
-                          },
-                          {
-                            id: "10",
-                            name: "10. Черновой пол по грунту",
-                            desc: selectedOption.id === "slab" 
-                              ? "✨ Уже полностью встроен в монолитную несущую плиту"
-                              : `Устройство пола: подушка ${selectedOption.materials.roughFloorSandM3 || 0} м³, сетка d8 ${selectedOption.materials.roughFloorRebarKg || 0} кг, бетон стяжки ${selectedOption.materials.roughFloorConcreteM3 || 0} м³ (${selectedOption.materials.roughFloorAreaM2 || 0} м²)`,
-                            cost: selectedOption.costEstimate.roughFloorCostMDL || 0,
-                            showIf: selectedOption.costEstimate.roughFloorCostMDL !== undefined,
-                            className: selectedOption.id === "slab" ? "bg-emerald-50/15" : "bg-orange-50/15",
-                            isSlabBuiltin: selectedOption.id === "slab"
-                          },
-                          {
-                            id: "11",
-                            name: "11. Бурение скважин под сваи",
-                            desc: `Кустовое/механическое бурение скважин d300-350мм: ${selectedOption.materials.pileCount || 0} шт. глубиной 2.2м (итого ${selectedOption.materials.pileDrillingM || 0} пог.м)`,
-                            cost: selectedOption.costEstimate.pileDrillingCostMDL || 0,
-                            showIf: selectedOption.id === "piles" && (selectedOption.costEstimate.pileDrillingCostMDL || 0) > 0,
-                            className: "bg-teal-50/15"
-                          },
-                          {
-                            id: "12",
-                            name: "12. Налог на добавленную стоимость (НДС 20% РМ)",
-                            desc: "Обязательный сбор в бюджет Республики Молдова на строительные работы и сертифицированные смеси",
-                            cost: selectedOption.costEstimate.vatMDL || 0,
-                            showIf: !!includeVAT,
-                            className: "bg-red-50/10"
-                          },
-                          {
-                            id: "13",
-                            name: "13. Раздел проектирования КЖ/АР",
-                            desc: "Полная разработка рабочих проектов: архитектурные и железобетонные спецификации контура",
-                            cost: selectedOption.costEstimate.designCostMDL || 0,
-                            showIf: !!includeSubDesign,
-                            className: "bg-indigo-50/10"
-                          },
-                          {
-                            id: "14",
-                            name: "14. Ревизионная инженерная геология",
-                            desc: "Ударно-канатное бурение 2 скважин по 6 метров, лаб. определение модуля Е и высоты УГВ",
-                            cost: selectedOption.costEstimate.geologyCostMDL || 0,
-                            showIf: !!includeSubDesign,
-                            className: "bg-indigo-50/10"
-                          },
-                          {
-                            id: "15",
-                            name: "15. Экспертиза технического соответствия",
-                            desc: "Контрольное прохождение верификации чертежей и проектных нормативов КЖ/АР лицензированным госорганом",
-                            cost: selectedOption.costEstimate.expertiseCostMDL || 0,
-                            showIf: !!includeSupervision,
-                            className: "bg-slate-100/10"
-                          },
-                          {
-                            id: "16",
-                            name: "16. Авторский и Технический надзор",
-                            desc: "Подписание актов скрытых контуров армирования разработчиком проекта и техническим инспектором",
-                            cost: selectedOption.costEstimate.supervisionCostMDL || 0,
-                            showIf: !!includeSupervision,
-                            className: "bg-slate-100/10"
-                          }
-                        ];
+                <div className="space-y-4">
+                  {/* PROJECT STATUS BENTO CARD */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    {/* Status widget */}
+                    <div className="lg:col-span-6 bg-slate-900 text-white rounded-3xl p-5 shadow-lg border border-slate-800 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+                          <div>
+                            <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Панель контроля</span>
+                            <h4 className="text-xs font-bold text-slate-100">PROJECT STATUS (Бюджет & Готовность)</h4>
+                          </div>
+                          <span className="px-2.5 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-mono text-[9px] font-bold rounded-lg uppercase tracking-wide">
+                            MDL Валюта
+                          </span>
+                        </div>
 
-                        return budgetCategories.filter(c => c.showIf).map((cat) => {
-                          const isExpanded = expandedCategoryIds.includes(cat.id);
-                          return (
-                            <React.Fragment key={cat.id}>
-                              <tr 
-                                onClick={() => setExpandedCategoryIds(prev => 
-                                  prev.includes(cat.id) ? prev.filter(id => id !== cat.id) : [...prev, cat.id]
-                                )}
-                                className={`cursor-pointer hover:bg-slate-100/80 transition-colors select-none ${cat.className || ""} ${isExpanded ? "bg-slate-100/90 font-medium" : ""}`}
-                              >
-                                <td className="py-2.5 px-3 font-semibold text-slate-800 flex items-center gap-1.5">
-                                  <span className="transition-transform duration-200 shrink-0">
-                                    {isExpanded ? (
-                                      <ChevronUp className="w-3.5 h-3.5 text-blue-600" />
-                                    ) : (
-                                      <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                                    )}
-                                  </span>
-                                  {cat.name}
-                                </td>
-                                <td className="py-2.5 px-3 text-slate-500 text-[10.5px] items-center">
-                                  {cat.desc}
-                                  <span className="text-[9px] text-blue-600 font-semibold ml-2 inline-flex items-center gap-0.5 hover:underline whitespace-nowrap bg-blue-50/50 px-1.5 py-0.5 rounded-md">
-                                    {isExpanded ? "Свернуть детали" : "Детали структуры 🔍"}
-                                  </span>
-                                </td>
-                                <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
-                                  {cat.isSlabBuiltin ? (
-                                    <span className="text-emerald-700 font-semibold text-[10.5px] font-sans">0 (Включено)</span>
-                                  ) : (
-                                    (cat.cost || 0).toLocaleString()
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div className="bg-slate-950/75 p-2.5 rounded-2xl border border-slate-800/60">
+                            <span className="text-[9px] text-slate-400 block font-medium">Общая сметная стоимость:</span>
+                            <strong className="text-sm text-slate-100 font-mono block mt-0.5">
+                              {(scopeMetrics?.totalProjectCost || 0).toLocaleString()} <span className="text-[10px] font-sans font-normal text-slate-400">MDL</span>
+                            </strong>
+                          </div>
+
+                          <div className="bg-blue-950/55 p-2.5 rounded-2xl border border-blue-900/60 ring-2 ring-blue-500/15">
+                            <span className="text-[9px] text-blue-300 block font-medium">Осталось потратить (Закупка + СМР):</span>
+                            <strong className="text-sm text-blue-400 font-mono block mt-0.5">
+                              {(scopeMetrics?.activeBudgetCost || 0).toLocaleString()} <span className="text-[10px] font-sans font-normal text-blue-400">MDL</span>
+                            </strong>
+                          </div>
+
+                          <div className="bg-slate-950/75 p-2.5 rounded-2xl border border-slate-800/60">
+                            <span className="text-[9px] text-slate-400 block font-medium">Уже закуплено материалов:</span>
+                            <strong className="text-xs text-amber-500 font-mono block mt-0.5">
+                              {(scopeMetrics?.totalAlreadyPurchased || 0).toLocaleString()} <span className="text-[9px] font-sans font-normal text-slate-400">MDL</span>
+                            </strong>
+                          </div>
+
+                          <div className="bg-slate-950/75 p-2.5 rounded-2xl border border-slate-800/60">
+                            <span className="text-[9px] text-slate-400 block font-medium">Уже выполнено работ (СМР):</span>
+                            <strong className="text-xs text-emerald-500 font-mono block mt-0.5">
+                              {(scopeMetrics?.totalAlreadyCompleted || 0).toLocaleString()} <span className="text-[9px] font-sans font-normal text-slate-400">MDL</span>
+                            </strong>
+                          </div>
+
+                          <div className="bg-slate-950/75 p-2.5 rounded-2xl border border-slate-800/60">
+                            <span className="text-[9px] text-slate-400 block font-medium">Экономия (Мат. заказчика):</span>
+                            <strong className="text-xs text-indigo-400 font-mono block mt-0.5">
+                              {(scopeMetrics?.totalOwnerSuppliedSavings || 0).toLocaleString()} <span className="text-[9px] font-sans font-normal text-slate-400">MDL</span>
+                            </strong>
+                          </div>
+
+                          <div className="bg-slate-950/75 p-2.5 rounded-2xl border border-slate-800/60">
+                            <span className="text-[9px] text-slate-400 block font-medium">Состав отложенных работ:</span>
+                            <strong className="text-xs text-slate-450 font-mono block mt-0.5">
+                              {(scopeMetrics?.totalOptionalCost || 0).toLocaleString()} <span className="text-[9px] font-sans font-normal text-slate-400">MDL</span>
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Percentage of completion visual bar */}
+                      <div className="mt-3.5 bg-slate-950/80 p-2.5 rounded-2xl border border-slate-800/50">
+                        <div className="flex items-center justify-between mb-1.5 text-xs">
+                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wide">Процент готовности</span>
+                          <strong className="text-xs font-mono text-emerald-400">{scopeMetrics?.progressPercent || 0}%</strong>
+                        </div>
+                        <div className="w-full bg-slate-850 h-2 rounded-full overflow-hidden border border-slate-800 shadow-inner">
+                          <div 
+                            className="bg-emerald-500 h-full rounded-full transition-all duration-300 shadow-xs"
+                            style={{ width: `${scopeMetrics?.progressPercent || 0}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[8px] text-slate-450 mt-1 font-sans leading-none">
+                          <span>Освоено: {(scopeMetrics?.completedCost || 0).toLocaleString()} MDL</span>
+                          <span>Остаток сметы: {Math.max(0, (scopeMetrics?.totalProjectCost || 0) - (scopeMetrics?.completedCost || 0)).toLocaleString()} MDL</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Checkboxes settings widget */}
+                    <div className="lg:col-span-6 bg-white border border-slate-200 shadow-sm rounded-3xl p-5 flex flex-col justify-between">
+                      <div>
+                        <div className="border-b border-slate-100 pb-2 mb-3">
+                          <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#5c607a]">Управление разделами проекта</span>
+                          <h4 className="text-xs font-extrabold text-slate-800">Быстрый выбор конструктивов строительного блока</h4>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[9.5px]">
+                          {[
+                            { key: "earthwork", label: "⛏️ Земляные" },
+                            { key: "foundation_base", label: "🧱 Основание" },
+                            { key: "geotextile", label: "📐 Геотекстиль" },
+                            { key: "pgs", label: "🏜️ ПГС подушка" },
+                            { key: "sewer", label: "🚰 Канализация" },
+                            { key: "water", label: "💧 Водоснабж." },
+                            { key: "power", label: "⚡ Электрика" },
+                            { key: "low_current", label: "📡 Слаботочка" },
+                            { key: "insulation", label: "❄️ Утепление" },
+                            { key: "reinforcement", label: "🛡️ Арматура" },
+                            { key: "formwork", label: "🪵 Опалубка" },
+                            { key: "concrete", label: "🧪 Бетон" },
+                            { key: "curing", label: "🚿 Уход" },
+                            { key: "waterproofing", label: "🧴 Гидроизол." },
+                            { key: "waterproofing_protection", label: "🕳️ Защита ГИ" },
+                            { key: "drainage", label: "🌧️ Дренаж" },
+                            { key: "backfill", label: "↩️ Обрат. засып." },
+                            { key: "blind_area", label: "🚶 Отмостка" },
+                            { key: "landscaping", label: "🌳 Благоустрой." },
+                          ].map((sec) => (
+                            <label 
+                              key={sec.key} 
+                              className={`flex items-center gap-1 px-1.5 py-1 bg-slate-50/50 hover:bg-slate-100/60 border rounded-lg cursor-pointer select-none transition-all ${
+                                sectionsActive[sec.key] 
+                                  ? "border-blue-200 bg-blue-50/20 text-blue-800 font-semibold" 
+                                  : "border-slate-150 text-slate-400 bg-slate-50 opacity-60"
+                              }`}
+                            >
+                              <input 
+                                type="checkbox"
+                                checked={sectionsActive[sec.key]}
+                                onChange={() => toggleSectionActive(sec.key)}
+                                className="accent-blue-600 scale-90 shrink-0"
+                              />
+                              <span className="truncate">{sec.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Horizontal Filters Segmented Bar */}
+                      <div className="mt-3.5 pt-3 border-t border-slate-100">
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#5c607a] block mb-1.5">Фильтрация таблицы (Cost Filters)</span>
+                        <div className="flex flex-wrap gap-1">
+                          {[
+                            { key: "all", label: "Все позиции" },
+                            { key: "not_purchased", label: "Не закупленные" },
+                            { key: "not_completed", label: "Не выполненные" },
+                            { key: "mandatory", label: "Обязательные" },
+                            { key: "optional", label: "Опциональные" },
+                            { key: "utilities", label: "Коммуникации" },
+                            { key: "materials", label: "Материалы" },
+                            { key: "works", label: "Работы" },
+                            { key: "machinery", label: "Техника" },
+                          ].map((f) => (
+                            <button
+                              key={f.key}
+                              type="button"
+                              onClick={() => setCostFilter(f.key as any)}
+                              className={`px-2 py-0.5 text-[9px] font-extrabold rounded-md transition-all border cursor-pointer select-none ${
+                                costFilter === f.key
+                                  ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                                  : "bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                              }`}
+                            >
+                              {f.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* MAIN ESTIMATE TABLE WITH INTERACTIVE CHECKBOXES */}
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-2xl overflow-hidden text-xs">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100/90 text-[10px] text-slate-500 font-bold uppercase border-b border-slate-200">
+                          <th className="py-2.5 px-3 w-[25%]">Код/Категория работ</th>
+                          <th className="py-2.5 px-3 w-[30%]">Описание затрат</th>
+                          <th className="py-2.5 px-2 w-[35%] text-center">Настройки состава (Управление опциями)</th>
+                          <th className="py-2.5 px-3 w-[10%] text-right">Стоимость (MDL)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-150 text-[11px] text-slate-700">
+                        {(() => {
+                          const budgetCategories = [
+                            {
+                              id: "01",
+                              name: "01. Бетон М300 (C20/25)",
+                              desc: `Закупка и доставка готовой ж/б смеси миксером (${selectedOption.materials.concreteVolumeM3 || 0} м³)`,
+                              cost: selectedOption.costEstimate.concreteCostMDL || 0,
+                              showIf: true
+                            },
+                            {
+                              id: "02",
+                              name: "02. Арматурный прокат",
+                              desc: `Поставка стержней класса A500C/A240 (${selectedOption.materials.reinforcementBarKg || 0} кг)`,
+                              cost: selectedOption.costEstimate.steelCostMDL || 0,
+                              showIf: true
+                            },
+                            {
+                              id: "03",
+                              name: "03. Вязка каркасов и работы",
+                              desc: "Монтаж, увязка узлов проволокой, установка фиксаторов защитного слоя",
+                              cost: selectedOption.costEstimate.rebarBindingCostMDL || 0,
+                              showIf: true
+                            },
+                            {
+                              id: "04",
+                              name: "04. Разработка грунта (JCB)",
+                              desc: `Копка траншей/бурение, профилирование дна, зачистка (${selectedOption.materials.excavationVolumeM3 || 0} м³)`,
+                              cost: selectedOption.costEstimate.excavationCostMDL || 0,
+                              showIf: true
+                            },
+                            {
+                              id: "05",
+                              name: "05. Щитовая опалубка",
+                              desc: `Аренда щитов, обрезная доска хвойных пород, шпильки и шурупы (${selectedOption.materials.formworkM2 || 0} м²)`,
+                              cost: selectedOption.costEstimate.formworkCostMDL || 0,
+                              showIf: true
+                            },
+                            {
+                              id: "06",
+                              name: "06. Устройство подушки",
+                              desc: `Песчано-гравийная смесь с уплотнением (${selectedOption.materials.sandGravelM3 || 0} м³)`,
+                              cost: selectedOption.costEstimate.sandCushionCostMDL || 0,
+                              showIf: true
+                            },
+                            {
+                              id: "07",
+                              name: "07. Изоляция и XPS цоколя",
+                              desc: `Монтаж влагозащиты и плит утепления Penoplex XPS (${selectedOption.materials.waterproofingM2 || 0} м²)`,
+                              cost: selectedOption.costEstimate.waterproofInsulationCostMDL || 0,
+                              showIf: true
+                            },
+                            {
+                              id: "08",
+                              name: "08. Дренажная система",
+                              desc: `Трубы d110, геотекстиль, гранитный щебень, ${selectedOption.materials.drainageWellsCount || 4} смотровых колодца`,
+                              cost: selectedOption.costEstimate.drainageCostMDL || 0,
+                              showIf: !!selectedOption.materials.hasDrainage,
+                              className: "bg-blue-50/20"
+                            },
+                            {
+                              id: "09",
+                              name: "09. Уступные компенсаторы",
+                              desc: `Сложность рельефа ${landSlope}%, ступенчатая опалубка, подгонка уровней`,
+                              cost: selectedOption.costEstimate.slopeComplicationCostMDL || 0,
+                              showIf: landSlope > 0,
+                              className: "bg-amber-50/20"
+                            },
+                            {
+                              id: "10",
+                              name: "10. Черновой пол по грунту",
+                              desc: selectedOption.id === "slab" 
+                                ? "✨ Уже полностью встроен в монолитную несущую плиту"
+                                : `Устройство пола: подушка ${selectedOption.materials.roughFloorSandM3 || 0} м³, сетка d8 ${selectedOption.materials.roughFloorRebarKg || 0} кг, бетон стяжки ${selectedOption.materials.roughFloorConcreteM3 || 0} м³ (${selectedOption.materials.roughFloorAreaM2 || 0} м²)`,
+                              cost: selectedOption.costEstimate.roughFloorCostMDL || 0,
+                              showIf: selectedOption.costEstimate.roughFloorCostMDL !== undefined,
+                              className: selectedOption.id === "slab" ? "bg-emerald-50/15" : "bg-orange-50/15",
+                              isSlabBuiltin: selectedOption.id === "slab"
+                            },
+                            {
+                              id: "11",
+                              name: "11. Бурение скважин под сваи",
+                              desc: `Кустовое/механическое бурение скважин d300-350мм: ${selectedOption.materials.pileCount || 0} шт. глубиной 2.2м (итого ${selectedOption.materials.pileDrillingM || 0} пог.м)`,
+                              cost: selectedOption.costEstimate.pileDrillingCostMDL || 0,
+                              showIf: selectedOption.id === "piles" && (selectedOption.costEstimate.pileDrillingCostMDL || 0) > 0,
+                              className: "bg-teal-50/15"
+                            },
+                            {
+                              id: "curing",
+                              name: "🔬 Уход за свежеуложенным бетоном (Curing)",
+                              desc: results.concreteCuring?.methodDescription || "Влажностный уход за плитой, укрытие полиэтиленом",
+                              cost: results.concreteCuring?.totalCostMDL || 0,
+                              showIf: true,
+                              className: "bg-blue-50/10"
+                            },
+                            {
+                              id: "backfill",
+                              name: "↩️ Обратная засыпка пазух",
+                              desc: "Послойное трамбование ПГС/грунта виброплитой с проливкой водой",
+                              cost: results.backfill?.totalCostMDL || 0,
+                              showIf: true,
+                              className: "bg-amber-50/10"
+                            },
+                            {
+                              id: "blind_area",
+                              name: "🚶 Железобетонная отмостка периметра",
+                              desc: `Разуклонка для отвода осадков (${results.blindArea?.widthM || 0.8}м)`,
+                              cost: results.blindArea?.totalCostMDL || 0,
+                              showIf: true,
+                              className: "bg-teal-50/10"
+                            },
+                            {
+                              id: "utility_water",
+                              name: "💧 Закладка ввода водоснабжения",
+                              desc: "Трасса ПНД труб ниже глубины промерзания с утеплением",
+                              cost: results.utilities?.water?.costMDL || 0,
+                              showIf: true,
+                              className: "bg-sky-50/10"
+                            },
+                            {
+                              id: "utility_sewer",
+                              name: "🚰 Закладка выпуска канализации d110",
+                              desc: "Комплект ПВХ труб d110 с уклоном 2% под несущими элементами",
+                              cost: results.utilities?.sewer?.costMDL || 0,
+                              showIf: true,
+                              className: "bg-orange-50/10"
+                            },
+                            {
+                              id: "utility_power",
+                              name: "⚡ Силовой кабельный ввод электросети",
+                              desc: "Труба ПНД со стальной протяжкой для защиты сетевого кабеля",
+                              cost: results.utilities?.power?.costMDL || 0,
+                              showIf: true,
+                              className: "bg-yellow-50/10"
+                            },
+                            {
+                              id: "utility_low",
+                              name: "📡 Слаботочный кабельный резерв (Интернет/Сигнализация)",
+                              desc: "Дополнительные гильзы d40/d50 для оптоволокна и внешних датчиков",
+                              cost: results.utilities?.lowCurrent?.costMDL || 0,
+                              showIf: true,
+                              className: "bg-indigo-50/10"
+                            },
+                            {
+                              id: "utility_reserve",
+                              name: "🌳 Дополнительные резервные гильзы ГИПа",
+                              desc: "Заглушенные каналы для ландшафтных линий и автополива",
+                              cost: results.utilities?.spareSleeves?.costMDL || 0,
+                              showIf: true,
+                              className: "bg-emerald-50/10"
+                            },
+                            {
+                              id: "12",
+                              name: "12. Налог на добавленную стоимость (НДС 20% РМ)",
+                              desc: "Обязательный сбор в бюджет Республики Молдова на строительные работы и сертифицированные смеси",
+                              cost: selectedOption.costEstimate.vatMDL || 0,
+                              showIf: !!includeVAT,
+                              className: "bg-red-50/10"
+                            },
+                            {
+                              id: "13",
+                              name: "13. Раздел проектирования КЖ/АР",
+                              desc: "Полная разработка рабочих проектов: архитектурные и железобетонные спецификации контура",
+                              cost: selectedOption.costEstimate.designCostMDL || 0,
+                              showIf: !!includeSubDesign,
+                              className: "bg-indigo-50/10"
+                            },
+                            {
+                              id: "14",
+                              name: "14. Ревизионная инженерная геология",
+                              desc: "Ударно-канатное бурение 2 скважин по 6 метров, лаб. определение модуля Е и высоты УГВ",
+                              cost: selectedOption.costEstimate.geologyCostMDL || 0,
+                              showIf: !!includeSubDesign,
+                              className: "bg-indigo-50/10"
+                            },
+                            {
+                              id: "15",
+                              name: "15. Экспертиза технического соответствия",
+                              desc: "Контрольное прохождение верификации чертежей и проектных нормативов КЖ/АР лицензированным госорганом",
+                              cost: selectedOption.costEstimate.expertiseCostMDL || 0,
+                              showIf: !!includeSupervision,
+                              className: "bg-slate-100/10"
+                            },
+                            {
+                              id: "16",
+                              name: "16. Авторский и Технический надзор",
+                              desc: "Подписание актов скрытых контуров армирования разработчиком проекта и техническим инспектором",
+                              cost: selectedOption.costEstimate.supervisionCostMDL || 0,
+                              showIf: !!includeSupervision,
+                              className: "bg-slate-100/10"
+                            }
+                          ];
+
+                          const matchesFilter = (catId: string, cost: number) => {
+                            const scope = scopeSettings[catId] || { included: true, purchased: false, completed: false, ownerSupplied: false, optional: false };
+                            if (costFilter === 'all') return true;
+                            if (costFilter === 'not_purchased') return !scope.purchased;
+                            if (costFilter === 'not_completed') return !scope.completed;
+                            if (costFilter === 'mandatory') return !scope.optional;
+                            if (costFilter === 'optional') return scope.optional;
+                            if (costFilter === 'utilities') {
+                              return ["utility_water", "utility_sewer", "utility_power", "utility_low", "utility_reserve"].includes(catId);
+                            }
+                            const { rawM, rawW } = scopeMetrics?.computeItemCosts(catId, selectedOption) || { rawM: 0, rawW: 0 };
+                            if (costFilter === 'materials') return rawM > 0;
+                            if (costFilter === 'works') return rawW > 0;
+                            if (costFilter === 'machinery') {
+                              const items = getCategoryDetailedItems(catId, selectedOption, landSlope, groundwaterDepth, results);
+                              return items.some(it => it.type === 'machinery');
+                            }
+                            return true;
+                          };
+
+                          return budgetCategories.filter(c => c.showIf && matchesFilter(c.id, c.cost)).map((cat) => {
+                            const isExpanded = expandedCategoryIds.includes(cat.id);
+                            return (
+                              <React.Fragment key={cat.id}>
+                                <tr 
+                                  onClick={() => setExpandedCategoryIds(prev => 
+                                    prev.includes(cat.id) ? prev.filter(id => id !== cat.id) : [...prev, cat.id]
                                   )}
-                                </td>
-                              </tr>
-                              {isExpanded && (
-                                <tr className="bg-slate-100/40">
-                                  <td colSpan={3} className="p-3">
-                                    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-inner space-y-3">
+                                  className={`cursor-pointer hover:bg-slate-100/80 transition-colors select-none ${cat.className || ""} ${isExpanded ? "bg-slate-100/90 font-medium" : ""}`}
+                                >
+                                  <td className="py-2.5 px-3 font-semibold text-slate-800 flex items-center gap-1.5">
+                                    <span className="transition-transform duration-200 shrink-0">
+                                      {isExpanded ? (
+                                        <ChevronUp className="w-3.5 h-3.5 text-blue-600" />
+                                      ) : (
+                                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                                      )}
+                                    </span>
+                                    {cat.name}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-500 text-[10.5px] items-center">
+                                    {cat.desc}
+                                    <span className="text-[9px] text-blue-600 font-semibold ml-2 inline-flex items-center gap-0.5 hover:underline whitespace-nowrap bg-blue-50/50 px-1.5 py-0.5 rounded-md">
+                                      {isExpanded ? "Свернуть" : "Детали 🔍"}
+                                    </span>
+                                  </td>
+                                  <td 
+                                    onClick={(e) => e.stopPropagation()} 
+                                    className="py-2.5 px-2 text-center"
+                                  >
+                                    <div className="flex items-center justify-center gap-2 text-[10px]">
+                                      {/* 1. Included */}
+                                      <label className="flex items-center gap-0.5 cursor-pointer" title="Включение в смету">
+                                        <input 
+                                          type="checkbox"
+                                          checked={scopeSettings[cat.id]?.included ?? true}
+                                          onChange={() => toggleScopeProp(cat.id, 'included')}
+                                          className="accent-blue-600 scale-90"
+                                        />
+                                        <span className={scopeSettings[cat.id]?.included ?? true ? "text-blue-600 font-bold" : "text-slate-400"}>Вкл.</span>
+                                      </label>
+
+                                      {/* 2. Purchased */}
+                                      <label className="flex items-center gap-0.5 cursor-pointer" title="Уже закуплено">
+                                        <input 
+                                          type="checkbox"
+                                          checked={scopeSettings[cat.id]?.purchased ?? false}
+                                          disabled={["03", "04", "09", "11", "13", "14", "15", "16"].includes(cat.id)}
+                                          onChange={() => toggleScopeProp(cat.id, 'purchased')}
+                                          className="accent-amber-500 scale-90 disabled:opacity-30"
+                                        />
+                                        <span className={scopeSettings[cat.id]?.purchased ? "text-amber-600 font-bold" : "text-slate-400"}>Купл.</span>
+                                      </label>
+
+                                      {/* 3. Completed */}
+                                      <label className="flex items-center gap-0.5 cursor-pointer" title="Работа выполнена">
+                                        <input 
+                                          type="checkbox"
+                                          checked={scopeSettings[cat.id]?.completed ?? false}
+                                          onChange={() => toggleScopeProp(cat.id, 'completed')}
+                                          className="accent-emerald-500 scale-90"
+                                        />
+                                        <span className={scopeSettings[cat.id]?.completed ? "text-emerald-600 font-bold" : "text-slate-440"}>Вып.</span>
+                                      </label>
+
+                                      {/* 4. Owner Supplied */}
+                                      <label className="flex items-center gap-0.5 cursor-pointer" title="Материал заказчика">
+                                        <input 
+                                          type="checkbox"
+                                          checked={scopeSettings[cat.id]?.ownerSupplied ?? false}
+                                          disabled={["01", "03", "04", "09", "11", "13", "14", "15", "16"].includes(cat.id)}
+                                          onChange={() => toggleScopeProp(cat.id, 'ownerSupplied')}
+                                          className="accent-indigo-500 scale-90 disabled:opacity-30"
+                                        />
+                                        <span className={scopeSettings[cat.id]?.ownerSupplied ? "text-indigo-600 font-bold" : "text-slate-400"}>Заказ.</span>
+                                      </label>
+
+                                      {/* 5. Optional */}
+                                      <label className="flex items-center gap-0.5 cursor-pointer" title="Опциональная работа">
+                                        <input 
+                                          type="checkbox"
+                                          checked={scopeSettings[cat.id]?.optional ?? false}
+                                          onChange={() => toggleScopeProp(cat.id, 'optional')}
+                                          className="accent-slate-500 scale-90"
+                                        />
+                                        <span className={scopeSettings[cat.id]?.optional ? "text-slate-800 font-bold bg-slate-100 px-1 rounded" : "text-slate-400"}>Опц.</span>
+                                      </label>
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                                    {cat.isSlabBuiltin ? (
+                                      <span className="text-emerald-700 font-semibold text-[10.5px] font-sans">0 (Включено)</span>
+                                    ) : (
+                                      (cat.cost || 0).toLocaleString()
+                                    )}
+                                  </td>
+                                </tr>
+                                {isExpanded && (
+                                  <tr className="bg-slate-100/40">
+                                    <td colSpan={4} className="p-3">
+                                      <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-inner space-y-3">
                                       <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                                         <span className="text-[9.5px] font-bold text-slate-550 uppercase tracking-wider block">Детализация затрат категории:</span>
                                         <span className="text-[10px] font-mono bg-blue-50 text-blue-700 px-2 py-0.5 border border-blue-100 rounded-full font-bold">Итого по статье: {cat.isSlabBuiltin ? "0" : (cat.cost || 0).toLocaleString()} MDL</span>
@@ -2703,7 +3472,7 @@ export default function App() {
                                               </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-50">
-                                              {getCategoryDetailedItems(cat.id, selectedOption, landSlope, groundwaterDepth).map((item, idx) => {
+                                              {getCategoryDetailedItems(cat.id, selectedOption, landSlope, groundwaterDepth, results).map((item, idx) => {
                                                 const badgeColors = {
                                                   material: "bg-amber-50 text-amber-700 border-amber-200/50",
                                                   delivery: "bg-sky-50 text-sky-700 border-sky-200/50",
@@ -2767,6 +3536,7 @@ export default function App() {
                     </tbody>
                   </table>
                 </div>
+              </div>
               ) : (
                 /* COMPARATIVE VIEW of all foundation variants with descriptions and comments */
                 <div className="space-y-4">
@@ -2932,7 +3702,7 @@ export default function App() {
                                     sectionCostStr = costVal !== undefined ? `${Math.round(costVal).toLocaleString()} MDL` : "—";
                                   }
 
-                                  const items = getCategoryDetailedItems(cat.id, opt, landSlope, groundwaterDepth);
+                                  const items = getCategoryDetailedItems(cat.id, opt, landSlope, groundwaterDepth, results);
 
                                   return (
                                     <div key={opt.id} className={`bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col justify-between shadow-2xs ${border}`}>
@@ -3194,6 +3964,498 @@ export default function App() {
               </div>
             </div>
 
+          </div>
+
+
+          {/* ADVANCED ENGINEERING DECISION SUPPORT & QUALITY CONTROL 2.0 (Stages 2-10) */}
+          <div id="advanced-decision-support" className="bg-white/95 backdrop-blur-md border border-slate-200/60 rounded-[24px] p-6 shadow-sm shadow-slate-200/40 relative overflow-hidden animate-fade-in space-y-6">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+            
+            <div className="pb-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block mb-0.5">NCM F.02.02 / NCM EN 1997 / ISO 31000 ERP</span>
+                <h2 className="text-base font-display font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                  🧠 Экспертная система обеспечения качества и принятия решений (QA 2.0)
+                </h2>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-sans">
+                  Автоматизированный анализ строительных рисков, технологических регламентов и геотехнического соответствия
+                </p>
+              </div>
+              
+              <div className="flex bg-slate-100 p-1 rounded-xl select-none text-[10px] font-extrabold max-w-full overflow-x-auto gap-0.5 shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => setActiveEngTab('risks')}
+                  className={`py-1 px-2 text-center rounded-lg cursor-pointer transition ${
+                    activeEngTab === 'risks' ? "bg-white text-emerald-600 shadow-xs" : "text-slate-500 hover:text-slate-750"
+                  }`}
+                >
+                  ⚡ Оценка Рисков
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveEngTab('geology')}
+                  className={`py-1 px-2 text-center rounded-lg cursor-pointer transition ${
+                    activeEngTab === 'geology' ? "bg-white text-emerald-600 shadow-xs" : "text-slate-500 hover:text-slate-750"
+                  }`}
+                >
+                  🌍 ИГИ и Несущая Способность
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveEngTab('utilities')}
+                  className={`py-1 px-2 text-center rounded-lg cursor-pointer transition ${
+                    activeEngTab === 'utilities' ? "bg-white text-emerald-600 shadow-xs" : "text-slate-500 hover:text-slate-750"
+                  }`}
+                >
+                  💧 Сети и Уклоны
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveEngTab('tech_ops')}
+                  className={`py-1 px-2 text-center rounded-lg cursor-pointer transition ${
+                    activeEngTab === 'tech_ops' ? "bg-white text-emerald-600 shadow-xs" : "text-slate-500 hover:text-slate-750"
+                  }`}
+                >
+                  ❄️ Рабочие Процессы
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveEngTab('explainable')}
+                  className={`py-1 px-2 text-center rounded-lg cursor-pointer transition ${
+                    activeEngTab === 'explainable' ? "bg-white text-emerald-600 shadow-xs" : "text-slate-500 hover:text-slate-750"
+                  }`}
+                >
+                  🎓 ИИ-Обоснование
+                </button>
+              </div>
+            </div>
+
+            {/* TAB CONTENT: 1. RISK ASSESSMENT LEDGER (Stage 2 & 10) */}
+            {activeEngTab === 'risks' && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="p-3.5 bg-slate-50 border border-slate-250/50 rounded-xl">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700 text-xs mb-1">
+                    <Activity className="w-4 h-4 text-emerald-600" />
+                    <span>Карта Рисков Строительной Площадки (ISO 31000 ERP Ledger)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-snug">
+                    Все геоморфологические, сейсмические и гидрологические риски рассчитаны в режиме реального времени на основании геологического профиля застройки и геометрии фундаментного контура.
+                  </p>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full text-left text-xs border-collapse min-w-[700px] font-sans">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200/60 text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                        <th className="py-2 px-3">Код WBS / Код Риска</th>
+                        <th className="py-2 px-3">Геотехническое Описание Риска</th>
+                        <th className="py-2 px-3 text-center">Вероятность (P)</th>
+                        <th className="py-2 px-3 text-center">Ущерб (I)</th>
+                        <th className="py-2 px-3 text-center">Критичность (S)</th>
+                        <th className="py-2 px-3">Проектные Защитные Меры (Mitigation)</th>
+                        <th className="py-2 px-3 text-right">Бюджет (MDL)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-[10.5px]">
+                      {results.risksList.map((risk) => (
+                        <tr key={risk.Risk_ID} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-800">
+                            <div>{risk.Risk_ID}</div>
+                            <div className="text-[8.5px] text-slate-450 font-normal">{risk.WBS_Code}</div>
+                          </td>
+                          <td className="py-2.5 px-3 max-w-[200px]">
+                            <p className="font-semibold text-slate-800">{risk.description}</p>
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1 font-mono text-[8px] text-slate-400">
+                              <span>Norm: {risk.Normative_ID}</span>
+                              <span>Calc: {risk.Calculation_ID}</span>
+                              <span>Insp: {risk.Inspection_ID}</span>
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-mono text-slate-650">{risk.probability}/5</td>
+                          <td className="py-2.5 px-3 text-center font-mono text-slate-650">{risk.impact}/5</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black font-mono ${
+                              risk.severity === 'CRITICAL' ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse' :
+                              risk.severity === 'HIGH' ? 'bg-orange-100 text-orange-850 border border-orange-250' :
+                              risk.severity === 'MEDIUM' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                              'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            }`}>
+                              {risk.severity} ({risk.status})
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 font-sans max-w-[180px] leading-tight">
+                            {risk.mitigation}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">
+                            {risk.mitigation_cost_mdl > 0 ? `+${risk.mitigation_cost_mdl.toLocaleString()}` : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: 2. GEOTECHNICAL ANALYSIS & SOIL PROFILE (Stage 3 & 10) */}
+            {activeEngTab === 'geology' && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Механика Грунтов и Слои основания</span>
+                    <strong className="text-slate-800 text-xs block font-display leading-tight uppercase">
+                      Геологическая развертка под профилем фундамента (γ_s = {results.geology.soil_heterogeneity_factor})
+                    </strong>
+                    <div className="grid grid-cols-2 gap-3 mt-3 text-[10.5px] font-medium text-slate-550 leading-loose">
+                      <div>• Несущий грунт: <strong className="text-slate-800">{results.geology.soil_type}</strong></div>
+                      <div>• Расч. сопротивление: <strong className="text-slate-850">{results.geology.design_soil_resistance} кПа</strong></div>
+                      <div>• Деформация E_avg: <strong className="text-slate-850">{results.geology.deformation_modulus} МПа</strong></div>
+                      <div>• Степень пучения: <strong className="text-slate-850">{results.frostHeavingPercent}%</strong></div>
+                      <div>• Скважин (ИГИ РМ): <strong className="text-slate-850">{results.geology.number_of_boreholes} шт (Н={results.geology.borehole_depth}м)</strong></div>
+                      <div>• Коэф. запаса γ_n: <strong className="text-slate-850">{results.geology.safety_factor}</strong></div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-150 rounded-xl p-3 space-y-2">
+                    <span className="text-[9.5px] font-bold text-emerald-600 block uppercase">Поперечный разрез выработки ИГИ:</span>
+                    <div className="space-y-1.5 font-mono text-[10px]">
+                      {results.geology.soil_layers.map((layer, idx) => (
+                        <div key={idx} className="bg-slate-50 border-l-4 border-emerald-500 p-1.5 rounded-r">
+                          <div className="flex justify-between items-center font-bold">
+                            <span className="text-slate-800 shrink-0">{idx+1}. {layer.name}</span>
+                            <span className="text-slate-500 text-[9px] ml-auto">Th={layer.thickness}м</span>
+                          </div>
+                          <p className="text-[8.5px] text-slate-450 mt-0.5 truncate leading-tight">{layer.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Foundation suitability index comparison under active soil */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {results.geology.suitability_matrix.map((matrix) => {
+                    const rank = results.geology.recommendation_ranking.find(r => r.id === matrix.id);
+                    return (
+                      <div key={matrix.id} className="p-3 bg-white border border-slate-205 rounded-xl flex flex-col justify-between shadow-xs">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <span className="text-slate-400 text-[8px] block font-semibold uppercase">{matrix.id} Вариант</span>
+                            <strong className="text-slate-800 text-xs block">{matrix.type}</strong>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-black ${
+                            matrix.suitability === 'Высокое соответствие' ? 'bg-emerald-50 text-emerald-700' :
+                            matrix.suitability === 'Удовлетворительно' ? 'bg-blue-50 text-blue-700' :
+                            'bg-amber-50 text-amber-700'
+                          }`}>
+                            {matrix.suitability}
+                          </span>
+                        </div>
+                        <ul className="text-[10px] text-slate-550 space-y-1 my-2 list-none font-medium">
+                          <li>• К-во заложений: <strong>h = {results.input.hasBasement ? "1.9м" : "1.2м"}</strong></li>
+                          <li>• Риск усадки: <strong>{matrix.settlementRiskCoeff}x</strong></li>
+                          <li>• Прок. сейсмика: <strong>{results.input.region === 'SOUTH' ? 'Класс С (Особый)' : 'Класс В (Стандарт)'}</strong></li>
+                        </ul>
+                        <div className="border-t border-slate-100 pt-2 flex items-center justify-between mt-1">
+                          <span className="text-[9px] text-slate-400 font-mono">Rank: #{rank?.rank} ({rank?.relativeEfficiencyScore}%)</span>
+                          <span className="text-blue-600 font-extrabold text-[10px]">{rank?.suitabilityNote}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: 3. EXTERIOR UTILITY NETWORKS (Stage 4 & 10) */}
+            {activeEngTab === 'utilities' && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="flex justify-between items-center text-xs font-bold text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <Droplet className="w-4 h-4 text-blue-500" />
+                      Инженерные коммуникации здания (Спецификация раздела НВК/ТСО)
+                    </span>
+                    <span className="font-mono text-blue-600 font-extrabold bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-full text-[10.5px]">
+                      Общая стоимость сетей: {results.utilities.totalCostMDL.toLocaleString()} MDL
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-snug mt-1">
+                    Проектирование вводов питьевой воды, выпусков канализации, систем электроснабжения и слаботочных сетей через толщу подошвы фундамента по нормам СНиП РМ.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-3.5">
+                  {[
+                    { key: 'sewer', title: 'Канализация лотковая d110', label: 'SEWER', icon: Waves },
+                    { key: 'water', title: 'Ввод воды ПНД d32 PN16', label: 'WATER', icon: Droplet },
+                    { key: 'power', title: 'Сила вводная ПНД d50', label: 'POWER', icon: Activity },
+                    { key: 'lowCurrent', title: 'Слаботочные сети ПНД d25', label: 'LOW_CURRENT', icon: Compass },
+                    { key: 'spareSleeves', title: 'Резервные гильзы d160', label: 'SPARE_SLEEVES', icon: Layers }
+                  ].map((sub) => {
+                    const model = (results.utilities as any)[sub.key];
+                    if (!model) return null;
+                    const Icon = sub.icon;
+                    return (
+                      <div key={sub.key} className="bg-white border border-slate-200/90 rounded-2xl p-3 flex flex-col justify-between shadow-xs">
+                        <div>
+                          <div className="flex justify-between items-start mb-2 border-b border-slate-100 pb-1.5">
+                            <div>
+                              <strong className="text-[11px] text-slate-800 block truncate leading-tight">{sub.title}</strong>
+                              <span className="text-[8.5px] text-slate-450 block font-bold font-mono tracking-wider">{sub.label}</span>
+                            </div>
+                            <Icon className="w-4 h-4 text-slate-400" />
+                          </div>
+
+                          <div className="space-y-1.5 my-2">
+                            <span className="text-[8.5px] font-extrabold text-slate-400 block uppercase tracking-wider">📦 Закладные материалы:</span>
+                            <div className="space-y-1 text-[9.5px] leading-tight">
+                              {model.materials.map((mat: any, idx: number) => (
+                                <div key={idx} className="bg-slate-50 p-1.5 rounded text-slate-650">
+                                  <div className="font-semibold text-slate-850 truncate">{mat.name}</div>
+                                  <div className="flex justify-between mt-0.5 text-slate-500 text-[8.5px]">
+                                    <span>Кол-во: {mat.qty} {mat.unit}</span>
+                                    <span>{mat.cost.toLocaleString()} MDL</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <span className="text-[8.5px] font-extrabold text-slate-400 block uppercase tracking-wider mt-2.5">📊 Рассчитанные объемы выпуска:</span>
+                            <div className="text-[9px] font-mono text-slate-550 space-y-0.5 bg-slate-50/50 p-1.5 rounded">
+                              {Object.entries(model.volumes).map(([vk, vv]: any) => (
+                                <div key={vk} className="truncate">
+                                  {vk}: <strong className="text-slate-750 font-bold">{vv}</strong>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-2 flex flex-col gap-1 mt-2.5">
+                          <div className="flex justify-between text-xs items-baseline font-bold">
+                            <span className="text-[9px] text-slate-400">Сумма лота:</span>
+                            <span className="text-blue-600 font-mono">{model.costMDL.toLocaleString()} MDL</span>
+                          </div>
+                          
+                          {/* Quality check for target system */}
+                          {model.qualityChecks.map((qc: any, qidx: number) => (
+                            <div key={qidx} className="bg-slate-50 border-l border-blue-500 p-1 rounded mt-1.5 text-[8.5px] text-slate-500 leading-snug">
+                              <div className="font-extrabold text-[#111] truncate">{qc.criterion}</div>
+                              <div className="font-mono mt-0.5 shrink-0 text-indigo-700 bg-indigo-50 px-1 py-0.5 rounded truncate">{qc.value}</div>
+                              <div className="text-slate-400 text-[7 px] mt-0.5 font-sans leading-tight italic truncate">{qc.norm}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: 4. DETAILED WORK SPECIALIZED MODULES (Stage 5, 6, 7 & 10) */}
+            {activeEngTab === 'tech_ops' && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="flex justify-between items-center text-xs font-bold text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <HardHat className="w-4 h-4 text-orange-500" />
+                      Специализированные Узлы и Климатические технологии производства
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-snug mt-1">
+                    Строгое соблюдение физико-технологических стадий гидратации бетона при экстремальных температурах, расчет объемов обратной засыпки грунта пазух и планирование изолированной отмостки на XPS барьерах от пучения.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  
+                  {/* CONCRETE CURING SECTION (Stage 5 & 10) */}
+                  <div className="bg-white border border-slate-205 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
+                    <div>
+                      <div className="flex justify-between border-b border-slate-100 pb-2 mb-2">
+                        <div>
+                          <strong className="text-xs text-slate-800 block uppercase">💧 Прогрев и Уход Б2.5</strong>
+                          <span className="text-[8.5px] text-slate-450 block font-bold font-mono tracking-widest">WBS SECTION CONCRETE_CURING</span>
+                        </div>
+                        <HardHat className="w-4 h-4 text-[#78716c]" />
+                      </div>
+                      
+                      <div className="text-[9.5px] leading-relaxed text-slate-600 space-y-2 mt-2 font-sans font-medium">
+                        <div className="bg-slate-50 p-2 rounded leading-snug">
+                          <div className="flex justify-between items-center text-[10px] text-slate-700 font-bold border-b border-slate-200/50 pb-1 mb-1">
+                            <span>Т-ра воздуха РМ:</span>
+                            <span className="font-mono text-blue-600">{results.concreteCuring.airTemperatureC}°C</span>
+                          </div>
+                          Метод созревания: <strong className="text-slate-800">{results.concreteCuring.methodDescription}</strong>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <span className="text-[8.5px] font-extrabold text-slate-400 block uppercase">Закупаемый инвентарь:</span>
+                          {results.concreteCuring.materialsNeeded.map((mat: any, idx: number) => (
+                            <div key={idx} className="flex justify-between text-slate-650 bg-slate-50/50 p-1 rounded font-mono text-[9px]">
+                              <span className="truncate max-w-[120px]">{mat.name}</span>
+                              <span className="font-bold shrink-0">{mat.qty} {mat.unit} ({mat.cost.toLocaleString()} MDL)</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="space-y-1 mt-2 bg-slate-50/50 p-2 rounded">
+                          <span className="text-[8.5px] font-extrabold text-slate-400 block uppercase">Требования инспекции (QC):</span>
+                          {results.concreteCuring.qcRequirements.map((qc: any, idx: number) => (
+                            <div key={idx} className="flex items-start gap-1 text-[8.5px] leading-snug text-slate-500">
+                              <span className="text-green-600 shrink-0 mt-0.5">✔</span>
+                              <span><strong>{qc.criterion}:</strong> {qc.norm}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2.5 flex justify-between items-baseline font-bold text-xs mt-3">
+                      <span className="text-[9px] text-slate-400">Сумма прогрева:</span>
+                      <span className="text-blue-600 font-mono">+{results.concreteCuring.totalCostMDL.toLocaleString()} MDL</span>
+                    </div>
+                  </div>
+
+                  {/* BACKFILL SPECIAL SOLVER (Stage 6 & 10) */}
+                  <div className="bg-white border border-slate-205 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
+                    <div>
+                      <div className="flex justify-between border-b border-slate-100 pb-2 mb-2">
+                        <div>
+                          <strong className="text-xs text-slate-800 block uppercase">🚜 Обратная засыпка пазух</strong>
+                          <span className="text-[8.5px] text-slate-450 block font-bold font-mono tracking-widest">WBS SECTION BACKFILL_COMPACTION</span>
+                        </div>
+                        <Truck className="w-4 h-4 text-blue-500" />
+                      </div>
+                      
+                      <div className="text-[9.5px] leading-relaxed text-slate-600 space-y-2 mt-2 font-sans font-medium">
+                        <div className="bg-slate-50 p-2 rounded leading-snug space-y-1 font-mono text-[9px]">
+                          <div>Извлечено грунта: <strong>{results.backfill.excavationM3} м³</strong></div>
+                          <div>Вытеснение бетоном: <strong>{results.backfill.concreteDisplacementM3} м³</strong></div>
+                          <div>Чистый объем пазух: <strong>{results.backfill.netBackfillVolumeM3} м³</strong></div>
+                          <div>Фактор разрыхления K_p: <strong>{results.backfill.soilSwellFactor}x</strong></div>
+                          <div>Плотность K_com: <strong>{results.backfill.densityRequiredT_M3} т/м³</strong></div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <span className="text-[8.5px] font-extrabold text-slate-400 block uppercase">Материалы и Трамбовка:</span>
+                          {results.backfill.materialsNeeded.map((mat: any, idx: number) => (
+                            <div key={idx} className="flex justify-between text-slate-650 bg-slate-50/50 p-1 rounded font-mono text-[9px]">
+                              <span className="truncate max-w-[120px]">{mat.name}</span>
+                              <span className="font-bold shrink-0">{mat.qty} {mat.unit} ({mat.cost.toLocaleString()} MDL)</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="mt-2 text-[8.5px] text-slate-500 leading-snug border border-slate-100 bg-slate-50/50 p-2 rounded">
+                          📌 <strong>Методика уплотнения:</strong> Послойная отсыпка ПГС мелкими картами по 200 мм. 
+                          Проливка водой до достижения оптимума влажности <strong>{results.backfill.optimalMoisturePercent}%</strong>. 
+                          Минимум <strong>{results.backfill.compactionPasses}</strong> холостых проходов тяжелой виброплитой весом не менее 120 кг.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2.5 flex justify-between items-baseline font-bold text-xs mt-3">
+                      <span className="text-[9px] text-slate-450">Сумма засыпки:</span>
+                      <span className="text-blue-600 font-mono">+{results.backfill.totalCostMDL.toLocaleString()} MDL</span>
+                    </div>
+                  </div>
+
+                  {/* STANDALONE BLIND AREA MODULE (Stage 7 & 10) */}
+                  <div className="bg-white border border-slate-205 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
+                    <div>
+                      <div className="flex justify-between border-b border-slate-100 pb-2 mb-2">
+                        <div>
+                          <strong className="text-xs text-slate-800 block uppercase">☔ Защитная Отмостка с XPS</strong>
+                          <span className="text-[8.5px] text-slate-450 block font-bold font-mono tracking-widest">WBS SECTION BLIND_AREA</span>
+                        </div>
+                        <HardHat className="w-4 h-4 text-emerald-500" />
+                      </div>
+                      
+                      <div className="text-[9.5px] leading-relaxed text-slate-600 space-y-2 mt-2 font-sans font-medium">
+                        <div className="bg-slate-50 p-2 rounded leading-snug space-y-1 font-mono text-[9px]">
+                          <div>Периметр здания: <strong>{results.blindArea.perimeterM} м.п.</strong></div>
+                          <div>Принятая ширина отмостки: <strong>{results.blindArea.blindAreaWidthM} м</strong></div>
+                          <div>Выемка основания: <strong>{results.blindArea.excavationVolumeM3} м³</strong></div>
+                          <div>Контурное утепление XPS: <strong>{results.blindArea.insulationXpsM3} м³</strong></div>
+                          <div>Подсыпка гравием: <strong>{results.blindArea.gravelBaseM3} м³</strong></div>
+                          <div>Бетонирование отмостки: <strong>{results.blindArea.concreteC20_25M3} м³</strong></div>
+                          <div>Сетка армирования: <strong>{results.blindArea.reinforcingMeshKg} кг</strong></div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <span className="text-[8.5px] font-extrabold text-slate-400 block uppercase">Позиции отмостки:</span>
+                          {results.blindArea.materialsNeeded.map((mat: any, idx: number) => (
+                            <div key={idx} className="flex justify-between text-slate-650 bg-slate-50/50 p-1 rounded font-mono text-[9px]">
+                              <span className="truncate max-w-[125px]">{mat.name}</span>
+                              <span className="font-bold shrink-0">{mat.qty} {mat.unit} ({mat.cost.toLocaleString()} MDL)</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="mt-2 text-[8.5px] text-slate-500 leading-snug border border-slate-100 bg-emerald-50/20 p-2 rounded">
+                          📌 <strong>Технологический узел:</strong> Покрытие отмостки армируется сеткой d8 100х100 в верхнем слое и утепляется контурной XPS плитой толщиной 50-80 мм для увода фронта теплообмена и недопущения вспучивания примыкающего суглинка у цоколя.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2.5 flex justify-between items-baseline font-bold text-xs mt-3">
+                      <span className="text-[9px] text-slate-450">Сумма отмостки:</span>
+                      <span className="text-blue-600 font-mono">+{results.blindArea.totalCostMDL.toLocaleString()} MDL</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: 5. EXPLAINABLE ARTIFICIAL INTELLIGENCE ENGINEERING (Stage 9) */}
+            {activeEngTab === 'explainable' && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700 text-xs mb-1">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span>Прозрачное проектное обоснование AI-DSS (Explainable Engineering)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-snug">
+                    Система наглядно объясняет научные мотивы каждого принятого решения, устраняя "черный ящик" ИИ. Все расчеты ссылаются на климатические и геотехнические нормативы Республики Молдова.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {results.explanations.map((exp, idx) => (
+                    <div key={idx} className="p-4 bg-white border border-slate-205 rounded-xl flex flex-col justify-between shadow-xs">
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5 border-b border-slate-100 pb-1.5">
+                          <strong className="text-slate-800 text-xs">{exp.optionName}</strong>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-extrabold ${
+                            exp.isRecommended ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          }`}>
+                            ID: {exp.optionId}
+                          </span>
+                        </div>
+
+                        <ul className="text-[10.5px] text-slate-650 space-y-2.5 list-none font-medium leading-relaxed my-3 pl-0.5">
+                          {exp.reasons.map((reason, ri) => (
+                            <li key={ri} className="flex items-start gap-1.5">
+                              <span className="text-blue-500 text-xs mt-0.5 shrink-0">✔</span>
+                              <span>{reason}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="border-t border-slate-100 pt-2.5 flex justify-between items-center mt-2 text-[10px] text-slate-550 italic leading-snug">
+                        <span>{exp.verdict}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* EUROCODE & NCM STRUCTURAL LOAD DESIGNS & COMBINATIONS PASSPORT */}

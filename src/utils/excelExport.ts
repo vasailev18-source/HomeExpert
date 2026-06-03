@@ -649,7 +649,9 @@ export async function generateExcelWorkbook(
   selectedOption: FoundationOption | null,
   landSlope: number,
   groundwaterDepth: number,
-  detailedItemsFetcher: (catId: string, opt: any, slope: number, gw: number) => any[]
+  detailedItemsFetcher: (catId: string, opt: any, slope: number, gw: number) => any[],
+  scopeSettings?: Record<string, any>,
+  sectionsActive?: Record<string, any>
 ): Promise<ExcelJS.Workbook> {
   const workbook = new ExcelJS.Workbook();
   const mainOpt = selectedOption || results.options.find(o => o.id === "slab") || results.options[0];
@@ -1128,6 +1130,12 @@ export async function generateExcelWorkbook(
   addNormativesSheet(workbook);
   addRiskAnalysisSheet(workbook, results);
 
+  if (scopeSettings) {
+    addProjectStatusSheet(workbook, scopeSettings, sectionsActive || {});
+  } else {
+    addProjectStatusSheet(workbook, {}, {});
+  }
+
   return workbook;
 }
 
@@ -1452,7 +1460,9 @@ export async function exportToExcel(
   selectedOption: FoundationOption,
   landSlope: number,
   groundwaterDepth: number,
-  detailedItemsFetcher: (catId: string, opt: any, slope: number, gw: number) => any[]
+  detailedItemsFetcher: (catId: string, opt: any, slope: number, gw: number) => any[],
+  scopeSettings?: Record<string, any>,
+  sectionsActive?: Record<string, any>
 ) {
   const workbook = await generateExcelWorkbook(
     input,
@@ -1460,7 +1470,9 @@ export async function exportToExcel(
     selectedOption,
     landSlope,
     groundwaterDepth,
-    detailedItemsFetcher
+    detailedItemsFetcher,
+    scopeSettings,
+    sectionsActive
   );
 
   const buffer = await workbook.xlsx.writeBuffer();
@@ -1476,7 +1488,9 @@ export async function exportAllToExcel(
   results: CalculationResults,
   landSlope: number,
   groundwaterDepth: number,
-  detailedItemsFetcher: (catId: string, opt: any, slope: number, gw: number) => any[]
+  detailedItemsFetcher: (catId: string, opt: any, slope: number, gw: number) => any[],
+  scopeSettings?: Record<string, any>,
+  sectionsActive?: Record<string, any>
 ) {
   const workbook = await generateExcelWorkbook(
     input,
@@ -1484,11 +1498,163 @@ export async function exportAllToExcel(
     null, // Sequential comparative rendering
     landSlope,
     groundwaterDepth,
-    detailedItemsFetcher
+    detailedItemsFetcher,
+    scopeSettings,
+    sectionsActive
   );
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const fileName = `Sravnitelnaya_Smeta_Fundamentov_Ultimate_Moldova.xlsx`;
   saveAs(blob, fileName);
+}
+
+export function addProjectStatusSheet(
+  workbook: ExcelJS.Workbook,
+  scopeSettings: Record<string, any>,
+  sectionsActive: Record<string, any>
+) {
+  const ws = workbook.addWorksheet("PROJECT_STATUS");
+  ws.views = [{ showGridLines: true }];
+  
+  ws.columns = [
+    { header: "Код/Раздел ID", key: "id", width: 15 },
+    { header: "Наименование конструкции / работы", key: "name", width: 45 },
+    { header: "Включено в смету (Include_In_Estimate)", key: "included", width: 25 },
+    { header: "Материал заказчика (Owner_Supplied)", key: "ownerSupplied", width: 25 },
+    { header: "Уже закуплено (Already_Purchased)", key: "purchased", width: 25 },
+    { header: "Уже завершено (Already_Completed)", key: "completed", width: 25 },
+    { header: "Опциональный (Optional_Item)", key: "optional", width: 25 },
+  ];
+
+  // Title block
+  ws.getRow(1).height = 28;
+  ws.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
+  ws.getRow(1).eachCell((cell) => {
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF3F51B5" }
+    };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+  });
+
+  const allPos = [
+    { id: "01", name: "Бетон М300 (C20/25)" },
+    { id: "02", name: "Арматурный прокат" },
+    { id: "03", name: "Вязка каркасов и работы" },
+    { id: "04", name: "Разработка грунта (JCB)" },
+    { id: "05", name: "Щитовая опалубка" },
+    { id: "06", name: "Устройство подушки" },
+    { id: "07", name: "Изоляция и XPS цоколя" },
+    { id: "08", name: "Дренажная система" },
+    { id: "09", name: "Уступные компенсаторы" },
+    { id: "10", name: "Черновой пол" },
+    { id: "11", name: "Бурение со скважинами" },
+    { id: "curing", name: "Уход за бетоном" },
+    { id: "backfill", name: "Обратная засыпка" },
+    { id: "blind_area", name: "Защитная отмостка" },
+    { id: "utility_water", name: "Ввод воды" },
+    { id: "utility_sewer", name: "Канализация вывода" },
+    { id: "utility_power", name: "Электрозащитный ввод" },
+    { id: "utility_low", name: "Слаботочные контуры" },
+    { id: "utility_reserve", name: "Резервные рукава" },
+    { id: "13", name: "Проектирование" },
+    { id: "14", name: "Инженерная геология" },
+    { id: "15", name: "Государственная экспертиза" },
+    { id: "16", name: "Технический надзор" }
+  ];
+
+  allPos.forEach((p, idx) => {
+    const setting = scopeSettings[p.id] || {
+      included: true,
+      ownerSupplied: false,
+      purchased: false,
+      completed: false,
+      optional: false,
+    };
+
+    const row = ws.addRow({
+      id: p.id,
+      name: p.name,
+      included: setting.included ? "TRUE" : "FALSE",
+      ownerSupplied: setting.ownerSupplied ? "TRUE" : "FALSE",
+      purchased: setting.purchased ? "TRUE" : "FALSE",
+      completed: setting.completed ? "TRUE" : "FALSE",
+      optional: setting.optional ? "TRUE" : "FALSE",
+    });
+
+    const argb = idx % 2 === 0 ? "FFF9FAFC" : "FFFFFFFF";
+    row.eachCell((cell, colNum) => {
+      cell.fill = {
+         type: "pattern",
+         pattern: "solid",
+         fgColor: { argb }
+      };
+      cell.font = { name: "Arial", size: 9 };
+      cell.border = {
+        bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
+        top: { style: "thin", color: { argb: "FFE2E8F0" } },
+        left: { style: "thin", color: { argb: "FFE2E8F0" } },
+        right: { style: "thin", color: { argb: "FFE2E8F0" } },
+      };
+      
+      if (colNum >= 3) {
+        cell.alignment = { horizontal: "center" };
+        if (cell.value === "TRUE") {
+          cell.font = { bold: true, color: { argb: "FF1B5E20" } }; // Dark green
+        } else {
+          cell.font = { color: { argb: "FFB71C1C" } }; // Dark red
+        }
+      }
+    });
+  });
+
+  // Summary sections block
+  const startRow = 27;
+  ws.mergeCells(`A${startRow}:G${startRow}`);
+  const titleCell = ws.getCell(`A${startRow}`);
+  titleCell.value = "СВОДНЫЙ СТАТУС ВЫПОЛНЕНИЯ БЮДЖЕТА (BUDGET EXECUTION METRICS)";
+  titleCell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
+  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1A237E" } };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(startRow).height = 24;
+
+  const shRow = ws.getRow(startRow + 1);
+  shRow.getCell(1).value = "Показатель затрат (Cost Indicator)";
+  ws.mergeCells(`A${startRow + 1}:C${startRow + 1}`);
+  shRow.getCell(4).value = "Статус отслеживания в смете";
+  ws.mergeCells(`D${startRow + 1}:G${startRow + 1}`);
+  shRow.font = { bold: true };
+  shRow.eachCell(c => {
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EAF6" } };
+  });
+
+  const boqMetrics = [
+    "Полная стоимость проекта (Total project raw cost)",
+    "Стоимость материалов к закупке (Materials to purchase)",
+    "Стоимость оставшихся СМР (Labour works remaining)",
+    "Стоимость уже выкупленных материалов (Already purchased)",
+    "Стоимость уже выполненных работ (Already completed)",
+    "Экономия за счёт материалов заказчика (Owner-supplied savings)"
+  ];
+
+  boqMetrics.forEach((metric, metricIdx) => {
+    const rIdx = startRow + 2 + metricIdx;
+    ws.mergeCells(`A${rIdx}:C${rIdx}`);
+    ws.mergeCells(`D${rIdx}:G${rIdx}`);
+    ws.getCell(`A${rIdx}`).value = metric;
+    ws.getCell(`A${rIdx}`).font = { name: "Arial", size: 9 };
+    
+    ws.getCell(`D${rIdx}`).value = "Считается динамически в приложении";
+    ws.getCell(`D${rIdx}`).font = { italic: true, color: { argb: "FF455A64" }, name: "Arial", size: 9 };
+    ws.getCell(`D${rIdx}`).alignment = { horizontal: "center" };
+    
+    ws.getRow(rIdx).height = 20;
+    ["A","B","C","D","E","F","G"].forEach(col => {
+      ws.getCell(`${col}${rIdx}`).border = {
+        bottom: { style: "thin", color: { argb: "FFE2E8F0" } }
+      };
+    });
+  });
 }

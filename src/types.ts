@@ -96,6 +96,7 @@ export interface SoilDetails {
 
 // Structural properties needed for calculation
 export interface CalculatorInput {
+  projectId?: string;
   region: MoldovaRegion;
   customSoilType?: SoilType;
   customSoilResistance?: number; // User custom inputs if any
@@ -233,7 +234,7 @@ export interface BIMEntityMaterial {
 
 export interface BIMQualityCheck {
   criterion: string;
-  status: "PASS" | "WARNING" | "FAIL";
+  status: "PASS" | "WARNING" | "FAIL" | "CRITICAL";
   value: string;
   norm: string;
 }
@@ -248,6 +249,15 @@ export interface BIMEntity {
   costMDL: number;
   dependencies: string[];
   qualityChecks: BIMQualityCheck[];
+
+  // BIM & ERP Metadata (Stage 10)
+  Project_ID?: string;
+  Element_ID?: string;
+  WBS_Code?: string;
+  Risk_ID?: string;
+  Normative_ID?: string;
+  Calculation_ID?: string;
+  Inspection_ID?: string;
 }
 
 export interface GeologyLayer {
@@ -257,28 +267,99 @@ export interface GeologyLayer {
 }
 
 export interface GeologyDetails {
-  soil_type: SoilType;
-  design_soil_resistance: number; // kPa
-  groundwater_level: number; // meters
-  freezing_depth: number; // meters
-  deformation_modulus: number; // MPa (Eavg)
+  // BIM & ERP Metadata (Stage 10)
+  Project_ID?: string;
+  Element_ID?: string;
+  WBS_Code?: string;
+  Risk_ID?: string;
+  Normative_ID?: string;
+  Calculation_ID?: string;
+  Inspection_ID?: string;
+
+  soil_type?: SoilType; // legacy support
+  design_soil_resistance?: number; // legacy support
+  groundwater_level?: number; // legacy support
+  freezing_depth?: number; // legacy support
+  deformation_modulus?: number; // legacy support
+
+  Soil_Type: SoilType;
+  Design_Resistance: number; // kPa
+  Groundwater_Level: number; // meters
+  Deformation_Modulus: number; // MPa
+  Porosity: number;
+  Frost_Heave_Index: number;
+  Weak_Layer_Depth: number;
+  Soil_Heterogeneity: number;
+  Borehole_Count: number;
+  Borehole_Depth: number;
+  Safety_Factor: number;
+
   soil_layers: GeologyLayer[];
-  weak_layer_depth: number; // meters
-  soil_heterogeneity_factor: number;
-  safety_factor: number;
-  number_of_boreholes: number;
-  borehole_depth: number;
+
+  // Expert Geotechnical Decision Output (Stage 3)
+  suitabilitySlab: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL";
+  suitabilityStrip: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL";
+  suitabilityPiles: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL";
+  suitabilityUSH: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL";
+
+  scoreSlab: number;
+  scoreStrip: number;
+  scorePiles: number;
+  scoreUSH: number;
+
+  reasonSlab: string;
+  reasonStrip: string;
+  reasonPiles: string;
+  reasonUSH: string;
+
+  ratingOptions: { id: string; name: string; score: number; rank: number }[];
+  soil_heterogeneity_factor?: number;
+  number_of_boreholes?: number;
+  borehole_depth?: number;
+  safety_factor?: number;
+  suitability_matrix: {
+    id: string;
+    type: string;
+    suitability: string;
+    settlementRiskCoeff: number;
+  }[];
+  recommendation_ranking: {
+    id: string;
+    rank: number;
+    relativeEfficiencyScore: number;
+    suitabilityNote: string;
+  }[];
+}
+
+export interface UtilitySubsystemWork {
+  name: string;
+  qty: number;
+  unit: string;
+  cost: number;
 }
 
 export interface UtilitySubsystem {
+  // BIM & ERP Metadata (Stage 10)
+  Project_ID?: string;
+  Element_ID?: string;
+  WBS_Code?: string;
+  Risk_ID?: string;
+  Normative_ID?: string;
+  Calculation_ID?: string;
+  Inspection_ID?: string;
+
   id: "SEWER" | "WATER" | "POWER" | "LOW_CURRENT" | "SPARE_SLEEVES";
   nameRu: string;
   nameRo: string;
   materials: BIMEntityMaterial[];
+  works: UtilitySubsystemWork[];
   volumes: Record<string, string | number>;
+  materialCostMDL: number;
+  workCostMDL: number;
   costMDL: number;
   dependencies: string[];
   qualityChecks: BIMQualityCheck[];
+  risks: string[];
 }
 
 export interface UtilitiesModel {
@@ -288,6 +369,139 @@ export interface UtilitiesModel {
   lowCurrent: UtilitySubsystem;
   spareSleeves: UtilitySubsystem;
   totalCostMDL: number;
+}
+
+export interface ConcreteCuringModel {
+  // BIM & ERP Metadata (Stage 10)
+  Project_ID?: string;
+  Element_ID?: string;
+  WBS_Code?: string;
+  Risk_ID?: string;
+  Normative_ID?: string;
+  Calculation_ID?: string;
+  Inspection_ID?: string;
+
+  hasCuringSection: boolean;
+  peFilmAreaM2: number;
+  peFilmCostMDL: number;
+  moisturizingDays: number;
+  moisturizingVolumeM3: number;
+  moisturizingCostMDL: number;
+  winterProtectionRequired: boolean;
+  winterCostMDL: number;
+  antifreezeAdditiveQtyKg: number;
+  antifreezeAdditiveCostMDL: number;
+  holdingDays: number;
+  totalCostMDL: number;
+  materials: BIMEntityMaterial[];
+  works: UtilitySubsystemWork[];
+  qualityChecks: BIMQualityCheck[];
+  risks: string[];
+
+  // Dynamic values accessed by UI
+  airTemperatureC?: number;
+  methodDescription?: string;
+  materialsNeeded?: BIMEntityMaterial[];
+  qcRequirements?: BIMQualityCheck[];
+}
+
+export interface BackfillModel {
+  // BIM & ERP Metadata (Stage 10)
+  Project_ID?: string;
+  Element_ID?: string;
+  WBS_Code?: string;
+  Risk_ID?: string;
+  Normative_ID?: string;
+  Calculation_ID?: string;
+  Inspection_ID?: string;
+
+  excavationVolumeM3: number;
+  constructionVolumeM3: number;
+  backfillVolumeM3: number;
+  materialName: string;
+  materialQtyM3: number;
+  materialCostMDL: number;
+  compactionRuns: number;
+  compactionCoeff: number;
+  workCostMDL: number;
+  totalCostMDL: number;
+  materials: BIMEntityMaterial[];
+  works: UtilitySubsystemWork[];
+  qualityChecks: BIMQualityCheck[];
+
+  // Dynamic values accessed by UI
+  excavationM3?: number;
+  concreteDisplacementM3?: number;
+  netBackfillVolumeM3?: number;
+  soilSwellFactor?: number;
+  densityRequiredT_M3?: number;
+  materialsNeeded?: BIMEntityMaterial[];
+  optimalMoisturePercent?: number;
+  compactionPasses?: number;
+}
+
+export interface BlindAreaModel {
+  // BIM & ERP Metadata (Stage 10)
+  Project_ID?: string;
+  Element_ID?: string;
+  WBS_Code?: string;
+  Risk_ID?: string;
+  Normative_ID?: string;
+  Calculation_ID?: string;
+  Inspection_ID?: string;
+
+  areaM2: number;
+  widthM: number;
+  thicknessMM: number;
+  concreteVolumeM3: number;
+  concreteCostMDL: number;
+  rebarWeightKg: number;
+  rebarCostMDL: number;
+  xpsVolumeM3: number;
+  xpsCostMDL: number;
+  preparationSandM3: number;
+  preparationSandCostMDL: number;
+  workCostMDL: number;
+  totalCostMDL: number;
+  materials: BIMEntityMaterial[];
+  works: UtilitySubsystemWork[];
+  qualityChecks: BIMQualityCheck[];
+
+  // Dynamic values accessed by UI
+  perimeterM?: number;
+  blindAreaWidthM?: number;
+  excavationVolumeM3?: number;
+  insulationXpsM3?: number;
+  gravelBaseM3?: number;
+  concreteC20_25M3?: number;
+  reinforcingMeshKg?: number;
+  materialsNeeded?: BIMEntityMaterial[];
+}
+
+export interface RiskItem {
+  Risk_ID: string;
+  Project_ID?: string;
+  Element_ID?: string;
+  WBS_Code?: string;
+  Normative_ID?: string;
+  Calculation_ID?: string;
+  Inspection_ID?: string;
+
+  description: string;
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  probability: number;
+  impact: number;
+  status: "ACTIVE" | "MITIGATED";
+  mitigation: string;
+  mitigation_cost_mdl?: number;
+}
+
+export interface OptionExplanation {
+  optionId: string;
+  optionName: string;
+  isRecommended: boolean;
+  reasons: string[];
+  verdict: string;
 }
 
 export interface FoundationOption {
@@ -306,6 +520,21 @@ export interface FoundationOption {
   widthM: number;
   depthM: number;
   bimEntities: BIMEntity[];
+  
+  costScore?: number;
+  riskScore?: number;
+  energyScore?: number;
+  geologyScore?: number;
+  totalScore?: number;
+
+  // BIM & ERP Metadata (Stage 10)
+  Project_ID?: string;
+  Element_ID?: string;
+  WBS_Code?: string;
+  Risk_ID?: string;
+  Normative_ID?: string;
+  Calculation_ID?: string;
+  Inspection_ID?: string;
 }
 
 export interface CalculationResults {
@@ -339,7 +568,7 @@ export interface CalculationResults {
   scenarioASnowDominantTons: number; // Scenario A: Snow Dominant
   scenarioBLiveDominantTons: number; // Scenario B: Live Load Dominant
   seismicMassCombinationTons: number; // Accidental/Seismic Mass Combination
-
+  
   // Required bearing area
   bearingAreaRequiredM2: number;
   
@@ -362,9 +591,14 @@ export interface CalculationResults {
   collapsibilityPercent: number;
   floodingPercent: number;
 
-  // Comprehensive additions
+  // Comprehensive additions (Stage 3, 4, 5, 6, 7, 9)
   geology: GeologyDetails;
   utilities: UtilitiesModel;
+  concreteCuring: ConcreteCuringModel;
+  backfill: BackfillModel;
+  blindArea: BlindAreaModel;
+  risksList: RiskItem[];
+  explanations: OptionExplanation[];
 }
 
 export interface ChatMessage {

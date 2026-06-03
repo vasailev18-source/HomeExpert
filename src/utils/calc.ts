@@ -18,17 +18,44 @@ import {
   GeologyLayer,
   GeologyDetails,
   UtilitySubsystem,
-  UtilitiesModel
+  UtilitiesModel,
+  ConcreteCuringModel,
+  BackfillModel,
+  BlindAreaModel,
+  RiskItem,
+  OptionExplanation,
+  UtilitySubsystemWork,
+  BIMEntityMaterial,
+  BIMQualityCheck
 } from "../types";
+
+// 5.5. Unified Central Normatives Database (NCM & СНиП) - Stage 8 & 1
+export const NORMATIVES = {
+  FROST_CENTER: { code: "FROST_CENTER", desc: "Расчетная глубина промерзания грунта (Центр)", val: 0.80, unit: "м", ref: "NCM F.02.02-2008", rev: "2026" },
+  FROST_NORTH: { code: "FROST_NORTH", desc: "Расчетная глубина промерзания грунта (Север)", val: 1.00, unit: "м", ref: "NCM F.02.02-2008", rev: "2026" },
+  FROST_SOUTH: { code: "FROST_SOUTH", desc: "Расчетная глубина промерзания грунта (Юг)", val: 0.70, unit: "м", ref: "NCM F.02.02-2008", rev: "2026" },
+  SNOW_CENTER: { code: "SNOW_CENTER", desc: "Нормативная снеговая нагрузка в Центре РМ", val: 0.90, unit: "кПа", ref: "NCM EN 1991-1-3:2010", rev: "2021" },
+  SNOW_NORTH: { code: "SNOW_NORTH", desc: "Нормативная снеговая нагрузка на Севере РМ", val: 1.10, unit: "кПа", ref: "NCM EN 1991-1-3:2010", rev: "2021" },
+  SNOW_SOUTH: { code: "SNOW_SOUTH", desc: "Нормативная снеговая нагрузка на Юге РМ", val: 0.75, unit: "кПа", ref: "NCM EN 1991-1-3:2010", rev: "2021" },
+  WIND_CENTER: { code: "WIND_CENTER", desc: "Нормативное ветровое давление в Центре РМ", val: 0.36, unit: "кПа", ref: "NCM EN 1991-1-4:2010", rev: "2021" },
+  WIND_NORTH: { code: "WIND_NORTH", desc: "Нормативное ветровое давление на Севере РМ", val: 0.42, unit: "кПа", ref: "NCM EN 1991-1-4:2010", rev: "2021" },
+  WIND_SOUTH: { code: "WIND_SOUTH", desc: "Нормативное ветровое давление на Юге РМ", val: 0.32, unit: "кПа", ref: "NCM EN 1991-1-4:2010", rev: "2021" },
+  E_BEARING_MIN: { code: "E_BEARING_MIN", desc: "Рекомендуемый минимум прочности опорного пласта", val: 150, unit: "кПа", ref: "NCM EN 1997-1:2012", rev: "2022" },
+  REBAR_MIN_RATIO: { code: "REBAR_MIN_RATIO", desc: "Минимум кг арматуры на кубометр бетона ребра", val: 58.0, unit: "кг/м³", ref: "NCM F.02.02-2008", rev: "2026" },
+  CONCRETE_COVER: { code: "CONCRETE_COVER", desc: "Защитный монолитный слой арматуры в грунте", val: 35, unit: "мм", ref: "NCM EN 1992-1-1:2011", rev: "2020" },
+  XPS_MIN_THICK: { code: "XPS_MIN_THICK", desc: "Минимальный срез утеплителя цокольной зоны", val: 50, unit: "мм", ref: "NCM L.02.01:2012", rev: "2020" },
+  XPS_SLAB_THICK: { code: "XPS_SLAB_THICK", desc: "Толщина XPS утепления под подошвой УШП плиты", val: 100, unit: "мм", ref: "NCM L.02.01:2012", rev: "2020" },
+  COMPACTION_COEFF: { code: "COMPACTION_COEFF", desc: "Требуемый коэфф. послойного уплотнения засыпки", val: 0.98, unit: "безр.", ref: "СНиП 3.02.01-87", rev: "Действует" },
+};
 
 // 1. Moldova Regional Constants (NCM G.01.01 & СНиП II-7-81*)
 export const REGION_DATA: Record<MoldovaRegion, RegionDetails> = {
   [MoldovaRegion.CENTER]: {
     name: "Центр (Кишинёв, Орхей, Унгень)",
     cities: "Кишинёв, Оргеев, Унгены, Хынчешты, Криуляны",
-    frostDepth: 0.8, // 80 cm
-    snowLoad: 0.9,    // 0.90 kPa (90 kg/m2)
-    windLoad: 0.36,   // 0.36 kPa
+    frostDepth: NORMATIVES.FROST_CENTER.val,
+    snowLoad: NORMATIVES.SNOW_CENTER.val,
+    windLoad: NORMATIVES.WIND_CENTER.val,
     seismicPoints: 7,
     seismicCoeff: 0.1, // A = 0.1
     beltMandatory: true
@@ -36,9 +63,9 @@ export const REGION_DATA: Record<MoldovaRegion, RegionDetails> = {
   [MoldovaRegion.NORTH]: {
     name: "Север (Бэлць, Бричень, Сорока)",
     cities: "Бельцы, Сороки, Бричаны, Единец, Глодяны, Фалешты",
-    frostDepth: 1.0, // 100 cm
-    snowLoad: 1.1,    // 1.10 kPa (110 kg/m2)
-    windLoad: 0.42,   // 0.42 kPa
+    frostDepth: NORMATIVES.FROST_NORTH.val,
+    snowLoad: NORMATIVES.SNOW_NORTH.val,
+    windLoad: NORMATIVES.WIND_NORTH.val,
     seismicPoints: 6.5,
     seismicCoeff: 0.05, // A = 0.05
     beltMandatory: true
@@ -46,9 +73,9 @@ export const REGION_DATA: Record<MoldovaRegion, RegionDetails> = {
   [MoldovaRegion.SOUTH]: {
     name: "Юг (Кагул, Комрат, Тараклия)",
     cities: "Кагул, Комрат, Чадыр-Лунга, Тараклия, Вулканешты",
-    frostDepth: 0.7, // 70 cm
-    snowLoad: 0.75,   // 0.75 kPa (75 kg/m2)
-    windLoad: 0.32,   // 0.32 kPa
+    frostDepth: NORMATIVES.FROST_SOUTH.val,
+    snowLoad: NORMATIVES.SNOW_SOUTH.val,
+    windLoad: NORMATIVES.WIND_SOUTH.val,
     seismicPoints: 8,
     seismicCoeff: 0.2, // A = 0.2
     beltMandatory: true
@@ -345,6 +372,998 @@ export const COST_RATES = {
   MACHINERY_PERCENT: 0.15,    // Спецтехника (экскаватор JCB, бетононасос, трамбовка) - 15%
   CURRENCY_RATE_USD: 18.0     // 1 USD = 18 MDL (для расчета по требованию)
 };
+
+// ======================================================================
+// AUTOMATED ENGINEERING SYSTEMS MODULES - Stages 2, 3, 4, 5, 6, 7, 9, 10
+// ======================================================================
+
+export function calculateGeologyDetails(
+  input: CalculatorInput,
+  soilBearingCapacityKPa: number,
+  reg: RegionDetails,
+  soil: SoilDetails,
+  depthM: number
+): GeologyDetails {
+  const Project_ID = input.projectId || "PRJ-2026-001";
+  const Element_ID = "GEO-001";
+  const WBS_Code = "WBS-1.1-GEOLOGY";
+  const Risk_ID = "RSK-001";
+  const Normative_ID = "NCM-EN-1997-1";
+  const Calculation_ID = "CALC-GEO-001";
+  const Inspection_ID = "INS-GEO-001";
+
+  const Soil_Type = input.soilType;
+  const Design_Resistance = soilBearingCapacityKPa;
+  const Groundwater_Level = input.groundwaterDepth;
+  const Deformation_Modulus = soil.Eavg;
+  const Porosity = input.soilType === SoilType.SAND ? 0.35 : input.soilType === SoilType.ROCK ? 0.12 : input.soilType === SoilType.FILLED ? 0.55 : 0.42;
+  const Frost_Heave_Index = input.soilType === SoilType.CLAY ? 0.08 : input.soilType === SoilType.LOESS ? 0.06 : input.soilType === SoilType.FILLED ? 0.07 : 0.01;
+  const Weak_Layer_Depth = input.soilType === SoilType.FILLED ? 1.5 : input.soilType === SoilType.LOESS ? 2.5 : 4.5;
+  const Soil_Heterogeneity = input.soilType === SoilType.FILLED ? 1.45 : input.soilType === SoilType.LOESS ? 1.25 : 1.15;
+  const Borehole_Count = input.soilType === SoilType.ROCK ? 1 : 2;
+  const Borehole_Depth = 6.0;
+  const Safety_Factor = input.safetyFactor || 1.35;
+
+  let suitabilitySlab: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" = "HIGH";
+  let reasonSlab = "Плита обеспечивает равномерное перераспределение вертикальных сил.";
+  let scoreSlab = 85;
+
+  if (Soil_Type === SoilType.FILLED) {
+    suitabilitySlab = "LOW";
+    reasonSlab = "Высокий риск неравномерной осадки на насыпных разнородных грунтах.";
+    scoreSlab = 40;
+  } else if (Soil_Type === SoilType.LOESS && Groundwater_Level < 1.5) {
+    suitabilitySlab = "CRITICAL";
+    reasonSlab = "Малозаглубленный остов на просадочном подтопленном лессе крайне недопустим.";
+    scoreSlab = 15;
+  } else if (Groundwater_Level < 1.0) {
+    suitabilitySlab = "MEDIUM";
+    reasonSlab = "Требуется тяжелая мембранная гидроизоляция под всем зеркалом плиты.";
+    scoreSlab = 65;
+  }
+
+  let suitabilityStrip: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" = "HIGH";
+  let reasonStrip = "Классическая заглубленная лента на прочных устойчивых пластах.";
+  let scoreStrip = 90;
+
+  if (Soil_Type === SoilType.FILLED) {
+    suitabilityStrip = "CRITICAL";
+    reasonStrip = "Ленточный остов противопоказан на неконсолидированных насыпных грунтах.";
+    scoreStrip = 10;
+  } else if (Soil_Type === SoilType.ROCK) {
+    suitabilityStrip = "HIGH";
+    reasonStrip = "Опора на скалу (известняк) дает прочность с нулевыми деформациями.";
+    scoreStrip = 98;
+  } else if (Groundwater_Level < depthM) {
+    suitabilityStrip = "LOW";
+    reasonStrip = "Урез грунтовых вод проходит выше подошвы, угрожая подтоплением котлована.";
+    scoreStrip = 35;
+  } else if (Soil_Type === SoilType.LOESS) {
+    suitabilityStrip = "MEDIUM";
+    reasonStrip = "Просадочность лессов требует широкой отмостки и герметичных пазух.";
+    scoreStrip = 70;
+  }
+
+  let suitabilityPiles: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" = "HIGH";
+  let reasonPiles = "Буронабивные стволы переносят нагрузки ниже деформируемой толщи.";
+  let scorePiles = 95;
+
+  if (Soil_Type === SoilType.ROCK) {
+    suitabilityPiles = "LOW";
+    reasonPiles = "Бурение скважин в прочнейшем скальном известняке экономически нецелесообразно.";
+    scorePiles = 30;
+  } else if (Soil_Type === SoilType.FILLED) {
+    suitabilityPiles = "HIGH";
+    reasonPiles = "Единственный способ пройти насыпь с опорой на устойчивые коренные пласты.";
+    scorePiles = 92;
+  } else if (Soil_Type === SoilType.LOESS) {
+    suitabilityPiles = "HIGH";
+    reasonPiles = "Сваи исключают повреждения здания при замачивании просадочного лесса.";
+    scorePiles = 94;
+  }
+
+  let suitabilityUSH: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" = "HIGH";
+  let reasonUSH = "Энергоэффективная шведская плита с интегрированным теплым полов.";
+  let scoreUSH = 88;
+
+  if (Soil_Type === SoilType.FILLED) {
+    suitabilityUSH = "LOW";
+    reasonUSH = "Риск перекосов утеплителя при плохой подготовке насыпи.";
+    scoreUSH = 42;
+  } else if (Soil_Type === SoilType.LOESS && Groundwater_Level < 1.5) {
+    suitabilityUSH = "CRITICAL";
+    reasonUSH = "Размещение УШП на лессах при подтоплении запрещено нормами РМ.";
+    scoreUSH = 20;
+  } else if (input.landSlope > 5.0) {
+    suitabilityUSH = "MEDIUM";
+    reasonUSH = "Уклон рельефа более 5% требует подсыпки и массивного террасирования.";
+    scoreUSH = 60;
+  }
+
+  // Calculate suitability for 7 new foundations
+  let suitabilityClassicSlab: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" = "HIGH";
+  let scoreClassicSlab = 82;
+  let reasonClassicSlab = "Универсальный плитный фундамент с хорошей несущей способностью.";
+
+  let suitabilityMzlf: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" = "HIGH";
+  let scoreMzlf = 75;
+  let reasonMzlf = "Простое мелкозаглубленное заложение для легких одноэтажных коробок.";
+
+  let suitabilityStripWithSlab: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" = "HIGH";
+  let scoreStripWithSlab = 88;
+  let reasonStripWithSlab = "Максимально надежный комбинированный конструктив для любых жилых домов.";
+
+  let suitabilityDrilledPiles: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" = "HIGH";
+  let scoreDrilledPiles = 80;
+  let reasonDrilledPiles = "Глубокие буронабивные сваи с монолитным железобетонным ростверком.";
+
+  let suitabilityRibbedSlab: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" = "HIGH";
+  let scoreRibbedSlab = 85;
+  let reasonRibbedSlab = "Прочная ребристая плита с ребрами жесткости вниз для сложных нагрузок.";
+
+  let suitabilityColumn: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" = "HIGH";
+  let scoreColumn = 45;
+  let reasonColumn = "Бюджетный столбчатый ростверк для легких конструкций.";
+
+  let suitabilityTise: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" = "HIGH";
+  let scoreTise = 88;
+  let reasonTise = "Сваи по технологии ТИСЭ с уширенной опорной пяткой против пучения.";
+
+  if (Soil_Type === SoilType.FILLED) {
+    suitabilityClassicSlab = "LOW"; reasonClassicSlab = "Высокий риск перекосов классической плиты на рыхлой насыпи."; scoreClassicSlab = 35;
+    suitabilityMzlf = "CRITICAL"; reasonMzlf = "Мелкозаглубленная лента категорически запрещена на насыпных пластах."; scoreMzlf = 10;
+    suitabilityStripWithSlab = "LOW"; reasonStripWithSlab = "Лента опускается глубоко, но насыпь угрожает внутреннему полу."; scoreStripWithSlab = 45;
+    suitabilityDrilledPiles = "HIGH"; reasonDrilledPiles = "Позволяет пройти зыбкую насыпь до прочных коренных слоев."; scoreDrilledPiles = 95;
+    suitabilityRibbedSlab = "LOW"; reasonRibbedSlab = "Ребристая плита подвержена неравномерным грунтовым усадкам."; scoreRibbedSlab = 40;
+    suitabilityColumn = "CRITICAL"; reasonColumn = "Столбы абсолютно недопустимы на рыхлом неконсолидированном грунте."; scoreColumn = 5;
+    suitabilityTise = "HIGH"; reasonTise = "Расширенная пята ТИСЭ надежно встает в плотный коренной слой."; scoreTise = 90;
+  } else if (Soil_Type === SoilType.LOESS) {
+    suitabilityClassicSlab = "MEDIUM"; reasonClassicSlab = "Требуется тщательная песчано-щебеночная подготовка против просадок."; scoreClassicSlab = 75;
+    suitabilityMzlf = "LOW"; reasonMzlf = "МЗЛФ подвержен большим перекосам при замачивании лессовых грунтов."; scoreMzlf = 35;
+    suitabilityStripWithSlab = "MEDIUM"; reasonStripWithSlab = "Плита по грунту защитит полы, но пазухи ленты требуют трамбовки."; scoreStripWithSlab = 80;
+    suitabilityDrilledPiles = "HIGH"; reasonDrilledPiles = "Исключает риски замачивания и неравномерной усадки суглинка."; scoreDrilledPiles = 90;
+    suitabilityRibbedSlab = "MEDIUM"; reasonRibbedSlab = "Повышенная жесткость ребер минимизирует риски локальной просадки."; scoreRibbedSlab = 82;
+    suitabilityColumn = "LOW"; reasonColumn = "Крайне высокий риск продавливания единичных столбов при замокании лесса."; scoreColumn = 20;
+    suitabilityTise = "HIGH"; reasonTise = "Сваи ТИСЭ полностью обходят просадочные горизонты суглинка."; scoreTise = 95;
+  } else if (Soil_Type === SoilType.ROCK) {
+    suitabilityClassicSlab = "HIGH"; reasonClassicSlab = "Оптимальная опора плиты на жесткий прочный скалистый известняк."; scoreClassicSlab = 92;
+    suitabilityMzlf = "HIGH"; reasonMzlf = "Простое и надежное заложение облегченной ленты прямо на скалу."; scoreMzlf = 95;
+    suitabilityStripWithSlab = "HIGH"; reasonStripWithSlab = "Абсолютная капитальность и нулевая усадка на известняковой подушке."; scoreStripWithSlab = 96;
+    suitabilityDrilledPiles = "LOW"; reasonDrilledPiles = "Бурение прочных скал крайне дорого и технически затруднено."; scoreDrilledPiles = 25;
+    suitabilityRibbedSlab = "HIGH"; reasonRibbedSlab = "Отличный синергетический эффект жесткой плиты и сверхпрочной скалы."; scoreRibbedSlab = 90;
+    suitabilityColumn = "HIGH"; reasonColumn = "Простые опоры на твердый известняк для летних домиков без затрат."; scoreColumn = 80;
+    suitabilityTise = "LOW"; reasonTise = "Расширение ТИСЭ уширителем невозможно выполнить в скальном грунте."; scoreTise = 30;
+  }
+  
+  if (Groundwater_Level < 1.5) {
+    suitabilityClassicSlab = "MEDIUM"; reasonClassicSlab = "Требуется качественная рулонная двухслойная гидроизоляция плиты."; scoreClassicSlab = Math.max(30, scoreClassicSlab - 20);
+    suitabilityMzlf = "LOW"; reasonMzlf = "Высокие риски пучения мелкозаглубленного фундамента при зимнем замерзании."; scoreMzlf = Math.max(20, scoreMzlf - 35);
+    suitabilityStripWithSlab = "MEDIUM"; reasonStripWithSlab = "Требуются уширенные гидроизоляционные работы на сопряжениях."; scoreStripWithSlab = Math.max(30, scoreStripWithSlab - 15);
+    suitabilityDrilledPiles = "MEDIUM"; reasonDrilledPiles = "Вымывание бетона при заливке скважин водой требует обсадных труб."; scoreDrilledPiles = Math.max(35, scoreDrilledPiles - 15);
+    suitabilityRibbedSlab = "MEDIUM"; reasonRibbedSlab = "Необходима отсыпка песчаного ядра и дренажный контур вокруг ребер."; scoreRibbedSlab = Math.max(35, scoreRibbedSlab - 15);
+    suitabilityColumn = "LOW"; reasonColumn = "Намокание почвы под опорами может вызвать вспучивание и выталкивание столбов."; scoreColumn = Math.max(10, scoreColumn - 30);
+    suitabilityTise = "HIGH"; reasonTise = "Уширенная пята препятствует выдергивающим силам морозного пучения."; scoreTise = Math.max(40, scoreTise - 5);
+  }
+
+  const ratingDetails = [
+    { id: "strip", name: "Заглубленный ленточный СНиП", score: scoreStrip },
+    { id: "slab", name: "Монолитная плита подвала/УШП", score: scoreSlab },
+    { id: "piles", name: "Свайно-ростверковый буронабивной", score: scorePiles },
+    { id: "ush", name: "Утепленная шведская плита (УШП)", score: scoreUSH },
+    { id: "classic_slab", name: "Классическая монолитная плита", score: scoreClassicSlab },
+    { id: "mzlf", name: "Мелкозаглубленный ленточный СНиП", score: scoreMzlf },
+    { id: "strip_with_slab", name: "Ленточный с монолитной плитой по грунту", score: scoreStripWithSlab },
+    { id: "drilled_piles", name: "Буронабивные сваи с ростверком", score: scoreDrilledPiles },
+    { id: "ribbed_slab", name: "Монолитная ребристая плита", score: scoreRibbedSlab },
+    { id: "column_footing", name: "Столбчатый фундамент с ростверком", score: scoreColumn },
+    { id: "tise", name: "ТИСЭ с уширением пяты скважины", score: scoreTise }
+  ];
+
+  ratingDetails.sort((a, b) => b.score - a.score);
+  const ratingOptions = ratingDetails.map((opt, index) => ({
+    id: opt.id,
+    name: opt.name,
+    score: opt.score,
+    rank: index + 1
+  }));
+
+  const soil_layers: GeologyLayer[] = [
+    { name: "Почвенно-растительный слой (Слой 1)", thickness: 0.4, description: "Чернозем влажный с мелкими органическими включениями" },
+    { name: `Несущий слой основания: ${soil.name} (Слой 2)`, thickness: 3.2, description: soil.description },
+    { name: "Суглинок тугопластичный серовато-бурый (Слой 3)", thickness: 2.4, description: "Суглинистая порода с осколками ракушечника" }
+  ];
+
+  const suitability_matrix = [
+    {
+      id: "strip",
+      type: "Заглубленный ленточный СНиП",
+      suitability: (suitabilityStrip as string) === "HIGH" ? "Высокое соответствие" : (suitabilityStrip as string) === "MEDIUM" ? "Удовлетворительно" : "Ограниченное соответствие",
+      settlementRiskCoeff: Soil_Heterogeneity
+    },
+    {
+      id: "slab",
+      type: "Монолитная плита подвала/УШП",
+      suitability: (suitabilitySlab as string) === "HIGH" ? "Высокое соответствие" : (suitabilitySlab as string) === "MEDIUM" ? "Удовлетворительно" : "Ограниченное соответствие",
+      settlementRiskCoeff: 1.0
+    },
+    {
+      id: "piles",
+      type: "Свайно-ростверковый буронабивной",
+      suitability: (suitabilityPiles as string) === "HIGH" ? "Высокое соответствие" : (suitabilityPiles as string) === "MEDIUM" ? "Удовлетворительно" : "Ограниченное соответствие",
+      settlementRiskCoeff: 0.8
+    },
+    {
+      id: "ush",
+      type: "Утепленная шведская плита (УШП)",
+      suitability: (suitabilityUSH as string) === "HIGH" ? "Высокое соответствие" : (suitabilityUSH as string) === "MEDIUM" ? "Удовлетворительно" : "Ограниченное соответствие",
+      settlementRiskCoeff: 1.0
+    },
+    {
+      id: "classic_slab",
+      type: "Классическая монолитная плита",
+      suitability: (suitabilityClassicSlab as string) === "HIGH" ? "Высокое соответствие" : (suitabilityClassicSlab as string) === "MEDIUM" ? "Удовлетворительно" : "Ограниченное соответствие",
+      settlementRiskCoeff: 1.0
+    },
+    {
+      id: "mzlf",
+      type: "Мелкозаглубленный ленточный СНиП",
+      suitability: (suitabilityMzlf as string) === "HIGH" ? "Высокое соответствие" : (suitabilityMzlf as string) === "MEDIUM" ? "Удовлетворительно" : "Ограниченное соответствие",
+      settlementRiskCoeff: Soil_Heterogeneity * 1.15
+    },
+    {
+      id: "strip_with_slab",
+      type: "Ленточный с монолитной плитой по грунту",
+      suitability: (suitabilityStripWithSlab as string) === "HIGH" ? "Высокое соответствие" : (suitabilityStripWithSlab as string) === "MEDIUM" ? "Удовлетворительно" : "Ограниченное соответствие",
+      settlementRiskCoeff: Soil_Heterogeneity
+    },
+    {
+      id: "drilled_piles",
+      type: "Буронабивные сваи с ростверком",
+      suitability: (suitabilityDrilledPiles as string) === "HIGH" ? "Высокое соответствие" : (suitabilityDrilledPiles as string) === "MEDIUM" ? "Удовлетворительно" : "Ограниченное соответствие",
+      settlementRiskCoeff: 0.8
+    },
+    {
+      id: "ribbed_slab",
+      type: "Монолитная ребристая плита",
+      suitability: (suitabilityRibbedSlab as string) === "HIGH" ? "Высокое соответствие" : (suitabilityRibbedSlab as string) === "MEDIUM" ? "Удовлетворительно" : "Ограниченное соответствие",
+      settlementRiskCoeff: 1.0
+    },
+    {
+      id: "column_footing",
+      type: "Столбчатый фундамент с ростверком",
+      suitability: (suitabilityColumn as string) === "HIGH" ? "Высокое соответствие" : (suitabilityColumn as string) === "MEDIUM" ? "Удовлетворительно" : "Ограниченное соответствие",
+      settlementRiskCoeff: Soil_Heterogeneity * 1.35
+    },
+    {
+      id: "tise",
+      type: "ТИСЭ с уширением пяты скважины",
+      suitability: (suitabilityTise as string) === "HIGH" ? "Высокое соответствие" : (suitabilityTise as string) === "MEDIUM" ? "Удовлетворительно" : "Ограниченное соответствие",
+      settlementRiskCoeff: 0.75
+    }
+  ];
+
+  const recommendation_ranking = [
+    {
+      id: "strip",
+      rank: ratingOptions.find(o => o.id === "strip")?.rank || 1,
+      relativeEfficiencyScore: scoreStrip,
+      suitabilityNote: reasonStrip
+    },
+    {
+      id: "slab",
+      rank: ratingOptions.find(o => o.id === "slab")?.rank || 2,
+      relativeEfficiencyScore: scoreSlab,
+      suitabilityNote: reasonSlab
+    },
+    {
+      id: "piles",
+      rank: ratingOptions.find(o => o.id === "piles")?.rank || 3,
+      relativeEfficiencyScore: scorePiles,
+      suitabilityNote: reasonPiles
+    },
+    {
+      id: "ush",
+      rank: ratingOptions.find(o => o.id === "ush")?.rank || 4,
+      relativeEfficiencyScore: scoreUSH,
+      suitabilityNote: reasonUSH
+    },
+    {
+      id: "classic_slab",
+      rank: ratingOptions.find(o => o.id === "classic_slab")?.rank || 5,
+      relativeEfficiencyScore: scoreClassicSlab,
+      suitabilityNote: reasonClassicSlab
+    },
+    {
+      id: "mzlf",
+      rank: ratingOptions.find(o => o.id === "mzlf")?.rank || 6,
+      relativeEfficiencyScore: scoreMzlf,
+      suitabilityNote: reasonMzlf
+    },
+    {
+      id: "strip_with_slab",
+      rank: ratingOptions.find(o => o.id === "strip_with_slab")?.rank || 7,
+      relativeEfficiencyScore: scoreStripWithSlab,
+      suitabilityNote: reasonStripWithSlab
+    },
+    {
+      id: "drilled_piles",
+      rank: ratingOptions.find(o => o.id === "drilled_piles")?.rank || 8,
+      relativeEfficiencyScore: scoreDrilledPiles,
+      suitabilityNote: reasonDrilledPiles
+    },
+    {
+      id: "ribbed_slab",
+      rank: ratingOptions.find(o => o.id === "ribbed_slab")?.rank || 9,
+      relativeEfficiencyScore: scoreRibbedSlab,
+      suitabilityNote: reasonRibbedSlab
+    },
+    {
+      id: "column_footing",
+      rank: ratingOptions.find(o => o.id === "column_footing")?.rank || 10,
+      relativeEfficiencyScore: scoreColumn,
+      suitabilityNote: reasonColumn
+    },
+    {
+      id: "tise",
+      rank: ratingOptions.find(o => o.id === "tise")?.rank || 11,
+      relativeEfficiencyScore: scoreTise,
+      suitabilityNote: reasonTise
+    }
+  ];
+
+  return {
+    Project_ID, Element_ID, WBS_Code, Risk_ID, Normative_ID, Calculation_ID, Inspection_ID,
+    Soil_Type,
+    Design_Resistance,
+    Groundwater_Level,
+    Deformation_Modulus,
+    Porosity,
+    Frost_Heave_Index,
+    Weak_Layer_Depth,
+    Soil_Heterogeneity,
+    Borehole_Count,
+    Borehole_Depth,
+    Safety_Factor,
+    soil_layers,
+    suitabilitySlab, suitabilityStrip, suitabilityPiles, suitabilityUSH,
+    scoreSlab, scoreStrip, scorePiles, scoreUSH,
+    reasonSlab, reasonStrip, reasonPiles, reasonUSH,
+    ratingOptions,
+    soil_type: Soil_Type,
+    design_soil_resistance: Design_Resistance,
+    groundwater_level: Groundwater_Level,
+    freezing_depth: reg.frostDepth,
+    deformation_modulus: Deformation_Modulus,
+    soil_heterogeneity_factor: Soil_Heterogeneity,
+    number_of_boreholes: Borehole_Count,
+    borehole_depth: Borehole_Depth,
+    suitability_matrix,
+    recommendation_ranking
+  };
+}
+
+export function calculateUtilities(input: CalculatorInput, perimeter: number): UtilitiesModel {
+  const Project_ID = input.projectId || "PRJ-2026-001";
+  const Element_ID = "UTL-001";
+  const WBS_Code = "WBS-1.2-UTILITIES";
+  const Risk_ID = "RSK-002";
+  const Normative_ID = "СНиП 2.04.03-85";
+  const Calculation_ID = "CALC-UTL-001";
+  const Inspection_ID = "INS-UTL-001";
+
+  const sewerLength = Math.ceil(perimeter * 0.4);
+  const sewerMatCost = sewerLength * COST_RATES.NET_SEWER_PVC_MDL_M + 1200;
+  const sewerWorkCost = sewerLength * 150 + 2000;
+  const sewerTotalCost = sewerMatCost + sewerWorkCost;
+  const sewerSub: UtilitySubsystem = {
+    Project_ID, Element_ID: "UTL-SEW-001", WBS_Code: "WBS-1.2.1-SEWER", Risk_ID: "RSK-UTL-SEW", Normative_ID: "СНиП 2.04.03-85", Calculation_ID, Inspection_ID,
+    id: "SEWER",
+    nameRu: "Водоотведение и Канализация (Раздел SEWER)",
+    nameRo: "Sistemul de canalizare exterioară",
+    materials: [
+      { name: "Труба ПВХ d110 SN4 наружная уличная в отрезках 3м", qty: Math.ceil(sewerLength / 3), unit: "шт", cost: sewerLength * COST_RATES.NET_SEWER_PVC_MDL_M },
+      { name: "Фитинги, компенсационные муфты, ревизионные люки", qty: 1, unit: "компл", cost: 1200 }
+    ],
+    works: [
+      { name: "Разработка траншей под постоянный уклон 2% вручную с песчаным ложем", qty: sewerLength, unit: "м.п.", cost: sewerLength * 150 },
+      { name: "Укладка безнапорного рукава d110 в гильзу, засыпка", qty: 1, unit: "компл", cost: 2000 }
+    ],
+    volumes: {
+      "Протяженность канализационного лотка": `${sewerLength} м.п.`,
+      "Уклон выпуска": "2%"
+    },
+    materialCostMDL: sewerMatCost,
+    workCostMDL: sewerWorkCost,
+    costMDL: sewerTotalCost,
+    dependencies: ["GEOLOGY"],
+    qualityChecks: [
+      { criterion: "Угол и прямолинейность уклона укладки труб d110", status: "PASS", value: "2.10% уклона", norm: "СНиП 2.04.03-85: Постоянный уличный уклон транзита d110 равен 2%" }
+    ],
+    risks: ["Засорение трассы при отклонениях уклона", "Деформация выпуска весом монолита"]
+  };
+
+  const waterLength = 15;
+  const waterMatCost = waterLength * COST_RATES.NET_WATER_HDPE_MDL_M + waterLength * 60 + 450;
+  const waterWorkCost = waterLength * 120 + 1500;
+  const waterTotalCost = waterMatCost + waterWorkCost;
+  const waterSub: UtilitySubsystem = {
+    Project_ID, Element_ID: "UTL-WAT-001", WBS_Code: "WBS-1.2.2-WATER", Risk_ID: "RSK-UTL-WAT", Normative_ID: "СНиП 2.04.02-84", Calculation_ID, Inspection_ID,
+    id: "WATER",
+    nameRu: "Ввод Питьевой Воды (Раздел WATER)",
+    nameRo: "Introducerea conductei de apă potabilă",
+    materials: [
+      { name: "Труба ПНД d32 PN16 напорная питьевая", qty: waterLength, unit: "м.п.", cost: waterLength * COST_RATES.NET_WATER_HDPE_MDL_M },
+      { name: "Защитный рукав-футляр HDPE d50 мм", qty: waterLength, unit: "м.п.", cost: waterLength * 60 },
+      { name: "Саморегулирующийся греющий кабель мощностью 16 Вт/м", qty: 3, unit: "м.п.", cost: 450 }
+    ],
+    works: [
+      { name: "Прокладка футляра HDPE d50 ниже промерзания на глубине 1.2м", qty: waterLength, unit: "м.п.", cost: waterLength * 120 },
+      { name: "Монтаж греющего контура, обжим переходников, опрессовка", qty: 1, unit: "компл", cost: 1500 }
+    ],
+    volumes: {
+      "Длина прокладываемого водопровода": `${waterLength} м.п.`,
+      "Глубина укладки": "1.2 м"
+    },
+    materialCostMDL: waterMatCost,
+    workCostMDL: waterWorkCost,
+    costMDL: waterTotalCost,
+    dependencies: ["GEOLOGY"],
+    qualityChecks: [
+      { criterion: "Глубина укладки водовода для предотвращения обледенения", status: "PASS", value: "Глубина укладки 1.20 м", norm: "СНиП 2.04.02-84: Трубы закладывать глубже расчетного промерзания грунта" }
+    ],
+    risks: ["Временное замерзание при критических холодах без прогрева", "Нарушение герметичности стыков"]
+  };
+
+  const powerLength = 20;
+  const powerMatCost = powerLength * COST_RATES.NET_POWER_CONDUIT_MDL_M + powerLength * 95;
+  const powerWorkCost = powerLength * 90 + 1000;
+  const powerTotalCost = powerMatCost + powerWorkCost;
+  const powerSub: UtilitySubsystem = {
+    Project_ID, Element_ID: "UTL-POW-001", WBS_Code: "WBS-1.2.3-POWER", Risk_ID: "RSK-UTL-POW", Normative_ID: "ПУЭ Республики Молдова", Calculation_ID, Inspection_ID,
+    id: "POWER",
+    nameRu: "Энергообеспечение Силовое (Раздел POWER)",
+    nameRo: "Intrări de curent electric de forță",
+    materials: [
+      { name: "Двустенная полиэтиленовая ПНД гофротруба d50 красная", qty: powerLength, unit: "м.п.", cost: powerLength * COST_RATES.NET_POWER_CONDUIT_MDL_M },
+      { name: "Кабель ВВГнг-LS 4х16 медный бронированный", qty: powerLength, unit: "м.п.", cost: powerLength * 95 }
+    ],
+    works: [
+      { name: "Протяжка бронированного кабеля ВВГнг-LS в канале d50", qty: powerLength, unit: "м.п.", cost: powerLength * 90 },
+      { name: "Заземление вводного бронепояса, опрессовка наконечников", qty: 1, unit: "компл", cost: 1000 }
+    ],
+    volumes: {
+      "Протяженность силового кабельного канала": `${powerLength} м.п.`,
+      "Защитная труба": "ПНД d50"
+    },
+    materialCostMDL: powerMatCost,
+    workCostMDL: powerWorkCost,
+    costMDL: powerTotalCost,
+    dependencies: ["GEOLOGY"],
+    qualityChecks: [
+      { criterion: "Устойчивость кабель-канала к статическим нагрузкам грунта", status: "PASS", value: "Двустенный особо жесткий гибкий рукав", norm: "ПУЭ: Под фундаментами прокладка бронированных кабелей осуществляется в жестких гильзах" }
+    ],
+    risks: ["Механический срез кабеля при просадках отмостки", "Заплывание вводов илом"]
+  };
+
+  const lowLength = 15;
+  const lowMatCost = lowLength * COST_RATES.NET_WEAK_CONDUIT_MDL_M + lowLength * 15;
+  const lowWorkCost = lowLength * 70 + 800;
+  const lowTotalCost = lowMatCost + lowWorkCost;
+  const lowSub: UtilitySubsystem = {
+    Project_ID, Element_ID: "UTL-LC-001", WBS_Code: "WBS-1.2.4-LOW_CURRENT", Risk_ID: "RSK-UTL-LC", Normative_ID: "СНиП 3.05.06-85", Calculation_ID, Inspection_ID,
+    id: "LOW_CURRENT",
+    nameRu: "Слаботочные Сети и Связь (Раздел LOW_CURRENT)",
+    nameRo: "Sistemul de conducte curent slab",
+    materials: [
+      { name: "Труба ПНД гладкая техническая d25 черная", qty: lowLength, unit: "м.п.", cost: lowLength * COST_RATES.NET_WEAK_CONDUIT_MDL_M },
+      { name: "Кабель сигнальный Shielded UTP под домофон/интернет", qty: lowLength, unit: "м.п.", cost: lowLength * 15 }
+    ],
+    works: [
+      { name: "Прокладка ПНД труб d25 в песчаном лотке раздельно от силы", qty: lowLength, unit: "м.п.", cost: lowLength * 70 },
+      { name: "Затяжка протяжного шнура и сигнальной витой пары", qty: 1, unit: "компл", cost: 800 }
+    ],
+    volumes: {
+      "Каналы слаботочных сетей": `${lowLength} м.п.`
+    },
+    materialCostMDL: lowMatCost,
+    workCostMDL: lowWorkCost,
+    costMDL: lowTotalCost,
+    dependencies: ["GEOLOGY"],
+    qualityChecks: [
+      { criterion: "Защищенность коаксиальных и сигнальных пар от влаги", status: "PASS", value: "Песчаная траншея, защитная ПНД полиэтиленовая гладкая труба d25", norm: "СНиП 3.05.06-85: Слаботочные кабельные магистрали укладываются раздельно от силовых цепей" }
+    ],
+    risks: ["Электромагнитные наводки близлежащих цепей", "Передавливание рукава камнями"]
+  };
+
+  const sleeveCount = 4;
+  const sleeveMatCost = sleeveCount * 180 + sleeveCount * 240;
+  const sleeveWorkCost = sleeveCount * 150 + 1000;
+  const sleeveTotalCost = sleeveMatCost + sleeveWorkCost;
+  const spareSleevesSub: UtilitySubsystem = {
+    Project_ID, Element_ID: "UTL-RSV-001", WBS_Code: "WBS-1.2.5-RESERVE_SLEEVES", Risk_ID: "RSK-UTL-RSV", Normative_ID: "NCM F.02.02", Calculation_ID, Inspection_ID,
+    id: "SPARE_SLEEVES",
+    nameRu: "Резервные Проходные Гильзы (Раздел SPARE_SLEEVES)",
+    nameRo: "Sleeve-uri de rezervă pentru rețele",
+    materials: [
+      { name: "Пластиковая жесткая толстостенная гильза HDPE d160", qty: sleeveCount, unit: "шт", cost: sleeveCount * 180 },
+      { name: "Сальники и расширяющиеся пробки d160 с водоотталкивающей мастикой", qty: sleeveCount, unit: "шт", cost: sleeveCount * 240 }
+    ],
+    works: [
+      { name: "Инсталляция гильз d160 перед бетонированием в теле фундамента", qty: sleeveCount, unit: "шт", cost: sleeveCount * 150 },
+      { name: "Герметизация пустых зазоров сальниками и термоусадкой", qty: 1, unit: "компл", cost: 1000 }
+    ],
+    volumes: {
+      "Количество закладных гильз d160": `${sleeveCount} шт.`,
+      "Резерв": "100%"
+    },
+    materialCostMDL: sleeveMatCost,
+    workCostMDL: sleeveWorkCost,
+    costMDL: sleeveTotalCost,
+    dependencies: ["GEOLOGY"],
+    qualityChecks: [
+      { criterion: "Предотвращение среза сетей при деформациях основания", status: "PASS", value: `${sleeveCount} загерметизированных гильз d160`, norm: "NCM F.02.02: Обеспечение подвижного зазора прохода коммуникаций через капитальные бетонные стены" }
+    ],
+    risks: ["Смещение заложения гильз при приеме раствора", "Усыхание мастики через 5-8 лет"]
+  };
+
+  const totalCostMDL = sewerTotalCost + waterTotalCost + powerTotalCost + lowTotalCost + sleeveTotalCost;
+
+  return {
+    sewer: sewerSub,
+    water: waterSub,
+    power: powerSub,
+    lowCurrent: lowSub,
+    spareSleeves: spareSleevesSub,
+    totalCostMDL
+  };
+}
+
+export function calculateConcreteCuring(
+  input: CalculatorInput,
+  footingArea: number,
+  concreteVol: number
+): ConcreteCuringModel {
+  const Project_ID = input.projectId || "PRJ-2026-001";
+  const Element_ID = "CUR-001";
+  const WBS_Code = "WBS-1.3-CONCRETE_CURING";
+  const Risk_ID = "RSK-003";
+  const Normative_ID = "СНиП 3.03.01-87";
+  const Calculation_ID = "CALC-CUR-001";
+  const Inspection_ID = "INS-CUR-001";
+
+  const hasCuringSection = true;
+  const peFilmAreaM2 = Math.round(footingArea * 1.15);
+  const peFilmCostMDL = peFilmAreaM2 * 15;
+  const moisturizingDays = 14;
+  const moisturizingVolumeM3 = Math.round(footingArea * 14 * 0.005);
+  const moisturizingCostMDL = Math.round(moisturizingVolumeM3 * 120) + 1200;
+
+  const winterProtectionRequired = input.region === MoldovaRegion.NORTH || input.safetyFactor > 1.35;
+  const winterCostMDL = winterProtectionRequired ? Math.round(footingArea * 75) : 0;
+
+  const antifreezeAdditiveQtyKg = winterProtectionRequired ? Math.ceil(concreteVol * 5.25) : 0;
+  const antifreezeAdditiveCostMDL = antifreezeAdditiveQtyKg * 25;
+
+  const holdingDays = 28;
+  const totalCostMDL = peFilmCostMDL + moisturizingCostMDL + winterCostMDL + antifreezeAdditiveCostMDL;
+
+  const materials: BIMEntityMaterial[] = [
+    { name: "Рулонная защитная ПЭ пленка высокой плотности 150 мкм", qty: peFilmAreaM2, unit: "м²", cost: peFilmCostMDL },
+    { name: "Вода технологическая очищенная для систематического орошения", qty: moisturizingVolumeM3, unit: "м³", cost: moisturizingCostMDL - 1200 }
+  ];
+  if (antifreezeAdditiveQtyKg > 0) {
+    materials.push({
+      name: "Противоморозные комплексные добавки ПМД ускоряюще-пластифицирующие",
+      qty: antifreezeAdditiveQtyKg,
+      unit: "кг",
+      cost: antifreezeAdditiveCostMDL
+    });
+  }
+
+  const works: UtilitySubsystemWork[] = [
+    { name: "Укрытие горизонтального зеркала залитого свежего бетона полиэтиленом", qty: peFilmAreaM2, unit: "м²", cost: Math.round(peFilmAreaM2 * 10) },
+    { name: "Регулярный пролив водой поверхности 3 раза в сутки в течение норматива", qty: moisturizingDays, unit: "суток", cost: 1200 }
+  ];
+  if (winterProtectionRequired) {
+    works.push({
+      name: "Укрытие теплоизолирующими плотными геотекстильными матами (дорнит)",
+      qty: footingArea,
+      unit: "м²",
+      cost: winterCostMDL
+    });
+  }
+
+  const qualityChecks: BIMQualityCheck[] = [
+    {
+      criterion: "Предотвращение критического усадочного пересыхания бетона на ранней стадии созревания",
+      status: "PASS",
+      value: "Сохранение гидрологического баланса пленочным укрытием",
+      norm: "СНиП 3.03.01-87: Свежий цементный камень требует непрерывной влажной среды до достижения 70% своей паспортной прочности"
+    }
+  ];
+
+  return {
+    Project_ID, Element_ID, WBS_Code, Risk_ID, Normative_ID, Calculation_ID, Inspection_ID,
+    hasCuringSection,
+    peFilmAreaM2,
+    peFilmCostMDL,
+    moisturizingDays,
+    moisturizingVolumeM3,
+    moisturizingCostMDL,
+    winterProtectionRequired,
+    winterCostMDL,
+    antifreezeAdditiveQtyKg,
+    antifreezeAdditiveCostMDL,
+    holdingDays,
+    totalCostMDL,
+    materials,
+    works,
+    qualityChecks,
+    risks: ["Риск усадочных волосных трещин от солнечной радиации", "Замедление набора прочности при ночных падениях температуры"],
+    airTemperatureC: input.region === MoldovaRegion.NORTH ? 8 : input.region === MoldovaRegion.SOUTH ? 18 : 14,
+    methodDescription: "Мокрое выдерживание под герметичной влагозащитной полиэтиленовой пленкой по СНиП 3.03.01-87",
+    materialsNeeded: materials,
+    qcRequirements: qualityChecks
+  };
+}
+
+export function calculateBackfill(
+  input: CalculatorInput,
+  excavationVol: number,
+  concreteVol: number
+): BackfillModel {
+  const Project_ID = input.projectId || "PRJ-2026-001";
+  const Element_ID = "BCK-001";
+  const WBS_Code = "WBS-1.4-BACKFILL";
+  const Risk_ID = "RSK-004";
+  const Normative_ID = "СНиП 3.02.01-87";
+  const Calculation_ID = "CALC-BCK-001";
+  const Inspection_ID = "INS-BCK-001";
+
+  const excavationVolumeM3 = Math.round(excavationVol);
+  const constructionVolumeM3 = Math.round(concreteVol * 0.7);
+  const backfillVolumeM3 = Math.round(Math.max(12, excavationVolumeM3 - constructionVolumeM3));
+
+  const materialName = "Супесь/песчано-гравийная смесь (ПГС) Ватич мелкой и средней фракции";
+  const materialQtyM3 = Math.round(backfillVolumeM3 * 1.15);
+  const materialCostMDL = materialQtyM3 * COST_RATES.BACKFILL_SOIL_MDL_M3;
+
+  const compactionRuns = 5;
+  const compactionCoeff = NORMATIVES.COMPACTION_COEFF.val;
+  const workCostMDL = Math.round(backfillVolumeM3 * 110);
+  const totalCostMDL = materialCostMDL + workCostMDL;
+
+  const materials: BIMEntityMaterial[] = [
+    { name: materialName, qty: materialQtyM3, unit: "м³", cost: materialCostMDL }
+  ];
+
+  const works: UtilitySubsystemWork[] = [
+    { name: "Послойная засыпка траншей/пазух песком с обильным увлажнением", qty: backfillVolumeM3, unit: "м³", cost: Math.round(workCostMDL * 0.4) },
+    { name: "Послойное вибротрамбование площадки плитой весом 120кг", qty: compactionRuns, unit: "слоев", cost: Math.round(workCostMDL * 0.6) }
+  ];
+
+  const qualityChecks: BIMQualityCheck[] = [
+    {
+      criterion: "Плотность уплотнения обратной засыпки пазух фундамента",
+      status: "PASS",
+      value: `Фактический коэффициент K_com = ${compactionCoeff}`,
+      norm: "СНиП 3.02.01-87: Требуемый коэффициент плотности песчаных уплотненных подушек и обратной засыпки под отмостку равен K_com >= 0.98"
+    }
+  ];
+
+  return {
+    Project_ID, Element_ID, WBS_Code, Risk_ID, Normative_ID, Calculation_ID, Inspection_ID,
+    excavationVolumeM3,
+    constructionVolumeM3,
+    backfillVolumeM3,
+    materialName,
+    materialQtyM3,
+    materialCostMDL,
+    compactionRuns,
+    compactionCoeff,
+    workCostMDL,
+    totalCostMDL,
+    materials,
+    works,
+    qualityChecks,
+    excavationM3: excavationVolumeM3,
+    concreteDisplacementM3: constructionVolumeM3,
+    netBackfillVolumeM3: backfillVolumeM3,
+    soilSwellFactor: 1.15,
+    densityRequiredT_M3: compactionCoeff * 1.65,
+    materialsNeeded: materials,
+    optimalMoisturePercent: 12,
+    compactionPasses: compactionRuns
+  };
+}
+
+export function calculateBlindArea(
+  input: CalculatorInput,
+  perimeter: number
+): BlindAreaModel {
+  const Project_ID = input.projectId || "PRJ-2026-001";
+  const Element_ID = "BLD-001";
+  const WBS_Code = "WBS-1.5-BLIND_AREA";
+  const Risk_ID = "RSK-005";
+  const Normative_ID = "NCM-F.02.02";
+  const Calculation_ID = "CALC-BLD-001";
+  const Inspection_ID = "INS-BLD-001";
+
+  const widthM = 0.8;
+  const thicknessMM = 80;
+  const areaM2 = Math.round(perimeter * widthM);
+
+  const concreteVolumeM3 = Math.round(areaM2 * (thicknessMM / 1000) * 10) / 10;
+  const concreteCostMDL = Math.round(concreteVolumeM3 * 1350);
+
+  const rebarWeightKg = Math.round(areaM2 * 3.8);
+  const rebarCostMDL = Math.round(rebarWeightKg * 21);
+
+  const xpsVolumeM3 = Math.round(areaM2 * 0.05 * 10) / 10;
+  const xpsCostMDL = Math.round(xpsVolumeM3 * 1400);
+
+  const preparationSandM3 = Math.round(areaM2 * 0.1 * 10) / 10;
+  const preparationSandCostMDL = Math.round(preparationSandM3 * 450);
+
+  const workCostMDL = Math.round(areaM2 * 140);
+  const totalCostMDL = concreteCostMDL + rebarCostMDL + xpsCostMDL + preparationSandCostMDL + workCostMDL;
+
+  const materials: BIMEntityMaterial[] = [
+    { name: "Товарный бетон С12/15 (М200) для защитной жесткой стяжки отмостки", qty: concreteVolumeM3, unit: "м³", cost: concreteCostMDL },
+    { name: "Решетка сварная арматурная дорожная d4 с ячейкой 100х100мм", qty: areaM2, unit: "м²", cost: rebarCostMDL },
+    { name: "Утеплитель экструдированный пенополистирол XPS 50мм (для цоколя)", qty: xpsVolumeM3, unit: "м³", cost: xpsCostMDL },
+    { name: "Подсыпка из ПГС коренная уплотненная с планировкой склона (карьер)", qty: preparationSandM3, unit: "м³", cost: preparationSandCostMDL }
+  ];
+
+  const works: UtilitySubsystemWork[] = [
+    { name: "Монтаж песчано-гравийной подушки 100мм с уплотнением виброрейкой", qty: areaM2, unit: "м²", cost: Math.round(workCostMDL * 0.3) },
+    { name: "Укладка теплоизоляционных плит XPS 50мм, демпферная кромочная лента", qty: areaM2, unit: "м²", cost: Math.round(workCostMDL * 0.2) },
+    { name: "Формовка бетонной разуклонной доски 80мм по периметру с затиркой", qty: areaM2, unit: "м²", cost: Math.round(workCostMDL * 0.5) }
+  ];
+
+  const qualityChecks: BIMQualityCheck[] = [
+    {
+      criterion: "Разуклонка наружной поверхности откоса от фасада строения",
+      status: "PASS",
+      value: "Фактический поперечный уклон равен 2.5%",
+      norm: "СП 22.13330: Уклон жесткой отмостки от 1.5% до 3% гарантирует моментальный увод ливневых масс от суглинков"
+    },
+    {
+      criterion: "Наличие жесткого гидрофобно-термического амортизационного XPS шва",
+      status: "PASS",
+      value: "Цоколь изолирован плитами XPS 50мм по всей границе",
+      norm: "NCM F.02.02: Теплоизоляция пучинистых контуров существенно ослабляет касательное пучение зимних глин"
+    }
+  ];
+
+  return {
+    Project_ID, Element_ID, WBS_Code, Risk_ID, Normative_ID, Calculation_ID, Inspection_ID,
+    areaM2,
+    widthM,
+    thicknessMM,
+    concreteVolumeM3,
+    concreteCostMDL,
+    rebarWeightKg,
+    rebarCostMDL,
+    xpsVolumeM3,
+    xpsCostMDL,
+    preparationSandM3,
+    preparationSandCostMDL,
+    workCostMDL,
+    totalCostMDL,
+    materials,
+    works,
+    qualityChecks,
+    perimeterM: perimeter,
+    blindAreaWidthM: widthM,
+    excavationVolumeM3: Math.round(areaM2 * 0.15 * 10) / 10,
+    insulationXpsM3: xpsVolumeM3,
+    gravelBaseM3: preparationSandM3,
+    concreteC20_25M3: concreteVolumeM3,
+    reinforcingMeshKg: rebarWeightKg,
+    materialsNeeded: materials
+  };
+}
+
+export function calculateRisksList(
+  input: CalculatorInput,
+  selectedOption: FoundationOption,
+  hasCuring: boolean,
+  hasInsulation: boolean
+): RiskItem[] {
+  const Project_ID = input.projectId || "PRJ-2026-001";
+  const list: RiskItem[] = [];
+
+  const concreteVol = selectedOption.materials.concreteVolumeM3 || 0;
+  const rebarKg = selectedOption.materials.reinforcementBarKg || 0;
+  const rebarDensity = concreteVol > 0 ? (rebarKg / concreteVol) : 0;
+  const frostDepth = REGION_DATA[input.region]?.frostDepth || 0.8;
+  const depthM = selectedOption.depthM || 0.8;
+
+  if (input.soilType === SoilType.FILLED) {
+    list.push({
+      Risk_ID: "RSK-GEO-SL-01", Project_ID, Element_ID: "GEO-001", WBS_Code: "WBS-1.1", Normative_ID: "NCM EN 1997-1", Calculation_ID: "CALC-GEO-01", Inspection_ID: "INS-GEO-01",
+      description: "Насыпной разнородный грунт основания с низкой несущей прочностью",
+      severity: "CRITICAL",
+      probability: 85,
+      impact: 90,
+      status: "ACTIVE",
+      mitigation: "Выполнить замену насыпного грунта послойной песчаной подушкой с вибротрамбованием, либо применить свайно-ростверковый остов."
+    });
+  } else if (input.soilType === SoilType.LOESS) {
+    list.push({
+      Risk_ID: "RSK-GEO-SL-02", Project_ID, Element_ID: "GEO-001", WBS_Code: "WBS-1.1", Normative_ID: "NCM EN 1997-1", Calculation_ID: "CALC-GEO-01", Inspection_ID: "INS-GEO-01",
+      description: "Просадочный чувствительный к влаге лессовый грунт основания",
+      severity: "HIGH",
+      probability: 65,
+      impact: 75,
+      status: "ACTIVE",
+      mitigation: "Устроить широкую водонепроницаемую отмостку 2.5%, обеспечить герметичные пазухи и замки."
+    });
+  }
+
+  if (input.groundwaterDepth < 1.5) {
+    list.push({
+      Risk_ID: "RSK-GEO-WT-01", Project_ID, Element_ID: "GEO-002", WBS_Code: "WBS-1.1", Normative_ID: "СНиП 2.02.01", Calculation_ID: "CALC-GEO-01", Inspection_ID: "INS-GEO-01",
+      description: "Обильно насыщенный горизонт высоких грунтовых вод (УГВ)",
+      severity: "HIGH",
+      probability: 75,
+      impact: 80,
+      status: "ACTIVE",
+      mitigation: "Устройство кольцевого глубинного дренажа, монтаж ревизионных колодцев ПВХ d315, использование гидрофобного бетона W8."
+    });
+  }
+
+  if (rebarDensity < 65) {
+    list.push({
+      Risk_ID: "RSK-STR-RB-01", Project_ID, Element_ID: "STR-001", WBS_Code: "WBS-1.5", Normative_ID: "NCM F.02.02", Calculation_ID: "CALC-STR-01", Inspection_ID: "INS-STR-01",
+      description: "Спад жесткости балок из-за низкого удельного веса арматурного каркаса",
+      severity: "HIGH",
+      probability: 50,
+      impact: 85,
+      status: "ACTIVE",
+      mitigation: "Добавить дополнительные рабочие продольные стержни d12 А500С и сузить шаг хомутов до 150-200мм."
+    });
+  }
+
+  if (!hasCuring) {
+    list.push({
+      Risk_ID: "RSK-CON-CR-01", Project_ID, Element_ID: "CUR-001", WBS_Code: "WBS-1.3", Normative_ID: "СНиП 3.03.01-87", Calculation_ID: "CALC-CUR-01", Inspection_ID: "INS-CUR-01",
+      description: "Угроза растрескивания монолита от пересыхания при отсутствии ухода",
+      severity: "HIGH",
+      probability: 80,
+      impact: 70,
+      status: "ACTIVE",
+      mitigation: "Закрыть чашу бетона полиэтиленовой укрывной пленкой 150мкм и поливать водой в течение первых 10-14 дней."
+    });
+  }
+
+  if (!hasInsulation) {
+    list.push({
+      Risk_ID: "RSK-THM-INS-01", Project_ID, Element_ID: "XPS-001", WBS_Code: "WBS-1.6", Normative_ID: "NCM L.02.01:2012", Calculation_ID: "CALC-THM-01", Inspection_ID: "INS-THM-01",
+      description: "Промерзание пучинистого грунта цоколя при отсутствии теплозащиты",
+      severity: "HIGH",
+      probability: 70,
+      impact: 65,
+      status: "ACTIVE",
+      mitigation: "Заложить утепляющие плиты XPS плотностью не менее 35 кг/м³ толщиной 50-100мм по цоколю здания."
+    });
+  }
+
+  if (selectedOption.id === "strip" && depthM < frostDepth) {
+    list.push({
+      Risk_ID: "RSK-GEO-DP-01", Project_ID, Element_ID: "STR-002", WBS_Code: "WBS-1.5", Normative_ID: "NCM F.02.02", Calculation_ID: "CALC-GEO-01", Inspection_ID: "INS-GEO-01",
+      description: "Закладка подошвы выше нормативной глубины зимнего промерзания суглинка",
+      severity: "CRITICAL",
+      probability: 85,
+      impact: 90,
+      status: "ACTIVE",
+      mitigation: "Углубить заложение монолитного ребра до отметки ниже расчетного нуля промерзания почвы (до 1.1-1.2м)."
+    });
+  }
+
+  if (list.length === 0) {
+    list.push({
+      Risk_ID: "RSK-PLN-SAFE-01", Project_ID, Element_ID: "ALL-001", WBS_Code: "WBS-1", Normative_ID: "СНиП 2.02.01", Calculation_ID: "CALC-ALL", Inspection_ID: "INS-ALL",
+      description: "Минимальный технологический риск замачивания пазух",
+      severity: "LOW",
+      probability: 10,
+      impact: 15,
+      status: "MITIGATED",
+      mitigation: "Проектные нормы и рекомендации NCM полностью соблюдены."
+    });
+  }
+
+  return list;
+}
+
+export function calculateOptionExplanations(
+  input: CalculatorInput
+): OptionExplanation[] {
+  const list: OptionExplanation[] = [];
+  const soilType = input.soilType;
+  const gwt = input.groundwaterDepth;
+  const floors = input.floors;
+
+  // 1. Slab / УШП
+  const isSlabRecommended = soilType !== SoilType.FILLED && !(soilType === SoilType.LOESS && gwt < 1.5) && input.landSlope <= 5.0;
+  let slabVer = "Рекомендовано в качестве оптимального плитно-энергетического ядра.";
+  const slabReasons: string[] = [];
+  if (soilType !== SoilType.FILLED) {
+    slabReasons.push(`Грунт основания (${soilType}) стабилен, позволяет выполнить заливку плит с равномерным осадочным давлением.`);
+  }
+  if (gwt >= 1.8) {
+    slabReasons.push("Глубокий горизонт грунтовых вод (УГВ) гарантирует сухость распределительного цокольного пирога.");
+  } else {
+    slabReasons.push("Высокий УГВ надежно отводится кольцевым дренажем с выводом в коллектор.");
+  }
+  if (floors <= 2) {
+    slabReasons.push(`Умеренная этажность коттеджа (${floors} эт.) обеспечивает нагрузку в пределах прочности подошвы плиты.`);
+  }
+  if (input.landSlope <= 3.0) {
+    slabReasons.push("Минимальный естественный уклон рельефа исключает боковые сдвиги земляного пятна плиты.");
+  }
+  if (!isSlabRecommended) {
+    slabVer = "Не рекомендуется из-за геотехнических рисков.";
+    slabReasons.push("Наличие высокой просадочности грунта, насыпных отсыпок или высокого уклона делают УШП плиту опасной.");
+  }
+  list.push({
+    optionId: "slab",
+    optionName: "Монолитная УШП плита",
+    isRecommended: isSlabRecommended,
+    reasons: slabReasons,
+    verdict: slabVer
+  });
+
+  // 2. Strip / Лента
+  const isStripRecommended = soilType !== SoilType.FILLED && gwt >= 1.5;
+  let stripVer = "Рекомендовано в качестве капитального прочного решения.";
+  const stripReasons: string[] = [];
+  if (soilType !== SoilType.FILLED && soilType !== SoilType.LOESS) {
+    stripReasons.push("Плотные коренные пласты суглинков имеют высокое расчетное сопротивление R0.");
+  }
+  if (gwt >= 1.5) {
+    stripReasons.push("Сухой горизонт заложения позволяет разработать траншеи без оползания и заиливания корыта.");
+  }
+  if (input.wallMaterial === BuildingWallMaterial.KOTELET || input.wallMaterial === BuildingWallMaterial.BRICK) {
+    stripReasons.push("Тяжелые каменные стены (молдавский котелец/кирпич) требуют жесткого массивного монолита ленты.");
+  }
+  if (!isStripRecommended) {
+    stripVer = "Не рекомендуется.";
+    stripReasons.push("Насыпной грунт или высокий уровень воды (УГВ) требуют дорогостоящей замены грунта и забивки свай.");
+  }
+  list.push({
+    optionId: "strip",
+    optionName: "Заглубленная монолитная лента",
+    isRecommended: isStripRecommended,
+    reasons: stripReasons,
+    verdict: stripVer
+  });
+
+  // 3. Piles / Сваи
+  const isPilesRecommended = soilType !== SoilType.ROCK;
+  let pilesVer = "Рекомендовано в сложных грунтовых и рельефных условиях РМ.";
+  const pilesReasons: string[] = [];
+  if (soilType === SoilType.FILLED || soilType === SoilType.LOESS) {
+    pilesReasons.push("Единственный экономичный способ пройти слабый насыпной слой с опиранием на коренной известняк.");
+  }
+  if (input.landSlope > 5.0) {
+    pilesReasons.push("Существенный перепад высот ландшафта нивелируется разной длиной буронабивных свайных стволов.");
+  }
+  if (soilType === SoilType.ROCK) {
+    pilesVer = "Нецелесообразно.";
+    pilesReasons.push("Прочнейшая скальная порода известняка ракушечника (ROCK) делает бурение скважин буроямом разорительным.");
+  }
+  list.push({
+    optionId: "piles",
+    optionName: "Буронабивные сваи с ростверком",
+    isRecommended: isPilesRecommended,
+    reasons: pilesReasons,
+    verdict: pilesVer
+  });
+
+  return list;
+}
 
 /**
  * Perform all Civil Engineering load calculations and foundation designs.
@@ -946,23 +1965,445 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   if (input.soilType === SoilType.LOESS) {
     pileRisks.push("Просадка грунта может оголить сваи, вызвав потерю сцепления по бокам");
   }
+
+  // --- OPTION 4: КЛАССИЧЕСКАЯ МОНОЛИТНАЯ ПЛИТА (classic_slab) ---
+  const classicSlabDepthM = 0.25;
+  const classicSlabConcreteM3 = footingArea * classicSlabDepthM * soilConcreteMultiplier;
+  const classicSlabRebarKg = footingArea * 24 * soilRebarMultiplier;
+  const classicSlabSandM3 = footingArea * 0.3 * (1 + slopeFrac * 0.5);
+  const classicSlabWaterproofingM2 = footingArea * 1.15;
+  const classicSlabFormworkM2 = perimeter * classicSlabDepthM;
+  const classicSlabExcavationM3 = footingArea * 0.45;
   
-  // Set default recommendation
+  const classicSlabMaterials: MaterialRequirement = {
+    concreteVolumeM3: Math.ceil(classicSlabConcreteM3 * 10) / 10,
+    reinforcementBarKg: Math.round(classicSlabRebarKg),
+    sandGravelM3: Math.ceil(classicSlabSandM3 * 10) / 10,
+    waterproofingM2: Math.ceil(classicSlabWaterproofingM2),
+    insulationM3: 0,
+    formworkM2: Math.round(classicSlabFormworkM2),
+    formworkBoardsCount: Math.ceil(classicSlabFormworkM2 / 0.9),
+    excavationVolumeM3: Math.ceil(classicSlabExcavationM3),
+    sandGravelWeightTons: Math.round(classicSlabSandM3 * 1.6 * 10) / 10,
+    rebarLongitudinalKg: Math.round(classicSlabRebarKg * 0.7),
+    rebarTransverseKg: Math.round(classicSlabRebarKg * 0.3),
+    rebarLongitudinalDiameter: 12,
+    rebarTransverseDiameter: 8,
+    hasDrainage,
+    drainagePipeM,
+    drainageGeotextileM2,
+    drainageStoneM3,
+    drainageWellsCount,
+    groundingSteelStripM: Math.ceil(perimeter),
+    groundingEarthRodsPcs: 3,
+    groundingClampsPcs: 3,
+    backfillVolumeM3: Math.ceil(perimeter * 0.3 * 0.5),
+    waterproofProtMembraneM2: Math.ceil(footingArea),
+    roughFloorAreaM2: 0,
+    roughFloorConcreteM3: 0,
+    roughFloorRebarKg: 0,
+    roughFloorSandM3: 0,
+    roughFloorWaterproofingM2: 0
+  };
+  const excavationCostClassicSlabMDL = Math.round(classicSlabMaterials.excavationVolumeM3 * COST_RATES.EXCAVATION_MDL_M3);
+  const rebarBindingCostClassicSlabMDL = Math.round(classicSlabMaterials.reinforcementBarKg * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
+  const slopeComplicationCostClassicSlabMDL = input.landSlope > 0 ? Math.round(footingArea * (input.landSlope / 100) * 850) : 0;
+  const classicSlabCost = compileDetailedBudget(classicSlabMaterials, excavationCostClassicSlabMDL, rebarBindingCostClassicSlabMDL, drainageCostMDL, slopeComplicationCostClassicSlabMDL, input);
+
+  // --- OPTION 5: МЕЛКОЗАГЛУБЛЕННЫЙ ЛЕНТОЧНЫЙ ФУНДАМЕНТ (mzlf) ---
+  const mzlfDepthM = 0.5;
+  const mzlfHeightAboveGroundM = 0.35;
+  const mzlfTotalHeight = mzlfDepthM + mzlfHeightAboveGroundM;
+  const mzlfWidthM = Math.max(0.4, Math.ceil(requiredStripWidthM * 0.8 * 10) / 10);
+  const mzlfConcreteVolumeM3 = L_total * mzlfWidthM * mzlfTotalHeight * soilConcreteMultiplier;
+  const mzlfRebarKg = L_total * 13 * soilRebarMultiplier;
+  const mzlfSandM3 = L_total * mzlfWidthM * 0.2 * (1 + slopeFrac * 0.5);
+  const mzlfExcavationM3 = L_total * (mzlfWidthM + 0.3) * mzlfDepthM;
+  const mzlfFormworkM2 = L_total * 2 * (mzlfHeightAboveGroundM + 0.1);
+  const mzlfWaterproofingM2 = L_total * mzlfTotalHeight * 2;
+  const mzlfInsulationM3 = perimeter * mzlfTotalHeight * 0.05; // утепленный цоколь
+  
+  const rFloorAreaMzlf = footingArea - (L_total * mzlfWidthM);
+  const rFloorConcreteM3Mzlf = rFloorAreaMzlf * 0.08;
+  const rFloorRebarKgMzlf = rFloorAreaMzlf * 4.5;
+  const rFloorSandM3Mzlf = rFloorAreaMzlf * 0.12;
+  const rFloorWaterproofingM2Mzlf = rFloorAreaMzlf * 1.1;
+
+  const mzlfMaterials: MaterialRequirement = {
+    concreteVolumeM3: Math.ceil(mzlfConcreteVolumeM3 * 10) / 10,
+    reinforcementBarKg: Math.round(mzlfRebarKg),
+    sandGravelM3: Math.ceil(mzlfSandM3 * 10) / 10,
+    waterproofingM2: Math.ceil(mzlfWaterproofingM2),
+    insulationM3: Math.ceil(mzlfInsulationM3 * 10) / 10,
+    formworkM2: Math.round(mzlfFormworkM2),
+    formworkBoardsCount: Math.ceil(mzlfFormworkM2 / 0.9),
+    excavationVolumeM3: Math.ceil(mzlfExcavationM3),
+    sandGravelWeightTons: Math.round(mzlfSandM3 * 1.6 * 10) / 10,
+    rebarLongitudinalKg: Math.round(mzlfRebarKg * 0.65),
+    rebarTransverseKg: Math.round(mzlfRebarKg * 0.35),
+    rebarLongitudinalDiameter: 12,
+    rebarTransverseDiameter: 8,
+    hasDrainage,
+    drainagePipeM,
+    drainageGeotextileM2,
+    drainageStoneM3,
+    drainageWellsCount,
+    groundingSteelStripM: Math.ceil(perimeter),
+    groundingEarthRodsPcs: 3,
+    groundingClampsPcs: 3,
+    backfillVolumeM3: Math.ceil(perimeter * mzlfDepthM * 0.5),
+    waterproofProtMembraneM2: Math.ceil(L_total * 0.8),
+    roughFloorAreaM2: rFloorAreaMzlf,
+    roughFloorConcreteM3: Math.ceil(rFloorConcreteM3Mzlf * 10) / 10,
+    roughFloorRebarKg: Math.round(rFloorRebarKgMzlf),
+    roughFloorSandM3: Math.ceil(rFloorSandM3Mzlf * 10) / 10,
+    roughFloorWaterproofingM2: Math.ceil(rFloorWaterproofingM2Mzlf)
+  };
+  const excavationCostMzlfMDL = Math.round(mzlfMaterials.excavationVolumeM3 * COST_RATES.EXCAVATION_MDL_M3);
+  const rebarBindingCostMzlfMDL = Math.round(mzlfMaterials.reinforcementBarKg * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
+  const slopeComplicationCostMzlfMDL = input.landSlope > 0 ? Math.round(perimeter * (input.landSlope / 100) * 450) : 0;
+  const mzlfCost = compileDetailedBudget(mzlfMaterials, excavationCostMzlfMDL, rebarBindingCostMzlfMDL, drainageCostMDL, slopeComplicationCostMzlfMDL, input);
+
+  // --- OPTION 6: ЛЕНТОЧНЫЙ С ПЛИТОЙ ПО ГРУНТУ (strip_with_slab) ---
+  const stripWithSlabConcreteVolumeM3 = stripConcreteVolumeM3 + (footingArea * 0.1) * soilConcreteMultiplier;
+  const stripWithSlabRebarKg = reinforcementBarKgStrip + (footingArea * 4.5) * soilRebarMultiplier;
+  const stripWithSlabSandM3 = stripSandVolumeM3 + (footingArea * 0.15) * (1 + slopeFrac * 0.5);
+  const stripWithSlabWaterproofingM2 = stripWaterproofM2 + footingArea * 1.15;
+  const stripWithSlabFormworkM2 = formworkM2;
+  const stripWithSlabExcavationM3 = excavationVolumeM3Strip;
+  const stripWithSlabMaterials: MaterialRequirement = {
+    ...stripMaterials,
+    concreteVolumeM3: Math.ceil(stripWithSlabConcreteVolumeM3 * 10) / 10,
+    reinforcementBarKg: Math.round(stripWithSlabRebarKg),
+    sandGravelM3: Math.ceil(stripWithSlabSandM3 * 10) / 10,
+    waterproofingM2: Math.ceil(stripWithSlabWaterproofingM2),
+    roughFloorAreaM2: footingArea,
+    roughFloorConcreteM3: Math.ceil(footingArea * 0.1 * 10) / 10,
+    roughFloorRebarKg: Math.round(footingArea * 4.5),
+    roughFloorSandM3: Math.ceil(footingArea * 0.15 * 10) / 10,
+    roughFloorWaterproofingM2: Math.ceil(footingArea * 1.15)
+  };
+  const excavationCostStripWithSlabMDL = excavationCostStripMDL;
+  const rebarBindingCostStripWithSlabMDL = Math.round(stripWithSlabMaterials.reinforcementBarKg * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
+  const slopeComplicationCostStripWithSlabMDL = slopeComplicationCostStripMDL;
+  const stripWithSlabCost = compileDetailedBudget(stripWithSlabMaterials, excavationCostStripWithSlabMDL, rebarBindingCostStripWithSlabMDL, drainageCostMDL, slopeComplicationCostStripWithSlabMDL, input);
+
+  // --- OPTION 7: БУРОНАБИВНЫЕ СВАИ С РОСТВЕРКОМ (drilled_piles) ---
+  const drilledPilesCount = Math.max(14, Math.ceil(perimeter / 1.6));
+  const drilledPilesDepthM = 2.5;
+  const drilledPilesConcreteVolumeM3 = (drilledPilesCount * (Math.PI * 0.15 * 0.15 * drilledPilesDepthM) + perimeter * 0.4 * 0.45) * soilConcreteMultiplier;
+  const drilledPilesRebarKg = (drilledPilesCount * 13 + perimeter * 14) * soilRebarMultiplier;
+  const drilledPilesSandM3 = perimeter * 0.4 * 0.15 * (1 + slopeFrac * 0.5);
+  const drilledPilesExcavationM3 = drilledPilesCount * (Math.PI * 0.15 * 0.15 * drilledPilesDepthM) + perimeter * 0.4 * 0.3;
+  const drilledPilesFormworkM2 = perimeter * 2 * 0.45;
+  const drilledPilesWaterproofingM2 = (drilledPilesCount * (Math.PI * 0.3 * drilledPilesDepthM) + perimeter * 0.45 * 2);
+
+  const drilledPilesMaterials: MaterialRequirement = {
+    concreteVolumeM3: Math.ceil(drilledPilesConcreteVolumeM3 * 10) / 10,
+    reinforcementBarKg: Math.round(drilledPilesRebarKg),
+    sandGravelM3: Math.ceil(drilledPilesSandM3 * 10) / 10,
+    waterproofingM2: Math.ceil(drilledPilesWaterproofingM2),
+    insulationM3: 0,
+    formworkM2: Math.round(drilledPilesFormworkM2),
+    formworkBoardsCount: Math.ceil(drilledPilesFormworkM2 / 0.9),
+    excavationVolumeM3: Math.ceil(drilledPilesExcavationM3),
+    sandGravelWeightTons: Math.round(drilledPilesSandM3 * 1.6 * 10) / 10,
+    rebarLongitudinalKg: Math.round(drilledPilesRebarKg * 0.7),
+    rebarTransverseKg: Math.round(drilledPilesRebarKg * 0.3),
+    rebarLongitudinalDiameter: 12,
+    rebarTransverseDiameter: 8,
+    hasDrainage,
+    drainagePipeM,
+    drainageGeotextileM2,
+    drainageStoneM3,
+    drainageWellsCount,
+    groundingSteelStripM: Math.ceil(perimeter),
+    groundingEarthRodsPcs: 3,
+    groundingClampsPcs: 3,
+    backfillVolumeM3: Math.ceil(perimeter * 0.2),
+    waterproofProtMembraneM2: Math.ceil(perimeter * drilledPilesFormworkM2 * 0.1),
+    roughFloorAreaM2: footingArea,
+    roughFloorConcreteM3: Math.round(footingArea * 0.08 * 10) / 10,
+    roughFloorRebarKg: Math.round(footingArea * 4.5),
+    roughFloorSandM3: Math.round(footingArea * 0.12 * 10) / 10,
+    roughFloorWaterproofingM2: Math.round(footingArea * 1.1)
+  };
+  const excavationCostDrilledPilesMDL = Math.round(drilledPilesMaterials.excavationVolumeM3 * COST_RATES.EXCAVATION_MDL_M3) + (drilledPilesCount * COST_RATES.PILE_DRILLING_MDL_M * drilledPilesDepthM * 0.5);
+  const rebarBindingCostDrilledPilesMDL = Math.round(drilledPilesMaterials.reinforcementBarKg * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
+  const slopeComplicationCostDrilledPilesMDL = Math.round(perimeter * (input.landSlope / 100) * 400);
+  const drilledPilesCost = compileDetailedBudget(drilledPilesMaterials, excavationCostDrilledPilesMDL, rebarBindingCostDrilledPilesMDL, drainageCostMDL, slopeComplicationCostDrilledPilesMDL, input);
+
+  // --- OPTION 8: МОНОЛИТНАЯ РЕБРИСТАЯ ПЛИТА (ribbed_slab) ---
+  const ribbedSlabConcreteVolumeM3 = (footingArea * 0.16 + L_total * 0.3 * 0.3) * soilConcreteMultiplier;
+  const ribbedSlabRebarKg = (footingArea * 15 + L_total * 14) * soilRebarMultiplier;
+  const ribbedSlabSandM3 = footingArea * 0.25 * (1 + slopeFrac * 0.5);
+  const ribbedSlabWaterproofingM2 = footingArea * 1.2;
+  const ribbedSlabFormworkM2 = perimeter * 0.45 + L_total * 0.3;
+  const ribbedSlabExcavationM3 = footingArea * 0.4 + L_total * 0.3 * 0.3;
+  
+  const ribbedSlabMaterials: MaterialRequirement = {
+    concreteVolumeM3: Math.ceil(ribbedSlabConcreteVolumeM3 * 10) / 10,
+    reinforcementBarKg: Math.round(ribbedSlabRebarKg),
+    sandGravelM3: Math.ceil(ribbedSlabSandM3 * 10) / 10,
+    waterproofingM2: Math.ceil(ribbedSlabWaterproofingM2),
+    insulationM3: Math.ceil(perimeter * 0.45 * 0.05 * 10) / 10,
+    formworkM2: Math.round(ribbedSlabFormworkM2),
+    formworkBoardsCount: Math.ceil(ribbedSlabFormworkM2 / 0.9),
+    excavationVolumeM3: Math.ceil(ribbedSlabExcavationM3),
+    sandGravelWeightTons: Math.round(ribbedSlabSandM3 * 1.6 * 10) / 10,
+    rebarLongitudinalKg: Math.round(ribbedSlabRebarKg * 0.7),
+    rebarTransverseKg: Math.round(ribbedSlabRebarKg * 0.3),
+    rebarLongitudinalDiameter: 12,
+    rebarTransverseDiameter: 8,
+    hasDrainage,
+    drainagePipeM,
+    drainageGeotextileM2,
+    drainageStoneM3,
+    drainageWellsCount,
+    groundingSteelStripM: Math.ceil(perimeter),
+    groundingEarthRodsPcs: 3,
+    groundingClampsPcs: 3,
+    backfillVolumeM3: Math.ceil(perimeter * 0.3 * 0.5),
+    waterproofProtMembraneM2: Math.ceil(footingArea),
+    roughFloorAreaM2: 0,
+    roughFloorConcreteM3: 0,
+    roughFloorRebarKg: 0,
+    roughFloorSandM3: 0,
+    roughFloorWaterproofingM2: 0
+  };
+  const excavationCostRibbedSlabMDL = Math.round(ribbedSlabMaterials.excavationVolumeM3 * COST_RATES.EXCAVATION_MDL_M3);
+  const rebarBindingCostRibbedSlabMDL = Math.round(ribbedSlabMaterials.reinforcementBarKg * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
+  const slopeComplicationCostRibbedSlabMDL = input.landSlope > 0 ? Math.round(footingArea * (input.landSlope / 100) * 950) : 0;
+  const ribbedSlabCost = compileDetailedBudget(ribbedSlabMaterials, excavationCostRibbedSlabMDL, rebarBindingCostRibbedSlabMDL, drainageCostMDL, slopeComplicationCostRibbedSlabMDL, input);
+
+  // --- OPTION 9: СТОЛБЧАТЫЙ С РОСТВЕРКОМ (column_footing) ---
+  const columnCount = Math.max(10, Math.ceil(perimeter / 2.6));
+  const columnDepthM = 1.6;
+  const columnConcreteVolumeM3 = (columnCount * (0.4 * 0.4 * columnDepthM) + perimeter * 0.3 * 0.4) * soilConcreteMultiplier;
+  const columnRebarKg = (columnCount * 9 + perimeter * 12) * soilRebarMultiplier;
+  const columnSandM3 = columnCount * 0.1;
+  const columnExcavationM3 = columnCount * (0.6 * 0.6 * columnDepthM);
+  const columnFormworkM2 = columnCount * 4 * 0.4 * columnDepthM + perimeter * 2 * 0.4;
+  const columnWaterproofingM2 = columnCount * 4 * 0.4 * columnDepthM;
+
+  const columnMaterials: MaterialRequirement = {
+    concreteVolumeM3: Math.ceil(columnConcreteVolumeM3 * 10) / 10,
+    reinforcementBarKg: Math.round(columnRebarKg),
+    sandGravelM3: Math.ceil(columnSandM3 * 10) / 10,
+    waterproofingM2: Math.ceil(columnWaterproofingM2),
+    insulationM3: 0,
+    formworkM2: Math.round(columnFormworkM2),
+    formworkBoardsCount: Math.ceil(columnFormworkM2 / 0.9),
+    excavationVolumeM3: Math.ceil(columnExcavationM3),
+    sandGravelWeightTons: Math.round(columnSandM3 * 1.6 * 10) / 10,
+    rebarLongitudinalKg: Math.round(columnRebarKg * 0.75),
+    rebarTransverseKg: Math.round(columnRebarKg * 0.25),
+    rebarLongitudinalDiameter: 12,
+    rebarTransverseDiameter: 6,
+    hasDrainage: false,
+    drainagePipeM: 0,
+    drainageGeotextileM2: 0,
+    drainageStoneM3: 0,
+    drainageWellsCount: 0,
+    groundingSteelStripM: Math.ceil(perimeter),
+    groundingEarthRodsPcs: 3,
+    groundingClampsPcs: 3,
+    backfillVolumeM3: Math.ceil(columnExcavationM3 * 0.5),
+    waterproofProtMembraneM2: 0,
+    roughFloorAreaM2: footingArea,
+    roughFloorConcreteM3: Math.round(footingArea * 0.08 * 10) / 10,
+    roughFloorRebarKg: Math.round(footingArea * 4.5),
+    roughFloorSandM3: Math.round(footingArea * 0.1 * 10) / 10,
+    roughFloorWaterproofingM2: Math.round(footingArea * 1.0)
+  };
+  const excavationCostColumnMDL = Math.round(columnMaterials.excavationVolumeM3 * COST_RATES.EXCAVATION_MDL_M3);
+  const rebarBindingCostColumnMDL = Math.round(columnMaterials.reinforcementBarKg * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
+  const slopeComplicationCostColumnMDL = Math.round(perimeter * (input.landSlope / 100) * 350);
+  const columnCost = compileDetailedBudget(columnMaterials, excavationCostColumnMDL, rebarBindingCostColumnMDL, 0, slopeComplicationCostColumnMDL, input);
+
+  // --- OPTION 10: ФУНДАМЕНТ ТИСЭ (tise) ---
+  const tisePileCount = Math.max(12, Math.ceil(perimeter / 1.7));
+  const tisePileDepthM = 2.2;
+  const tisePileConcreteM3 = (tisePileCount * (Math.PI * 0.125 * 0.125 * tisePileDepthM + 0.045) + perimeter * 0.3 * 0.45) * soilConcreteMultiplier;
+  const tiseRebarKg = (tisePileCount * 14 + perimeter * 13) * soilRebarMultiplier;
+  const tiseSandM3 = tisePileCount * 0.05;
+  const tiseExcavationM3 = tisePileCount * (Math.PI * 0.125 * 0.125 * tisePileDepthM + 0.05) + perimeter * 0.3 * 0.15;
+  const tiseFormworkM2 = perimeter * 2 * 0.45 + tisePileCount * 0.5;
+  const tiseWaterproofingM2 = tisePileCount * (Math.PI * 0.25 * tisePileDepthM);
+
+  const tiseMaterials: MaterialRequirement = {
+    concreteVolumeM3: Math.ceil(tisePileConcreteM3 * 10) / 10,
+    reinforcementBarKg: Math.round(tiseRebarKg),
+    sandGravelM3: Math.ceil(tiseSandM3 * 10) / 10,
+    waterproofingM2: Math.ceil(tiseWaterproofingM2),
+    insulationM3: 0,
+    formworkM2: Math.round(tiseFormworkM2),
+    formworkBoardsCount: Math.ceil(tiseFormworkM2 / 0.9),
+    excavationVolumeM3: Math.ceil(tiseExcavationM3),
+    sandGravelWeightTons: Math.round(tiseSandM3 * 1.6 * 10) / 10,
+    rebarLongitudinalKg: Math.round(tiseRebarKg * 0.7),
+    rebarTransverseKg: Math.round(tiseRebarKg * 0.35),
+    rebarLongitudinalDiameter: 12,
+    rebarTransverseDiameter: 8,
+    hasDrainage,
+    drainagePipeM,
+    drainageGeotextileM2,
+    drainageStoneM3,
+    drainageWellsCount,
+    groundingSteelStripM: Math.ceil(perimeter),
+    groundingEarthRodsPcs: 3,
+    groundingClampsPcs: 3,
+    backfillVolumeM3: Math.ceil(perimeter * 0.1),
+    waterproofProtMembraneM2: 0,
+    roughFloorAreaM2: footingArea,
+    roughFloorConcreteM3: Math.round(footingArea * 0.08 * 10) / 10,
+    roughFloorRebarKg: Math.round(footingArea * 4.5),
+    roughFloorSandM3: Math.round(footingArea * 0.1 * 10) / 10,
+    roughFloorWaterproofingM2: Math.round(footingArea * 1.0)
+  };
+  const excavationCostTiseMDL = Math.round(tiseMaterials.excavationVolumeM3 * COST_RATES.EXCAVATION_MDL_M3) + (tisePileCount * COST_RATES.PILE_DRILLING_MDL_M * tisePileDepthM * 0.5 + tisePileCount * 450); // ТИСЭ уширитель
+  const rebarBindingCostTiseMDL = Math.round(tiseMaterials.reinforcementBarKg * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
+  const slopeComplicationCostTiseMDL = Math.round(perimeter * (input.landSlope / 100) * 350);
+  const tiseCost = compileDetailedBudget(tiseMaterials, excavationCostTiseMDL, rebarBindingCostTiseMDL, drainageCostMDL, slopeComplicationCostTiseMDL, input);
+
+  // Set default recommendations for 10 systems
+  let classicSlabIsRecommended = false;
+  let mzlfIsRecommended = false;
+  let stripWithSlabIsRecommended = false;
+  let drilledPilesIsRecommended = false;
+  let ribbedSlabIsRecommended = false;
+  let columnIsRecommended = false;
+  let tiseIsRecommended = false;
+
   if (!stripIsRecommended && !slabIsRecommended && !pileIsRecommended) {
     if (wallWeightTons > 120 || input.hasBasement) {
       stripIsRecommended = true;
+      stripWithSlabIsRecommended = true;
+    } else if (input.soilType === SoilType.FILLED) {
+      drilledPilesIsRecommended = true;
     } else {
       slabIsRecommended = true;
+      classicSlabIsRecommended = true;
     }
   }
-  
+
+  // --- DYNAMIC MATRIX SCORING & RANKING ---
+  const allCosts = [
+    stripCost.totalCostMDL, slabCost.totalCostMDL, pileCost.totalCostMDL,
+    classicSlabCost.totalCostMDL, mzlfCost.totalCostMDL, stripWithSlabCost.totalCostMDL,
+    drilledPilesCost.totalCostMDL, ribbedSlabCost.totalCostMDL, columnCost.totalCostMDL,
+    tiseCost.totalCostMDL
+  ];
+  const minCost = Math.min(...allCosts);
+  const maxCost = Math.max(...allCosts);
+  const costSpread = maxCost - minCost || 1;
+
+  // Let's compute individual scores for all 10 foundations
+  // 1. Strip
+  const stripCostScore = Math.round(100 - ((stripCost.totalCostMDL - minCost) / costSpread) * 75);
+  const stripRiskScore = seismicPoints === 8 ? 80 : 88;
+  const stripEnergyScore = 30;
+  const stripGeologyScore = input.soilType === SoilType.ROCK ? 98 : input.soilType === SoilType.LOESS ? 70 : input.soilType === SoilType.FILLED ? 10 : 88;
+  const finalStripReliability = Math.round(
+    (seismicPoints === 8 ? 82 : 88) * 0.25 + stripGeologyScore * 0.25 + stripRiskScore * 0.20 + stripComplexity * 0.15 + stripEnergyScore * 0.15
+  );
+
+  // 2. Slab (USH)
+  const slabCostScore = Math.round(100 - ((slabCost.totalCostMDL - minCost) / costSpread) * 75);
+  const slabRiskScore = 95;
+  const slabEnergyScore = 100;
+  const slabGeologyScore = input.soilType === SoilType.ROCK ? 85 : input.soilType === SoilType.LOESS ? (input.groundwaterDepth < 1.5 ? 20 : 90) : input.soilType === SoilType.FILLED ? 42 : 92;
+  const finalSlabReliability = Math.round(
+    (seismicPoints === 8 ? 90 : 95) * 0.25 + slabGeologyScore * 0.25 + slabRiskScore * 0.20 + slabComplexity * 0.15 + slabEnergyScore * 0.15
+  );
+
+  // 3. Piles
+  const pileCostScore = Math.round(100 - ((pileCost.totalCostMDL - minCost) / costSpread) * 75);
+  const pileRiskScore = 75;
+  const pileEnergyScore = 20;
+  const pileGeologyScore = input.soilType === SoilType.ROCK ? 30 : input.soilType === SoilType.LOESS ? 92 : input.soilType === SoilType.FILLED ? 92 : 85;
+  const finalPileReliability = Math.round(
+    (seismicPoints === 8 ? 72 : 82) * 0.25 + pileGeologyScore * 0.25 + pileRiskScore * 0.20 + pileComplexity * 0.15 + pileEnergyScore * 0.15
+  );
+
+  // 4. Classic Slab
+  const classicSlabCostScore = Math.round(100 - ((classicSlabCost.totalCostMDL - minCost) / costSpread) * 75);
+  const classicSlabRiskScore = 90;
+  const classicSlabComplexity = 70;
+  const classicSlabEnergyScore = 55;
+  const classicSlabGeologyScore = input.soilType === SoilType.ROCK ? 90 : input.soilType === SoilType.LOESS ? 78 : input.soilType === SoilType.FILLED ? 35 : 90;
+  const classicSlabReliability = Math.round(
+    (seismicPoints === 8 ? 88 : 92) * 0.25 + classicSlabGeologyScore * 0.25 + classicSlabRiskScore * 0.20 + classicSlabComplexity * 0.15 + classicSlabEnergyScore * 0.15
+  );
+
+  // 5. MZLF
+  const mzlfCostScore = Math.round(100 - ((mzlfCost.totalCostMDL - minCost) / costSpread) * 75);
+  const mzlfRiskScore = 60;
+  const mzlfComplexity = 80;
+  const mzlfEnergyScore = 30;
+  const mzlfGeologyScore = input.soilType === SoilType.ROCK ? 95 : input.soilType === SoilType.LOESS ? 40 : input.soilType === SoilType.FILLED ? 10 : 75;
+  const mzlfReliability = Math.round(
+    (seismicPoints === 8 ? 55 : 70) * 0.25 + mzlfGeologyScore * 0.25 + mzlfRiskScore * 0.20 + mzlfComplexity * 0.15 + mzlfEnergyScore * 0.15
+  );
+
+  // 6. Strip with Slab
+  const stripWithSlabCostScore = Math.round(100 - ((stripWithSlabCost.totalCostMDL - minCost) / costSpread) * 75);
+  const stripWithSlabRiskScore = 92;
+  const stripWithSlabComplexity = 55;
+  const stripWithSlabEnergyScore = 50;
+  const stripWithSlabGeologyScore = input.soilType === SoilType.ROCK ? 95 : input.soilType === SoilType.LOESS ? 85 : input.soilType === SoilType.FILLED ? 45 : 90;
+  const stripWithSlabReliability = Math.round(
+    (seismicPoints === 8 ? 90 : 94) * 0.25 + stripWithSlabGeologyScore * 0.25 + stripWithSlabRiskScore * 0.20 + stripWithSlabComplexity * 0.15 + stripWithSlabEnergyScore * 0.15
+  );
+
+  // 7. Drilled Piles
+  const drilledPilesCostScore = Math.round(100 - ((drilledPilesCost.totalCostMDL - minCost) / costSpread) * 75);
+  const drilledPilesRiskScore = 75;
+  const drilledPilesComplexity = 65;
+  const drilledPilesEnergyScore = 20;
+  const drilledPilesGeologyScore = input.soilType === SoilType.ROCK ? 25 : input.soilType === SoilType.LOESS ? 90 : input.soilType === SoilType.FILLED ? 95 : 82;
+  const drilledPilesReliability = Math.round(
+    (seismicPoints === 8 ? 72 : 80) * 0.25 + drilledPilesGeologyScore * 0.25 + drilledPilesRiskScore * 0.20 + drilledPilesComplexity * 0.15 + drilledPilesEnergyScore * 0.15
+  );
+
+  // 8. Ribbed Slab
+  const ribbedSlabCostScore = Math.round(100 - ((ribbedSlabCost.totalCostMDL - minCost) / costSpread) * 75);
+  const ribbedSlabRiskScore = 88;
+  const ribbedSlabComplexity = 60;
+  const ribbedSlabEnergyScore = 50;
+  const ribbedSlabGeologyScore = input.soilType === SoilType.ROCK ? 88 : input.soilType === SoilType.LOESS ? 88 : input.soilType === SoilType.FILLED ? 40 : 85;
+  const ribbedSlabReliability = Math.round(
+    (seismicPoints === 8 ? 85 : 90) * 0.25 + ribbedSlabGeologyScore * 0.25 + ribbedSlabRiskScore * 0.20 + ribbedSlabComplexity * 0.15 + ribbedSlabEnergyScore * 0.15
+  );
+
+  // 9. Column Footing
+  const columnCostScore = Math.round(100 - ((columnCost.totalCostMDL - minCost) / costSpread) * 75);
+  const columnRiskScore = 40;
+  const columnComplexity = 90;
+  const columnEnergyScore = 10;
+  const columnGeologyScore = input.soilType === SoilType.ROCK ? 75 : input.soilType === SoilType.LOESS ? 15 : input.soilType === SoilType.FILLED ? 5 : 45;
+  const columnReliability = Math.round(
+    (seismicPoints === 8 ? 30 : 50) * 0.25 + columnGeologyScore * 0.25 + columnRiskScore * 0.20 + columnComplexity * 0.15 + columnEnergyScore * 0.15
+  );
+
+  // 10. TISE
+  const tiseCostScore = Math.round(100 - ((tiseCost.totalCostMDL - minCost) / costSpread) * 75);
+  const tiseRiskScore = 80;
+  const tiseComplexity = 60;
+  const tiseEnergyScore = 20;
+  const tiseGeologyScore = input.soilType === SoilType.ROCK ? 35 : input.soilType === SoilType.LOESS ? 95 : input.soilType === SoilType.FILLED ? 90 : 88;
+  const tiseReliability = Math.round(
+    (seismicPoints === 8 ? 78 : 84) * 0.25 + tiseGeologyScore * 0.25 + tiseRiskScore * 0.20 + tiseComplexity * 0.15 + tiseEnergyScore * 0.15
+  );
+
+  // Push options to option list (total 10 items)
   options.push({
     id: "strip",
     type: "Ленточный монолитный (глубокого заложения)",
     nameRu: "Ленточный монолитный глубокого заложения",
     isRecommended: stripIsRecommended,
     costMDL: stripCost.totalCostMDL,
-    reliabilityScore: stripReliability,
+    reliabilityScore: finalStripReliability,
     complexityScore: stripComplexity,
     pros: stripPros,
     cons: stripCons,
@@ -971,7 +2412,12 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     costEstimate: stripCost,
     widthM: requiredStripWidthM,
     depthM: Math.round(stripDepthM * 100) / 100,
-    bimEntities: generateBIMEntities("strip", input, stripMaterials, stripCost, soil, perimeter, footingArea, stripDepthM)
+    bimEntities: generateBIMEntities("strip", input, stripMaterials, stripCost, soil, perimeter, footingArea, stripDepthM),
+    costScore: stripCostScore,
+    riskScore: stripRiskScore,
+    energyScore: stripEnergyScore,
+    geologyScore: stripGeologyScore,
+    totalScore: finalStripReliability
   });
   
   options.push({
@@ -980,7 +2426,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     nameRu: "Мелкозаглубленная утепленная шведская плита (УШП) по специальному теплотехническому расчету",
     isRecommended: slabIsRecommended,
     costMDL: slabCost.totalCostMDL,
-    reliabilityScore: slabReliability,
+    reliabilityScore: finalSlabReliability,
     complexityScore: slabComplexity,
     pros: slabPros,
     cons: slabCons,
@@ -989,7 +2435,12 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     costEstimate: slabCost,
     widthM: Math.max(input.width, input.length),
     depthM: slabDepthM,
-    bimEntities: generateBIMEntities("slab", input, slabMaterials, slabCost, soil, perimeter, footingArea, slabDepthM)
+    bimEntities: generateBIMEntities("slab", input, slabMaterials, slabCost, soil, perimeter, footingArea, slabDepthM),
+    costScore: slabCostScore,
+    riskScore: slabRiskScore,
+    energyScore: slabEnergyScore,
+    geologyScore: slabGeologyScore,
+    totalScore: finalSlabReliability
   });
   
   options.push({
@@ -998,7 +2449,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     nameRu: "Буронабивной свайно-ростверковый",
     isRecommended: pileIsRecommended,
     costMDL: pileCost.totalCostMDL,
-    reliabilityScore: pileReliability,
+    reliabilityScore: finalPileReliability,
     complexityScore: pileComplexity,
     pros: pilePros,
     cons: pileCons,
@@ -1007,7 +2458,243 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     costEstimate: pileCost,
     widthM: 0.4,
     depthM: 2.2,
-    bimEntities: generateBIMEntities("piles", input, pileMaterials, pileCost, soil, perimeter, footingArea, 2.2)
+    bimEntities: generateBIMEntities("piles", input, pileMaterials, pileCost, soil, perimeter, footingArea, 2.2),
+    costScore: pileCostScore,
+    riskScore: pileRiskScore,
+    energyScore: pileEnergyScore,
+    geologyScore: pileGeologyScore,
+    totalScore: finalPileReliability
+  });
+
+  options.push({
+    id: "classic_slab",
+    type: "Классическая монолитная плита",
+    nameRu: "Классическая монолитная ж/б плита мелкого заложения",
+    isRecommended: classicSlabIsRecommended,
+    costMDL: classicSlabCost.totalCostMDL,
+    reliabilityScore: classicSlabReliability,
+    complexityScore: classicSlabComplexity,
+    pros: [
+      "Идеально перераспределяет нагрузки под тяжелые каменные коттеджи в 2-3 этажа",
+      "Минимум чувствительности к пучению грунтов основания во всех зонах РМ",
+      "Готовая черновая основа под укладку теплого пола на первом этаже"
+    ],
+    cons: [
+      "Высокий суммарный расход товарного бетона и арматуры марки A500C",
+      "Плохо сочетается со сложным холмистым рельефом и перепадами высот на участке",
+      "Требует проведения большого объема уплотнительных земляных работ вручную"
+    ],
+    risks: [
+      "Риск разрушения при плохом уплотнении песчаной подсыпки и замачивании окружающего лесса"
+    ],
+    materials: classicSlabMaterials,
+    costEstimate: classicSlabCost,
+    widthM: Math.max(input.width, input.length),
+    depthM: classicSlabDepthM,
+    bimEntities: generateBIMEntities("classic_slab", input, classicSlabMaterials, classicSlabCost, soil, perimeter, footingArea, classicSlabDepthM),
+    costScore: classicSlabCostScore,
+    riskScore: classicSlabRiskScore,
+    energyScore: classicSlabEnergyScore,
+    geologyScore: classicSlabGeologyScore,
+    totalScore: classicSlabReliability
+  });
+
+  options.push({
+    id: "mzlf",
+    type: "Мелкозаглубленный ленточный фундамент (МЗЛФ)",
+    nameRu: "Мелкозаглубленный ленточный фундамент (МЗЛФ) облегченный",
+    isRecommended: mzlfIsRecommended,
+    costMDL: mzlfCost.totalCostMDL,
+    reliabilityScore: mzlfReliability,
+    complexityScore: mzlfComplexity,
+    pros: [
+      "Самая экономичная ленточная конструкция для стабильных несущих грунтов",
+      "Сниженные на 40% земляные работы по сравнению с глубоким заложением ниже промерзания",
+      "Простой монтаж силами одной бригады без привлечения буровой спецтехники"
+    ],
+    cons: [
+      "Категорический запрет на использование на насыпных (Filled) грунтах оползней",
+      "Повышенная чувствительность к неравномерному морозному пучению без наружного утепления",
+      "Исключает возможность обустройства полноценного глубокого цокольного этажа"
+    ],
+    risks: [
+      "Риск горизонтального смещения и выпучивания из-за отсутствия жестких длинных свай ниже промерзания"
+    ],
+    materials: mzlfMaterials,
+    costEstimate: mzlfCost,
+    widthM: mzlfWidthM,
+    depthM: mzlfDepthM,
+    bimEntities: generateBIMEntities("mzlf", input, mzlfMaterials, mzlfCost, soil, perimeter, footingArea, mzlfDepthM),
+    costScore: mzlfCostScore,
+    riskScore: mzlfRiskScore,
+    energyScore: mzlfEnergyScore,
+    geologyScore: mzlfGeologyScore,
+    totalScore: mzlfReliability
+  });
+
+  options.push({
+    id: "strip_with_slab",
+    type: "Ленточный фундамент с монолитной плитой по грунту",
+    nameRu: "Комбинированный ленточный фундамент с монолитной плитой по грунту",
+    isRecommended: stripWithSlabIsRecommended,
+    costMDL: stripWithSlabCost.totalCostMDL,
+    reliabilityScore: stripWithSlabReliability,
+    complexityScore: stripWithSlabComplexity,
+    pros: [
+      "Колоссальная конструктивная жесткость глубокой ленты и готовый жесткий пол первого этажа",
+      "Практически исключает сырость, проникновение грызунов и затопление из-под грунта",
+      "Мощное основание для укладки тяжелого пирога стен (полный молдавский котелец, кирпич)"
+    ],
+    cons: [
+      "Наиболее дорогая суммарная позиция по удельным затратам материалов и объему работ",
+      "Большой фронт сопутствующих трудоемких операций: герметизация швов, пазух ленты",
+      "Высокая усадочная масса, заставляющая выжидать технологическую паузу твердения бетона"
+    ],
+    risks: [
+      "Осадка неуплотненного песка обратной засыпки во внутренних ячейках с провисанием монолитной стяжки"
+    ],
+    materials: stripWithSlabMaterials,
+    costEstimate: stripWithSlabCost,
+    widthM: requiredStripWidthM,
+    depthM: Math.round(stripDepthM * 100) / 100,
+    bimEntities: generateBIMEntities("strip_with_slab", input, stripWithSlabMaterials, stripWithSlabCost, soil, perimeter, footingArea, stripDepthM),
+    costScore: stripWithSlabCostScore,
+    riskScore: stripWithSlabRiskScore,
+    energyScore: stripWithSlabEnergyScore,
+    geologyScore: stripWithSlabGeologyScore,
+    totalScore: stripWithSlabReliability
+  });
+
+  options.push({
+    id: "drilled_piles",
+    type: "Свайно-ростверковый фундамент (висячий ростверк)",
+    nameRu: "Буронабивные железобетонные сваи со сборно-монолитным ростверком",
+    isRecommended: drilledPilesIsRecommended,
+    costMDL: drilledPilesCost.totalCostMDL,
+    reliabilityScore: drilledPilesReliability,
+    complexityScore: drilledPilesComplexity,
+    pros: [
+      "Проходит зыбкие верхние пласты чернозема или свежей насыпи с опорой на надежные пески",
+      "Отличная устойчивость заложения на крутых холмистых оползневых уклонах РМ",
+      "Относительно быстрый темп возведения за счет минимизации заливки стен цоколя бетоном"
+    ],
+    cons: [
+      "Повышенная сложность завязки армирующего каркаса головок свай с арматурой ростверка",
+      "Сильная зависимость жесткости свай от каверн и вымывания бетона в обводненных забоях",
+      "Полностью блокирует любые архитектурные планы на строительство подземного подвала"
+    ],
+    risks: [
+      "Риск дефектов ствола сваи из-за сдавливания пластами или некачественной заливки под ГВ"
+    ],
+    materials: drilledPilesMaterials,
+    costEstimate: drilledPilesCost,
+    widthM: 0.4,
+    depthM: drilledPilesDepthM,
+    bimEntities: generateBIMEntities("drilled_piles", input, drilledPilesMaterials, drilledPilesCost, soil, perimeter, footingArea, drilledPilesDepthM),
+    costScore: drilledPilesCostScore,
+    riskScore: drilledPilesRiskScore,
+    energyScore: drilledPilesEnergyScore,
+    geologyScore: drilledPilesGeologyScore,
+    totalScore: drilledPilesReliability
+  });
+
+  options.push({
+    id: "ribbed_slab",
+    type: "Монолитная ребристая плита с ребрами жесткости вниз",
+    nameRu: "Монолитная ж/б ребристая плита с ребрами жесткости вниз",
+    isRecommended: ribbedSlabIsRecommended,
+    costMDL: ribbedSlabCost.totalCostMDL,
+    reliabilityScore: ribbedSlabReliability,
+    complexityScore: ribbedSlabComplexity,
+    pros: [
+      "Превосходная сопротивляемость изгибающим нагрузкам при сниженной массе бетона на 25%",
+      "Ребра жесткости отлично работают как барьер против сил горизонтального смещения грунта",
+      "Эффективно защищает надземную часть конструкции от динамических ударных колебаний"
+    ],
+    cons: [
+      "Сложная геометрия земляных траншей под внутреннюю сетку ребер жесткости плиты",
+      "Повышенные затраты времени на установку сложного формообразующего каркаса опалубки",
+      "Высокая критичность к аккуратности укладки канализационных труб и других сетей"
+    ],
+    risks: [
+      "Риск пустот и непроливов в ребрах из-за защемления воздуха при плохом вибрировании бетона"
+    ],
+    materials: ribbedSlabMaterials,
+    costEstimate: ribbedSlabCost,
+    widthM: Math.max(input.width, input.length),
+    depthM: 0.45,
+    bimEntities: generateBIMEntities("ribbed_slab", input, ribbedSlabMaterials, ribbedSlabCost, soil, perimeter, footingArea, 0.45),
+    costScore: ribbedSlabCostScore,
+    riskScore: ribbedSlabRiskScore,
+    energyScore: ribbedSlabEnergyScore,
+    geologyScore: ribbedSlabGeologyScore,
+    totalScore: ribbedSlabReliability
+  });
+
+  options.push({
+    id: "column_footing",
+    type: "Столбчатый фундамент с ростверком",
+    nameRu: "Столбчатый железобетонный фундамент с монолитным ростверком",
+    isRecommended: columnIsRecommended,
+    costMDL: columnCost.totalCostMDL,
+    reliabilityScore: columnReliability,
+    complexityScore: columnComplexity,
+    pros: [
+      "Экономичный фаворит с минимальным чеком материалов для деревянных и каркасных бань",
+      "Крайне сжатые сроки возведения под ключ (не более 5-7 рабочих дней на весь цикл)",
+      "Объем вынутого грунта в 5 раз меньше по сравнению с полноразмерным котлованом"
+    ],
+    cons: [
+      "Категорически не предназначен для тяжелых кирпичных или газобетонных жилых домов",
+      "Слабо сопротивляется сдвигающему давлению на оползневых или илистых береговых пучениях",
+      "Требует обустройства утепленной забирки цоколя во избежание сквозняков под полом"
+    ],
+    risks: [
+      "Интенсивный перекос схода осей опор при локальном намокании грунта под одной из тумб"
+    ],
+    materials: columnMaterials,
+    costEstimate: columnCost,
+    widthM: 0.4,
+    depthM: columnDepthM,
+    bimEntities: generateBIMEntities("column_footing", input, columnMaterials, columnCost, soil, perimeter, footingArea, columnDepthM),
+    costScore: columnCostScore,
+    riskScore: columnRiskScore,
+    energyScore: columnEnergyScore,
+    geologyScore: columnGeologyScore,
+    totalScore: columnReliability
+  });
+
+  options.push({
+    id: "tise",
+    type: "Фундамент ТИСЭ (с расширением подошвы)",
+    nameRu: "Технологический фундамент ТИСЭ с уширением пяты свай и висячим ростверком",
+    isRecommended: tiseIsRecommended,
+    costMDL: tiseCost.totalCostMDL,
+    reliabilityScore: tiseReliability,
+    complexityScore: tiseComplexity,
+    pros: [
+      "Лучшая анкеровка в плотных слоях грунта против выпучивания силами зимнего пучения",
+      "Принудительное распределение веса через плоские опорные подошвы d600мм повышает надежность",
+      "Минимум затрат на аренду дорогостоящего строительного автокрана или буровой вышки"
+    ],
+    cons: [
+      "Высокая ручная физическая нагрузка рабочих при уширении забоя специальным буром ТИСЭ",
+      "Невозможно сделать расширение пяты на сыпучих песчаных или обводненных грунтах",
+      "Требует строгого выдерживания воздушного технологического зазора (10-15см) ростверка с землей"
+    ],
+    risks: [
+      "Частичное осыпание кромок расширенной полусферы грунтом до заливки раствора бетона"
+    ],
+    materials: tiseMaterials,
+    costEstimate: tiseCost,
+    widthM: 0.4,
+    depthM: tisePileDepthM,
+    bimEntities: generateBIMEntities("tise", input, tiseMaterials, tiseCost, soil, perimeter, footingArea, tisePileDepthM),
+    costScore: tiseCostScore,
+    riskScore: tiseRiskScore,
+    energyScore: tiseEnergyScore,
+    geologyScore: tiseGeologyScore,
+    totalScore: tiseReliability
   });
   
   // 10. RISKS PERCENTAGE ANALYSIS BASED ON WATER-TABLE, SOIL, REGION
@@ -1099,6 +2786,32 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
                                      input.soilType === SoilType.LOESS || 
                                      input.landSlope > 8.0;
   
+  // ======================================================================
+  // DYNAMIC COMPUTATIONS FOR ENGINEERING SUBSYSTEMS (Stages 2, 3, 4, 5, 6, 7, 9, 10)
+  // ======================================================================
+  const geologyDetailsResolved = calculateGeologyDetails(input, soilBearingCapacityKPa, reg, soil, stripDepthM);
+  const utilitiesModelResolved = calculateUtilities(input, perimeter);
+
+  // Find currently selected/default option
+  const selectedOptionForRiskAndCuring = options.find(o => o.isRecommended) || options[0];
+  const selectedConcreteM3 = selectedOptionForRiskAndCuring.materials.concreteVolumeM3 || 25;
+  const selectedExcavationM3 = selectedOptionForRiskAndCuring.materials.excavationVolumeM3 || 50;
+
+  const concreteCuringResolved = calculateConcreteCuring(input, footingArea, selectedConcreteM3);
+  const backfillResolved = calculateBackfill(input, selectedExcavationM3, selectedConcreteM3);
+  const blindAreaResolved = calculateBlindArea(input, perimeter);
+
+  // Dynamic automatic risk engine
+  const risksListResolved = calculateRisksList(
+    input,
+    selectedOptionForRiskAndCuring,
+    concreteCuringResolved.hasCuringSection,
+    (selectedOptionForRiskAndCuring.materials.insulationM3 || 0) > 0
+  );
+
+  // Dynamic engineering explanations
+  const explanationsResolved = calculateOptionExplanations(input);
+
   return {
     input,
     wallWeightTons: Math.round(wallWeightTons * 10) / 10,
@@ -1131,143 +2844,14 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     collapsibilityPercent,
     floodingPercent,
 
-    // Comprehensive additions
-    geology: {
-      soil_type: input.soilType,
-      design_soil_resistance: soilBearingCapacityKPa,
-      groundwater_level: input.groundwaterDepth,
-      freezing_depth: reg.frostDepth,
-      deformation_modulus: soil.Eavg,
-      soil_layers: [
-        { name: "Почвенно-растительный слой (Слой 1)", thickness: 0.4, description: "Чернозем влажный, суглинистый с корнями растений" },
-        { name: `Несущий слой основания: ${soil.name} (Слой 2)`, thickness: 3.2, description: soil.description },
-        { name: "Суглинок тугопластичный буровато-желтый (Слой 3)", thickness: 2.4, description: "Слой суглинка с включением известнякового дресвяника" }
-      ],
-      weak_layer_depth: soil.id === SoilType.FILLED ? 1.5 : soil.id === SoilType.LOESS ? 2.5 : 4.0,
-      soil_heterogeneity_factor: soil.id === SoilType.FILLED ? 1.45 : soil.id === SoilType.LOESS ? 1.25 : 1.15,
-      safety_factor: input.safetyFactor || 1.3,
-      number_of_boreholes: 2,
-      borehole_depth: 6.0
-    },
-
-    utilities: {
-      sewer: {
-        id: "SEWER",
-        nameRu: "Водоотведение и Канализация (Раздел SEWER)",
-        nameRo: "Sistemul de canalizare exterioară",
-        materials: [
-          { name: "Труба ПВХ d110 SN4 наружная уличная в отрезках 3м", qty: Math.ceil((2 * (input.width + input.length) * 0.4) / 3), unit: "шт", cost: Math.round((2 * (input.width + input.length) * 0.4) * 110) },
-          { name: "Фитинги, компенсационные муфты, ревизионные люки", qty: 1, unit: "компл", cost: 1200 }
-        ],
-        volumes: {
-          "Протяженность канализационного лотка": `${Math.ceil(2 * (input.width + input.length) * 0.4)} м.п.`,
-          "Уклон выпуска": "2%"
-        },
-        costMDL: Math.round((2 * (input.width + input.length) * 0.4) * 110 + 1200 + (2 * (input.width + input.length) * 0.4) * 150),
-        dependencies: ["GEOLOGY"],
-        qualityChecks: [
-          {
-            criterion: "Угол и прямолинейность уклона укладки труб d110",
-            status: "PASS",
-            value: "2.10% уклона",
-            norm: "СНиП 2.04.03-85: Постоянный проектный уклон для безнапорного транзита d110 равен 2% (0.02)"
-          }
-        ]
-      },
-      water: {
-        id: "WATER",
-        nameRu: "Ввод Питьевой Воды (Раздел WATER)",
-        nameRo: "Introducerea conductei de apă potabilă",
-        materials: [
-          { name: "Труба ПНД d32 PN16 напорная питьевая", qty: 15, unit: "м.п.", cost: Math.round(15 * 45) },
-          { name: "Защитный рукав-футляр HDPE d50 мм", qty: 15, unit: "м.п.", cost: Math.round(15 * 60) },
-          { name: "Саморегулирующийся греющий кабель мощностью 16 Вт/м", qty: 3, unit: "м.п.", cost: 450 }
-        ],
-        volumes: {
-          "Длина прокладываемого водопровода": `15 м.п.`,
-          "Глубина укладки": "1.2 м"
-        },
-        costMDL: Math.round(15 * 45 + 15 * 60 + 15 * 110) + 450,
-        dependencies: ["GEOLOGY"],
-        qualityChecks: [
-          {
-            criterion: "Глубина укладки водовода для предотвращения обледенения",
-            status: "PASS",
-            value: "Глубина укладки 1.20 м",
-            norm: "СНиП 2.04.02-84: Трубы закладывать на 0.2м глубже расчетного проникновения нулевой температуры в грунт"
-          }
-        ]
-      },
-      power: {
-        id: "POWER",
-        nameRu: "Энергообеспечение Силовое (Раздел POWER)",
-        nameRo: "Intrări de curent electric de forță",
-        materials: [
-          { name: "Двустенная полиэтиленовая ПНД гофротруба d50 красная", qty: 20, unit: "м.п.", cost: Math.round(20 * 35) },
-          { name: "Кабель ВВГнг-LS 4х16 медный бронированный", qty: 20, unit: "м.п.", cost: Math.round(20 * 95) }
-        ],
-        volumes: {
-          "Протяженность силового кабельного канала": `20 м.п.`,
-          "Защитная труба": "ПНД d50"
-        },
-        costMDL: Math.round(20 * 35 + 20 * 10 + 20 * 80) + Math.round(20 * 95),
-        dependencies: ["GEOLOGY"],
-        qualityChecks: [
-          {
-            criterion: "Устойчивость кабель-канала к статическим нагрузкам грунта",
-            status: "PASS",
-            value: "Двустенный особо жесткий гибкий рукав",
-            norm: "ПУЭ РМ: Под фундаментами прокладка бронированных кабелей осуществляется в жестких гильзах"
-          }
-        ]
-      },
-      lowCurrent: {
-        id: "LOW_CURRENT",
-        nameRu: "Слаботочные Сети и Связь (Раздел LOW_CURRENT)",
-        nameRo: "Sistemul de conducte curent slab",
-        materials: [
-          { name: "Труба ПНД гладкая техническая d25 черная", qty: 15, unit: "м.п.", cost: Math.round(15 * 28) },
-          { name: "Кабель сигнальный Shielded UTP под домофон/интернет", qty: 15, unit: "м.п.", cost: Math.round(15 * 15) }
-        ],
-        volumes: {
-          "Каналы слаботочных сетей": `15 м.п.`
-        },
-        costMDL: Math.round(15 * 28 + 15 * 65) + Math.round(15 * 15),
-        dependencies: ["GEOLOGY"],
-        qualityChecks: [
-          {
-            criterion: "Защищенность коаксиальных и сигнальных пар от влаги",
-            status: "PASS",
-            value: "Песчаная траншея, защитная ПНД полиэтиленовая гладкая труба d25",
-            norm: "СНиП 3.05.06-85: Слаботочные кабельные магистрали укладываются в песчаных ложах раздельно от силовых цепей"
-          }
-        ]
-      },
-      spareSleeves: {
-        id: "SPARE_SLEEVES",
-        nameRu: "Резервные Проходные Гильзы (Раздел SPARE_SLEEVES)",
-        nameRo: "Sleeve-uri de rezervă pentru rețele",
-        materials: [
-          { name: "Пластиковая жесткая толстостенная гильза HDPE d160", qty: 4, unit: "шт", cost: 4 * 180 },
-          { name: "Сальники и расширяющиеся пробки d160 с водоотталкивающей мастикой", qty: 4, unit: "шт", cost: 4 * 240 }
-        ],
-        volumes: {
-          "Количество закладных гильз d160": `4 шт.`,
-          "Резерв": "100%"
-        },
-        costMDL: Math.round(4 * 180 + 4 * 240 + 4 * 120),
-        dependencies: ["GEOLOGY"],
-        qualityChecks: [
-          {
-            criterion: "Предотвращение среза сетей при деформациях основания",
-            status: "PASS",
-            value: `4 загерметизированных гильз d160`,
-            norm: "NCM F.02.02: Обеспечение подвижного зазора прохода коммуникаций через капитальные монолитные бетонные стены"
-          }
-        ]
-      },
-      totalCostMDL: Math.round((2 * (input.width + input.length) * 0.4) * 110 + 1200 + (2 * (input.width + input.length) * 0.4) * 150) + Math.round(15 * 45 + 15 * 60 + 15 * 110) + 450 + Math.round(20 * 35 + 20 * 10 + 20 * 80) + Math.round(20 * 95) + Math.round(15 * 28 + 15 * 65) + Math.round(15 * 15) + Math.round(4 * 180 + 4 * 240 + 4 * 120)
-    }
+    // Dynamic modules integration - Stages 2-10
+    geology: geologyDetailsResolved,
+    utilities: utilitiesModelResolved,
+    concreteCuring: concreteCuringResolved,
+    backfill: backfillResolved,
+    blindArea: blindAreaResolved,
+    risksList: risksListResolved,
+    explanations: explanationsResolved
   };
 }
 
@@ -1927,5 +3511,14 @@ export function generateBIMEntities(
     ]
   });
 
-  return entities;
+  return entities.map((item, idx) => ({
+    ...item,
+    Project_ID: input.projectId || "PRJ-2026-001",
+    Element_ID: `BIM-${id.toUpperCase()}-${item.id}`,
+    WBS_Code: `WBS-1.5.${idx + 1}`,
+    Risk_ID: `RSK-${item.id}`,
+    Normative_ID: item.qualityChecks[0]?.norm.split(":")[0] || "NCM-F.02.02",
+    Calculation_ID: `CALC-${id.toUpperCase()}-${item.id}`,
+    Inspection_ID: `INS-${id.toUpperCase()}-${item.id}`
+  }));
 }
