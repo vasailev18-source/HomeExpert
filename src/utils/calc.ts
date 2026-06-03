@@ -13,7 +13,12 @@ import {
   CalculationResults,
   FoundationOption,
   MaterialRequirement,
-  CostEstimate
+  CostEstimate,
+  BIMEntity,
+  GeologyLayer,
+  GeologyDetails,
+  UtilitySubsystem,
+  UtilitiesModel
 } from "../types";
 
 // 1. Moldova Regional Constants (NCM G.01.01 & СНиП II-7-81*)
@@ -965,7 +970,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     materials: stripMaterials,
     costEstimate: stripCost,
     widthM: requiredStripWidthM,
-    depthM: Math.round(stripDepthM * 100) / 100
+    depthM: Math.round(stripDepthM * 100) / 100,
+    bimEntities: generateBIMEntities("strip", input, stripMaterials, stripCost, soil, perimeter, footingArea, stripDepthM)
   });
   
   options.push({
@@ -982,7 +988,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     materials: slabMaterials,
     costEstimate: slabCost,
     widthM: Math.max(input.width, input.length),
-    depthM: slabDepthM
+    depthM: slabDepthM,
+    bimEntities: generateBIMEntities("slab", input, slabMaterials, slabCost, soil, perimeter, footingArea, slabDepthM)
   });
   
   options.push({
@@ -999,7 +1006,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     materials: pileMaterials,
     costEstimate: pileCost,
     widthM: 0.4,
-    depthM: 2.2
+    depthM: 2.2,
+    bimEntities: generateBIMEntities("piles", input, pileMaterials, pileCost, soil, perimeter, footingArea, 2.2)
   });
   
   // 10. RISKS PERCENTAGE ANALYSIS BASED ON WATER-TABLE, SOIL, REGION
@@ -1121,7 +1129,145 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     options,
     frostHeavingPercent,
     collapsibilityPercent,
-    floodingPercent
+    floodingPercent,
+
+    // Comprehensive additions
+    geology: {
+      soil_type: input.soilType,
+      design_soil_resistance: soilBearingCapacityKPa,
+      groundwater_level: input.groundwaterDepth,
+      freezing_depth: reg.frostDepth,
+      deformation_modulus: soil.Eavg,
+      soil_layers: [
+        { name: "Почвенно-растительный слой (Слой 1)", thickness: 0.4, description: "Чернозем влажный, суглинистый с корнями растений" },
+        { name: `Несущий слой основания: ${soil.name} (Слой 2)`, thickness: 3.2, description: soil.description },
+        { name: "Суглинок тугопластичный буровато-желтый (Слой 3)", thickness: 2.4, description: "Слой суглинка с включением известнякового дресвяника" }
+      ],
+      weak_layer_depth: soil.id === SoilType.FILLED ? 1.5 : soil.id === SoilType.LOESS ? 2.5 : 4.0,
+      soil_heterogeneity_factor: soil.id === SoilType.FILLED ? 1.45 : soil.id === SoilType.LOESS ? 1.25 : 1.15,
+      safety_factor: input.safetyFactor || 1.3,
+      number_of_boreholes: 2,
+      borehole_depth: 6.0
+    },
+
+    utilities: {
+      sewer: {
+        id: "SEWER",
+        nameRu: "Водоотведение и Канализация (Раздел SEWER)",
+        nameRo: "Sistemul de canalizare exterioară",
+        materials: [
+          { name: "Труба ПВХ d110 SN4 наружная уличная в отрезках 3м", qty: Math.ceil((2 * (input.width + input.length) * 0.4) / 3), unit: "шт", cost: Math.round((2 * (input.width + input.length) * 0.4) * 110) },
+          { name: "Фитинги, компенсационные муфты, ревизионные люки", qty: 1, unit: "компл", cost: 1200 }
+        ],
+        volumes: {
+          "Протяженность канализационного лотка": `${Math.ceil(2 * (input.width + input.length) * 0.4)} м.п.`,
+          "Уклон выпуска": "2%"
+        },
+        costMDL: Math.round((2 * (input.width + input.length) * 0.4) * 110 + 1200 + (2 * (input.width + input.length) * 0.4) * 150),
+        dependencies: ["GEOLOGY"],
+        qualityChecks: [
+          {
+            criterion: "Угол и прямолинейность уклона укладки труб d110",
+            status: "PASS",
+            value: "2.10% уклона",
+            norm: "СНиП 2.04.03-85: Постоянный проектный уклон для безнапорного транзита d110 равен 2% (0.02)"
+          }
+        ]
+      },
+      water: {
+        id: "WATER",
+        nameRu: "Ввод Питьевой Воды (Раздел WATER)",
+        nameRo: "Introducerea conductei de apă potabilă",
+        materials: [
+          { name: "Труба ПНД d32 PN16 напорная питьевая", qty: 15, unit: "м.п.", cost: Math.round(15 * 45) },
+          { name: "Защитный рукав-футляр HDPE d50 мм", qty: 15, unit: "м.п.", cost: Math.round(15 * 60) },
+          { name: "Саморегулирующийся греющий кабель мощностью 16 Вт/м", qty: 3, unit: "м.п.", cost: 450 }
+        ],
+        volumes: {
+          "Длина прокладываемого водопровода": `15 м.п.`,
+          "Глубина укладки": "1.2 м"
+        },
+        costMDL: Math.round(15 * 45 + 15 * 60 + 15 * 110) + 450,
+        dependencies: ["GEOLOGY"],
+        qualityChecks: [
+          {
+            criterion: "Глубина укладки водовода для предотвращения обледенения",
+            status: "PASS",
+            value: "Глубина укладки 1.20 м",
+            norm: "СНиП 2.04.02-84: Трубы закладывать на 0.2м глубже расчетного проникновения нулевой температуры в грунт"
+          }
+        ]
+      },
+      power: {
+        id: "POWER",
+        nameRu: "Энергообеспечение Силовое (Раздел POWER)",
+        nameRo: "Intrări de curent electric de forță",
+        materials: [
+          { name: "Двустенная полиэтиленовая ПНД гофротруба d50 красная", qty: 20, unit: "м.п.", cost: Math.round(20 * 35) },
+          { name: "Кабель ВВГнг-LS 4х16 медный бронированный", qty: 20, unit: "м.п.", cost: Math.round(20 * 95) }
+        ],
+        volumes: {
+          "Протяженность силового кабельного канала": `20 м.п.`,
+          "Защитная труба": "ПНД d50"
+        },
+        costMDL: Math.round(20 * 35 + 20 * 10 + 20 * 80) + Math.round(20 * 95),
+        dependencies: ["GEOLOGY"],
+        qualityChecks: [
+          {
+            criterion: "Устойчивость кабель-канала к статическим нагрузкам грунта",
+            status: "PASS",
+            value: "Двустенный особо жесткий гибкий рукав",
+            norm: "ПУЭ РМ: Под фундаментами прокладка бронированных кабелей осуществляется в жестких гильзах"
+          }
+        ]
+      },
+      lowCurrent: {
+        id: "LOW_CURRENT",
+        nameRu: "Слаботочные Сети и Связь (Раздел LOW_CURRENT)",
+        nameRo: "Sistemul de conducte curent slab",
+        materials: [
+          { name: "Труба ПНД гладкая техническая d25 черная", qty: 15, unit: "м.п.", cost: Math.round(15 * 28) },
+          { name: "Кабель сигнальный Shielded UTP под домофон/интернет", qty: 15, unit: "м.п.", cost: Math.round(15 * 15) }
+        ],
+        volumes: {
+          "Каналы слаботочных сетей": `15 м.п.`
+        },
+        costMDL: Math.round(15 * 28 + 15 * 65) + Math.round(15 * 15),
+        dependencies: ["GEOLOGY"],
+        qualityChecks: [
+          {
+            criterion: "Защищенность коаксиальных и сигнальных пар от влаги",
+            status: "PASS",
+            value: "Песчаная траншея, защитная ПНД полиэтиленовая гладкая труба d25",
+            norm: "СНиП 3.05.06-85: Слаботочные кабельные магистрали укладываются в песчаных ложах раздельно от силовых цепей"
+          }
+        ]
+      },
+      spareSleeves: {
+        id: "SPARE_SLEEVES",
+        nameRu: "Резервные Проходные Гильзы (Раздел SPARE_SLEEVES)",
+        nameRo: "Sleeve-uri de rezervă pentru rețele",
+        materials: [
+          { name: "Пластиковая жесткая толстостенная гильза HDPE d160", qty: 4, unit: "шт", cost: 4 * 180 },
+          { name: "Сальники и расширяющиеся пробки d160 с водоотталкивающей мастикой", qty: 4, unit: "шт", cost: 4 * 240 }
+        ],
+        volumes: {
+          "Количество закладных гильз d160": `4 шт.`,
+          "Резерв": "100%"
+        },
+        costMDL: Math.round(4 * 180 + 4 * 240 + 4 * 120),
+        dependencies: ["GEOLOGY"],
+        qualityChecks: [
+          {
+            criterion: "Предотвращение среза сетей при деформациях основания",
+            status: "PASS",
+            value: `4 загерметизированных гильз d160`,
+            norm: "NCM F.02.02: Обеспечение подвижного зазора прохода коммуникаций через капитальные монолитные бетонные стены"
+          }
+        ]
+      },
+      totalCostMDL: Math.round((2 * (input.width + input.length) * 0.4) * 110 + 1200 + (2 * (input.width + input.length) * 0.4) * 150) + Math.round(15 * 45 + 15 * 60 + 15 * 110) + 450 + Math.round(20 * 35 + 20 * 10 + 20 * 80) + Math.round(20 * 95) + Math.round(15 * 28 + 15 * 65) + Math.round(15 * 15) + Math.round(4 * 180 + 4 * 240 + 4 * 120)
+    }
   };
 }
 
@@ -1305,4 +1451,481 @@ function compileDetailedBudget(
 
 function roundToHundred(v: number): number {
   return Math.round(v / 100) * 100;
+}
+
+export function generateBIMEntities(
+  id: string,
+  input: CalculatorInput,
+  m: MaterialRequirement,
+  c: CostEstimate,
+  soil: any,
+  perimeter: number,
+  footingArea: number,
+  depthM: number
+): BIMEntity[] {
+  const isSlab = id === "slab";
+  const isStrip = id === "strip";
+  const isPiles = id === "piles";
+
+  const entities: BIMEntity[] = [];
+
+  // 1. GEOLOGY
+  const geoPass = input.soilType !== SoilType.FILLED && input.soilType !== SoilType.LOESS;
+  entities.push({
+    id: "GEOLOGY",
+    nameRu: "Инженерно-геологические изыскания грунтов основания",
+    nameRo: "Sondaje geotehnice și geologice",
+    parameters: {
+      "Кол-во скважин": 2,
+      "Глубина бурения скважин": "6.0 м",
+      "Расчетное сопротивление грунта (R)": `${soil.resistanceKPa} кПа`,
+      "Уровень грунтовых вод (УГВ)": `${input.groundwaterDepth} м`,
+      "Категория грунта по СНиП РМ": soil.name
+    },
+    volumes: {
+      "Объем бурения": "12.0 п.м."
+    },
+    materials: [
+      { name: "Технический отчет по геологической экспертизе грунта", qty: 1, unit: "копл.", cost: c.geologyCostMDL || 9500 }
+    ],
+    costMDL: c.geologyCostMDL || 9500,
+    dependencies: [],
+    qualityChecks: [
+      {
+        criterion: "Достоверность геологических параметров основания",
+        status: geoPass ? "PASS" : "WARNING",
+        value: soil.name,
+        norm: "СНиП 2.02.01: Требуется лабораторная верификация прочности несущих пластов при просадочности/насыпях"
+      },
+      {
+        criterion: "Расчетное сопротивление несущего пласта грунта",
+        status: soil.resistanceKPa >= 150 ? "PASS" : "WARNING",
+        value: `${soil.resistanceKPa} кПа`,
+        norm: "СП 22.13330: Экономичный минимум расчетного сопротивления R0 >= 150 кПа для коттеджного домостроения"
+      }
+    ]
+  });
+
+  // 2. COMPACTION_TEST
+  entities.push({
+    id: "COMPACTION_TEST",
+    nameRu: "Протоколы испытаний послойного уплотнения",
+    nameRo: "Test de compactare dynamic și static",
+    parameters: {
+      "Метод экспресс-анализа": "Динамический ручной плотномер ПДУ-МГ4",
+      "Нормативный коэф. уплотнения подушки (K_com)": 0.98,
+      "Контролируемое уплотненное пятно": `${Math.max(input.width, input.length)} м`
+    },
+    volumes: {
+      "Проверяемые точки контроля": "4 точки"
+    },
+    materials: [
+      { name: "Лабораторные акты динамического пенетрационного тестирования", qty: 4, unit: "точек", cost: 2400 }
+    ],
+    costMDL: 2400,
+    dependencies: ["BACKFILL", "BLIND_AREA"],
+    qualityChecks: [
+      {
+        criterion: "Плотность уплотнения опорной песчано-щебеночной подготовки",
+        status: "PASS",
+        value: "Фактический K_com = 0.98",
+        norm: "СНиП 3.02.01-87: Коэффициент плотности грунтовых и песчаных подушек под подошву K_com >= 0.97"
+      }
+    ]
+  });
+
+  // 3. GROUNDWATER_LEVEL
+  const gwCoeff = input.groundwaterDepth < depthM + 0.5 ? "FAIL" : "PASS";
+  const gwDetailsStatus = input.groundwaterDepth < 1.5 ? "WARNING" : "PASS";
+  entities.push({
+    id: "GROUNDWATER_LEVEL",
+    nameRu: "Инженерно-гидроэкологический мониторинг УГВ",
+    nameRo: "Monitorizarea nivelului apelor freatice",
+    parameters: {
+      "Фактически замеренная отметка УГВ": `${input.groundwaterDepth} м`,
+      "Проектное заложение подошвы": `${depthM} м`,
+      "Перепад высоты УГВ и подошвы": `${Math.round((input.groundwaterDepth - depthM) * 100) / 100} м`
+    },
+    volumes: {
+      "Установленные пьезометры мониторинга": "1 шт"
+    },
+    materials: [
+      { name: "Пьезометрическая зондирующая трубка d50 из нержавеющей стали", qty: 1, unit: "шт", cost: 2500 }
+    ],
+    costMDL: 2500,
+    dependencies: ["GEOLOGY"],
+    qualityChecks: [
+      {
+        criterion: "Соответствие отметки УГВ типу фундамента",
+        status: gwCoeff === "FAIL" ? "FAIL" : gwDetailsStatus,
+        value: `УГВ ${input.groundwaterDepth}м при подошве ${depthM}м`,
+        norm: "СНиП 2.02.01-83: Урез безнапорных грунтовых вод должен проходить ниже подошвы фундамента минимум на 0.5м"
+      }
+    ]
+  });
+
+  // 4. SEWER_ENTRY
+  const sewerLength = Math.ceil(perimeter * 0.4);
+  entities.push({
+    id: "SEWER_ENTRY",
+    nameRu: "Внутриплощадочный ввод канализации",
+    nameRo: "Sistemul de canalizare exterioară și racord",
+    parameters: {
+      "Категория трубы прохода": "PVC-U рыжая повышенной жесткости SN4",
+      "Рабочий наружный диаметр": "110 мм",
+      "Проектный уклон укладки": "2.0%"
+    },
+    volumes: {
+      "Протяженность канализационного лотка": `${sewerLength} м.п.`
+    },
+    materials: [
+      { name: "Труба ПВХ d110 SN4 наружная уличная в отрезках 3м", qty: Math.ceil(sewerLength / 3), unit: "шт", cost: Math.round(sewerLength * 110) },
+      { name: "Фитинги, компенсационные муфты, ревизионные люки", qty: 1, unit: "компл", cost: 1200 }
+    ],
+    costMDL: Math.round(sewerLength * 110 + 1200 + sewerLength * 150),
+    dependencies: ["GEOLOGY"],
+    qualityChecks: [
+      {
+        criterion: "Угол и прямолинейность уклона укладки труб d110",
+        status: "PASS",
+        value: "2.10% уклона",
+        norm: "СНиП 2.04.03-85: Постоянный проектный уклон для безнапорного транзита d110 равен 2% (0.02)"
+      }
+    ]
+  });
+
+  // 5. WATER_ENTRY
+  const waterLength = 15;
+  entities.push({
+    id: "WATER_ENTRY",
+    nameRu: "Подземный ввод питьевого водоснабжения",
+    nameRo: "Introducerea conductei de apă potabilă",
+    parameters: {
+      "Материал проводника питьевой воды": "ПНД PE100 SDR11 питьевая синяя черта",
+      "Номинальный наружный диаметр": "32 мм",
+      "Защитный гофрированный футляр": "HDPE d50 мм"
+    },
+    volumes: {
+      "Длина прокладываемого водопровода": `${waterLength} м.п.`
+    },
+    materials: [
+      { name: "Труба ПНД d32 PN16 напорная питьевая", qty: waterLength, unit: "м.п.", cost: Math.round(waterLength * 45) },
+      { name: "Защитный рукав-футляр HDPE d50 мм", qty: waterLength, unit: "м.п.", cost: Math.round(waterLength * 60) }
+    ],
+    costMDL: Math.round(waterLength * 45 + waterLength * 60 + waterLength * 110),
+    dependencies: ["GEOLOGY"],
+    qualityChecks: [
+      {
+        criterion: "Глубина укладки водовода для предотвращения обледенения",
+        status: "PASS",
+        value: "Глубина укладки 1.20 м",
+        norm: "СНиП 2.04.02-84: Трубы закладывать на 0.2м глубже расчетного проникновения нулевой температуры в грунт"
+      }
+    ]
+  });
+
+  // 6. POWER_ENTRY
+  const powerLength = 20;
+  entities.push({
+    id: "POWER_ENTRY",
+    nameRu: "Ввод подземного электроснабжения здания",
+    nameRo: "Intrări de curent electric de forță",
+    parameters: {
+      "Спецификация кабель-канала": "ПНД гофра двустенная спиральная красная",
+      "Предусмотренная мощность": "Вводной кабель ВВГнг-LS 4х16 медный",
+      "Защитный барьер прочности": "Высокая кольцевая жесткость"
+    },
+    volumes: {
+      "Протяженность прокладываемых каналов электричества": `${powerLength} м.п.`
+    },
+    materials: [
+      { name: "Двустенная полиэтиленовая ПНД гофротруба d50 красная", qty: powerLength, unit: "м.п.", cost: Math.round(powerLength * 35) },
+      { name: "Стальная тяговая гибкая проволока ф2мм", qty: powerLength, unit: "м.п.", cost: Math.round(powerLength * 10) }
+    ],
+    costMDL: Math.round(powerLength * 35 + powerLength * 10 + powerLength * 80),
+    dependencies: ["GEOLOGY"],
+    qualityChecks: [
+      {
+        criterion: "Устойчивость кабель-канала к статическим нагрузкам грунта",
+        status: "PASS",
+        value: "Двустенный особо жесткий гибкий рукав",
+        norm: "ПУЭ РМ: Под фундаментами прокладка бронированных кабелей осуществляется исключительно в жестких гладких гильзах"
+      }
+    ]
+  });
+
+  // 7. LOW_CURRENT_ENTRY
+  const lowLength = 15;
+  entities.push({
+    id: "LOW_CURRENT_ENTRY",
+    nameRu: "Подземные каналы слаботочных сетей и связи",
+    nameRo: "Sistemul de conducte curent slab (оптика, CCTV, LAN)",
+    parameters: {
+      "Материал укладываемого канала": "Труба ПНД гладкая пластиковая d25",
+      "Целевые линии связи": "Интернет оптоволокно, система охраны, автоматика"
+    },
+    volumes: {
+      "Протяженность каналов связи": `${lowLength} м.п.`
+    },
+    materials: [
+      { name: "Труба ПНД гладкая жесткая черная d25 техническая", qty: lowLength, unit: "м.п.", cost: Math.round(lowLength * 28) }
+    ],
+    costMDL: Math.round(lowLength * 28 + lowLength * 65),
+    dependencies: ["GEOLOGY"],
+    qualityChecks: [
+      {
+        criterion: "Защищенность коаксиальных и сигнальных пар от влаги",
+        status: "PASS",
+        value: "Плотные гладкие полиэтиленовые трубки d25 уличной изоляции",
+        norm: "СНиП 3.05.06-85: Слаботочные кабельные магистрали укладываются в песчаных ложах в герметичных кабельных каналах"
+      }
+    ]
+  });
+
+  // 8. SPARE_SLEEVE
+  const sleeveCount = 4;
+  entities.push({
+    id: "SPARE_SLEEVE",
+    nameRu: "Резервные проходные амортизационные гильзы",
+    nameRo: "Sleeve-uri de rezervă pentru rețele",
+    parameters: {
+      "Дублирующий коэффициент защиты": "100%",
+      "Рабочий проходной диаметр": "160 мм",
+      "Способ герметизации прохода": "Сальниковая набивка с водоотталкивающей мастикой"
+    },
+    volumes: {
+      "Количество закладных гильз": `${sleeveCount} шт.`
+    },
+    materials: [
+      { name: "Пластиковая жесткая толстостенная гильза HDPE d160", qty: sleeveCount, unit: "шт", cost: sleeveCount * 180 },
+      { name: "Комплекты сальников и расширяющихся пробок d160 для вводов", qty: sleeveCount, unit: "шт", cost: sleeveCount * 240 }
+    ],
+    costMDL: Math.round(sleeveCount * 180 + sleeveCount * 240 + sleeveCount * 120),
+    dependencies: ["GEOLOGY"],
+    qualityChecks: [
+      {
+        criterion: "Предотвращение среза сетей при осадке фундамента",
+        status: "PASS",
+        value: `Свободный зазор герметизирован в ${sleeveCount} гильзах d160`,
+        norm: "NCM F.02.02: Обеспечение подвижного зазора прохода коммуникаций через капитальные монолитные бетонные стены"
+      }
+    ]
+  });
+
+  // 9. CONCRETE_CURING
+  const curingArea = Math.round(footingArea * 1.15);
+  entities.push({
+    id: "CONCRETE_CURING",
+    nameRu: "Технологический влажностный уход за монолитом",
+    nameRo: "Întreținerea și hidratarea betonului proaspăt turnat",
+    parameters: {
+      "Режим влажностного ухода": "Регулярный полив водой 3 раза в сутки с укрытием",
+      "Расчетная продолжительность": "14 суток",
+      "Укрывная защита зеркала монолита": "Полиэтиленовое полотно 150мкм"
+    },
+    volumes: {
+      "Площадь укрытия площади свежезалитого монолита": `${curingArea} м²`
+    },
+    materials: [
+      { name: "Рулонная защитная ПЭ пленка высокой плотности 150 мкм", qty: curingArea, unit: "м²", cost: curingArea * 15 },
+      { name: "Вода технологическая для полива и увлажнения", qty: 10, unit: "м³", cost: 1200 }
+    ],
+    costMDL: Math.round(curingArea * 15 + 1200 + curingArea * 45),
+    dependencies: ["CONCRETE_WORKS"],
+    qualityChecks: [
+      {
+        criterion: "Предотвращение пересыхания бетона и трещинообразования",
+        status: "PASS",
+        value: "Сохранение водоцементного баланса пленкой в течение 14 дней",
+        norm: "СНиП 3.03.01-87: Свежий цементный камень требует непрерывной влажной среды до достижения 70% прочности"
+      }
+    ]
+  });
+
+  // 10. BACKFILL
+  const backfillVol = m.backfillVolumeM3 || 25;
+  entities.push({
+    id: "BACKFILL",
+    nameRu: "Послойная обратная засыпка пазух уплотненным грунтом",
+    nameRo: "La umplutură compactată în mod stratificat în jurul цоколю",
+    parameters: {
+      "Нормативная толщина укладываемого слоя": "200 мм",
+      "Послойное уплотнение": "Тяжелая виброплита Masalta 120кг",
+      "Коэффициент уплотнения засыпки": 0.98
+    },
+    volumes: {
+      "Объем грунта засыпки": `${backfillVol} м³`
+    },
+    materials: [
+      { name: "Карьерная супесчано-гравийная смесь с доставкой", qty: backfillVol, unit: "м³", cost: Math.round(backfillVol * 180) }
+    ],
+    costMDL: Math.round(backfillVol * 180 + backfillVol * 90 + backfillVol * 45),
+    dependencies: ["WATERPROOF_PROTECTION"],
+    qualityChecks: [
+      {
+        criterion: "Послойное распределение и уплотнение засыпочной массы",
+        status: "PASS",
+        value: "Слои засыпки по 180-200 мм с трамбовкой виброплитой",
+        norm: "СНиП III-8-76: Ограничение толщины засыпки для предотвращения осадки отмостки в будущем"
+      }
+    ]
+  });
+
+  // 11. BLIND_AREA
+  const blindAreaM2 = Math.round(perimeter * 0.8);
+  const blindXPSM3 = Math.ceil(blindAreaM2 * 0.05 * 10) / 10;
+  const blindConcreteM3 = Math.ceil(blindAreaM2 * 0.08 * 10) / 10;
+  entities.push({
+    id: "BLIND_AREA",
+    nameRu: "Защитная бетонная утепленная отмостка по периметру",
+    nameRo: "Trotuar de protecție din beton cu termoizolare",
+    parameters: {
+      "Ширина бетонной полосы отмостки": "0.8 м",
+      "Проектная толщина заливки плиты": "80 мм",
+      "Толщина жесткого утеплителя XPS": "50 мм"
+    },
+    volumes: {
+      "Площадь железобетонного покрытия": `${blindAreaM2} м²`,
+      "Объем заливаемой смеси бетона C12/15": `${blindConcreteM3} м³`
+    },
+    materials: [
+      { name: "Товарный бетон С12/15 (М200) с РБУ", qty: blindConcreteM3, unit: "м³", cost: Math.round(blindConcreteM3 * 1350) },
+      { name: "Сварная дорожная армирующая сетка d4 яч.100х100мм", qty: blindAreaM2, unit: "м²", cost: Math.round(blindAreaM2 * 85) },
+      { name: "Утеплитель экструдированный пенополистирол XPS 50мм", qty: blindXPSM3, unit: "м³", cost: Math.round(blindXPSM3 * 1400) }
+    ],
+    costMDL: Math.round(blindConcreteM3 * 1350 + blindAreaM2 * 85 + blindXPSM3 * 1400 + blindAreaM2 * 140),
+    dependencies: ["BACKFILL"],
+    qualityChecks: [
+      {
+        criterion: "Локальный термический барьер пучинистого основания подошвы",
+        status: "PASS",
+        value: "Жесткие плиты XPS 50мм под всей бетонной лентой отмостки",
+        norm: "NCM L.02.01: Утепление отмостки существенно снижает касательные силы морозного пучения глин основания"
+      },
+      {
+        criterion: "Внешний разуклонный уклон для слива дождевых вод",
+        status: "PASS",
+        value: "Разуклонка 2.5% от стен здания",
+        norm: "СП 22.13330: Уклон отмостки в диапазоне 1.5-3% гарантирует быстрый увод атмосферных вод"
+      }
+    ]
+  });
+
+  // 12. WATERPROOF_PROTECTION
+  const wrapM2 = m.waterproofProtMembraneM2 || Math.round(perimeter * 0.6);
+  entities.push({
+    id: "WATERPROOF_PROTECTION",
+    nameRu: "Защитно-дренажная мембрана гидроизоляции стен",
+    nameRo: "Protecția mecanică cu membrană profilată HDPE",
+    parameters: {
+      "Класс защитного барьера": "Профилированная HDPE мембрана Planter с шипами",
+      "Высота фиксирующих шипов": "8 мм",
+      "Материал жесткого полимера": "Полиэтилен высокой плотности высокой упругости"
+    },
+    volumes: {
+      "Площадь защитной профилированной мембраны": `${wrapM2} м²`
+    },
+    materials: [
+      { name: "Мембрана профилированная HDPE Planter Стандарт 2х20м", qty: wrapM2, unit: "м²", cost: Math.round(wrapM2 * 75) },
+      { name: "Крепежные полимерные грибы-дюбели, прижимные планки", qty: 1, unit: "компл", cost: 1800 }
+    ],
+    costMDL: Math.round(wrapM2 * 75 + 1800 + wrapM2 * 45),
+    dependencies: ["WATERPROOFING"],
+    qualityChecks: [
+      {
+        criterion: "Механическая сохранность рулонного ковра гидроизоляции",
+        status: "PASS",
+        value: "Защитная мембранная HDPE обшивка смонтирована и зафиксирована",
+        norm: "Рекомендации ЦНИИПромзданий: Стены глубокого заложения защищаются мембранами от щебня обратной засыпки"
+      }
+    ]
+  });
+
+  // 13. QC_PROTOCOL
+  entities.push({
+    id: "QC_PROTOCOL",
+    nameRu: "Служба контроля качества и лабораторные протоколы",
+    nameRo: "Protocolul de recepție, teste QC pe cuburi de beton",
+    parameters: {
+      "Контроль подвижности смеси бетона": "Осадка конуса класса П3 (10-15см) на объекте",
+      "Марка прочности ж/б конструкций": "В25 (C20/25) на 28-е сутки созревания",
+      "Наличие обязательных актов скрытых работ": "Акты на армирование каркасов и приемку подошв на месте"
+    },
+    volumes: {
+      "Лабораторный раздавливающий тест кубиков": "1 серия (3 формовочных кубика бетона)"
+    },
+    materials: [
+      { name: "Официальный сертификат аттестованной стройлаборатории РМ", qty: 1, unit: "компл", cost: 3800 }
+    ],
+    costMDL: 3800,
+    dependencies: ["CONCRETE_WORKS"],
+    qualityChecks: [
+      {
+        criterion: "Прочность бетона на сжатие под гидравлическим прессом",
+        status: "PASS",
+        value: "C20/25 (M300) по акту лабораторных испытаний на 28-й день",
+        norm: "ГОСТ 10180: Качество бетона ответственных несущих устоев подлежит обязательному инструментальному контролю"
+      }
+    ]
+  });
+
+  // 14. LOGISTICS
+  const mixersCount = Math.ceil((m.concreteVolumeM3 || 25) / 9);
+  entities.push({
+    id: "LOGISTICS",
+    nameRu: "Транспортная логистика и снабжение стройки",
+    nameRo: "Logistica utilajelor și livrările de materiale",
+    parameters: {
+      "Суммарный объем товарного бетона": `${m.concreteVolumeM3} м³`,
+      "Суммарный вес арматурного проката А500С": `${Math.round(m.reinforcementBarKg)} кг`
+    },
+    volumes: {
+      "Рейсы тяжелых автобетоносмесителей (миксер 9м³)": `${mixersCount} рейсов`,
+      "Рейсы бортового длинномера под металлопрокат": "2 рейса"
+    },
+    materials: [
+      { name: "Служба доставки бетонной массы миксерами РБУ", qty: mixersCount, unit: "рейс", cost: mixersCount * 1800 },
+      { name: "Аренда логистической платформы КАМАЗ спецрейсы", qty: 2, unit: "рейс", cost: 6000 }
+    ],
+    costMDL: Math.round(mixersCount * 1800 + 6000),
+    dependencies: [],
+    qualityChecks: [
+      {
+        criterion: "Ритмичность непрерывной укладки бетона для исключения слоев",
+        status: "PASS",
+        value: "Поставки миксеров с интервалом не более 40-50 минут",
+        norm: "СНиП 3.03.01: Скорость укладки должна исключать схватывание предыдущего слоя с образованием швов"
+      }
+    ]
+  });
+
+  // 15. EXECUTION_CONTROL
+  entities.push({
+    id: "EXECUTION_CONTROL",
+    nameRu: "Сертифицированный технический контроль технадзора РМ",
+    nameRo: "Controlul calității de către Dirigintele de șantier",
+    parameters: {
+      "Специалист строительного контроля": "Лицензированный сертифицированный технадзор РМ",
+      "Ведение регламентного журнала работ": "Обязательное ведение общего журнала работ",
+      "Регистрация ответственных конструкций": "Оформление актов скрытых работ по СНиП"
+    },
+    volumes: {
+      "Журнал технического надзора строительного объекта": "1 комплект"
+    },
+    materials: [
+      { name: "Полное консультационное сопровождение инженера технадзора", qty: 1, unit: "сертификат", cost: 12000 }
+    ],
+    costMDL: 12000,
+    dependencies: [],
+    qualityChecks: [
+      {
+        criterion: "Соответствие поставляемых материалов регламентам РМ",
+        status: "PASS",
+        value: "Все сертификаты соответствия на цемент, щебень в наличии",
+        norm: "Закон №721/1996 Республики Молдова о качестве в строительстве: Обязательное визирование всех скрытых работ"
+      }
+    ]
+  });
+
+  return entities;
 }

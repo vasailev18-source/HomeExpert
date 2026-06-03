@@ -118,6 +118,7 @@ export interface CalculatorInput {
   groundwaterDepth: number; // meters, e.g. 1.5
   safetyFactor: number; // e.g. 1.8
   landSlope: number; // land slope in percent (e.g. 0 to 15%)
+  hasGeologyReport?: boolean; // If false/undefined, final foundation recommendation is blocked
   
   // Basement choice
   hasBasement: boolean;
@@ -223,6 +224,72 @@ export interface CostEstimate {
   totalCostMDL: number;
 }
 
+export interface BIMEntityMaterial {
+  name: string;
+  qty: number;
+  unit: string;
+  cost: number;
+}
+
+export interface BIMQualityCheck {
+  criterion: string;
+  status: "PASS" | "WARNING" | "FAIL";
+  value: string;
+  norm: string;
+}
+
+export interface BIMEntity {
+  id: string; // e.g., GEOLOGY, COMPACTION_TEST, etc.
+  nameRu: string;
+  nameRo: string;
+  parameters: Record<string, string | number>;
+  volumes: Record<string, string | number>;
+  materials: BIMEntityMaterial[];
+  costMDL: number;
+  dependencies: string[];
+  qualityChecks: BIMQualityCheck[];
+}
+
+export interface GeologyLayer {
+  name: string;
+  thickness: number; // meters
+  description: string;
+}
+
+export interface GeologyDetails {
+  soil_type: SoilType;
+  design_soil_resistance: number; // kPa
+  groundwater_level: number; // meters
+  freezing_depth: number; // meters
+  deformation_modulus: number; // MPa (Eavg)
+  soil_layers: GeologyLayer[];
+  weak_layer_depth: number; // meters
+  soil_heterogeneity_factor: number;
+  safety_factor: number;
+  number_of_boreholes: number;
+  borehole_depth: number;
+}
+
+export interface UtilitySubsystem {
+  id: "SEWER" | "WATER" | "POWER" | "LOW_CURRENT" | "SPARE_SLEEVES";
+  nameRu: string;
+  nameRo: string;
+  materials: BIMEntityMaterial[];
+  volumes: Record<string, string | number>;
+  costMDL: number;
+  dependencies: string[];
+  qualityChecks: BIMQualityCheck[];
+}
+
+export interface UtilitiesModel {
+  sewer: UtilitySubsystem;
+  water: UtilitySubsystem;
+  power: UtilitySubsystem;
+  lowCurrent: UtilitySubsystem;
+  spareSleeves: UtilitySubsystem;
+  totalCostMDL: number;
+}
+
 export interface FoundationOption {
   id: string; // recommended, economic, maximum
   type: string; // e.g. Ленточный монолитный
@@ -238,6 +305,7 @@ export interface FoundationOption {
   costEstimate: CostEstimate;
   widthM: number;
   depthM: number;
+  bimEntities: BIMEntity[];
 }
 
 export interface CalculationResults {
@@ -293,6 +361,10 @@ export interface CalculationResults {
   frostHeavingPercent: number;
   collapsibilityPercent: number;
   floodingPercent: number;
+
+  // Comprehensive additions
+  geology: GeologyDetails;
+  utilities: UtilitiesModel;
 }
 
 export interface ChatMessage {

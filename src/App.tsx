@@ -34,6 +34,7 @@ import { MoldovaRegion, SoilType, BuildingWallMaterial, SlabMaterial, RoofType, 
 import { calculateFoundation, REGION_DATA, SOIL_DATA, WALL_MATERIAL_DATA, SLAB_DATA, ROOF_DATA, COST_RATES } from "./utils/calc";
 import Header from "./components/Header";
 import WeightDistributionAudit from "./components/WeightDistributionAudit";
+import EngineeringAudit from "./components/EngineeringAudit";
 import { exportToExcel, exportAllToExcel } from "./utils/excelExport";
 import {
   ResponsiveContainer,
@@ -3064,6 +3065,15 @@ export default function App() {
             {/* Weight distribution Recharts component */}
             <div className="mt-6 pt-5 border-t border-slate-100">
               <WeightDistributionAudit results={results} />
+            </div>
+
+            {/* Automated Quality Control and Formulas Engineering Audit */}
+            <div className="mt-6 pt-5 border-t border-slate-100">
+              <EngineeringAudit 
+                input={currentInput} 
+                results={results} 
+                selectedOption={selectedOption} 
+              />
             </div>
 
             {/* Geotechnical Audit and Soil Risks Indicators */}

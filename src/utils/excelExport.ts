@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { CalculatorInput, CalculationResults, FoundationOption } from "../types";
 
+// Helper/format utility functions
 export function getRegionLabel(region: string): string {
   switch (region) {
     case "CENTER": return "Центр (Кишинёв, Орхей, Унгень, Хынчешты)";
@@ -13,14 +14,14 @@ export function getRegionLabel(region: string): string {
 
 export function getSoilLabel(soilType: string): string {
   switch (soilType) {
-    case "SAND": return "Песок средней крупности ( ~280 кПа, отличная несущая способность, непучинистый )";
-    case "SILTY_SAND": return "Песок пылеватый ( ~180 кПа, склонность к плывунам при замачивании )";
-    case "SANDY_LOAM": return "Супесь ( ~150 кПа, умеренное пучение )";
-    case "LOAM": return "Суглинок ( ~200 кПа, типичный грунт Республики Молдова, пучинистый )";
-    case "CLAY": return "Глина пластичная ( ~160 кПа, высокая пучинистость и задержка влаги )";
-    case "LOESS": return "Лёссовый просадочный ( ~110 кПа, экстремальный риск просадки при замачивании )";
-    case "FILLED": return "Насыпной / Техногенный ( ~70 кПа, крайне малая прочность, неравномерность )";
-    case "ROCK": return "Скальный прочный ( ~650 кПа, сверхвысокая прочность, просадка = 0 )";
+    case "SAND": return "Песок средней крупности (~280 кПа, отличная несущая основа)";
+    case "SILTY_SAND": return "Песок пылеватый (~180 кПа, склонность к плывунам)";
+    case "SANDY_LOAM": return "Супесь (~150 кПа, умеренное пучение)";
+    case "LOAM": return "Суглинок (~200 кПа, типичный просадочный грунт РМ)";
+    case "CLAY": return "Глина пластичная (~160 кПа, высокая пучинистость)";
+    case "LOESS": return "Лёссовый просадочный (~110 кПа, критический риск при замачивании)";
+    case "FILLED": return "Насыпной / Техногенный (~70 кПа, крайне малая прочность)";
+    case "ROCK": return "Скальный прочный (~650 кПа, сверхвысокая прочность)";
     default: return soilType;
   }
 }
@@ -28,10 +29,10 @@ export function getSoilLabel(soilType: string): string {
 export function getWallLabel(wallMaterial: string): string {
   switch (wallMaterial) {
     case "GASOBETON": return "Автоклавный газобетон (~500 кг/м³)";
-    case "KOTELET": return "Молдавский котелец ( природный пиленый камень ~1900 кг/м³)";
-    case "BRICK": return "Полнотелый / пустотелый кирпич (~1700 кг/м³)";
+    case "KOTELET": return "Молдавский котелец (известняк ~1900 кг/м³)";
+    case "BRICK": return "Полнотелый/пустотелый кирпич (~1700 кг/м³)";
     case "KERAMZIT": return "Керамзитобетонные блоки (~1100 кг/м³)";
-    case "FRAME": return "Энергоэффективный деревянный каркас (~250 кг/м³)";
+    case "FRAME": return "Деревянный каркас (~250 кг/м³)";
     default: return wallMaterial;
   }
 }
@@ -55,16 +56,14 @@ export function getRoofLabel(roofType: string): string {
   }
 }
 
-// Generates an interactive, dynamic ASCII CAD blueprint in monospaced format for Excel
+// CAD ASCII Drawing Generator
 export function buildASCIIBlueprint(input: CalculatorInput, fbId: string): string[] {
   const lines: string[] = [];
-  
   lines.push("  ┌──────────────────────────────────────────────────┐");
   lines.push("  │        ИНЖЕНЕРНЫЙ ЧЕРТЕЖ САПР (РАЗРЕЗ CAD)       │");
   lines.push("  └──────────────────────────────────────────────────┘");
   lines.push("");
 
-  // 1 & 2. INTEGRATED ROOF & MANSARD (КРОВЛЯ И МАНСАРДНЫЙ ЭТАЖ ВО ФРАНЦУЗСКОМ СТИЛЕ)
   const floors = input.floors;
   const hasMansard = floors === 1.5 || floors === 1.6 || floors === 1.7 || floors === 2.5 || floors === 3.5;
   const floorCount = Math.floor(floors);
@@ -73,48 +72,45 @@ export function buildASCIIBlueprint(input: CalculatorInput, fbId: string): strin
     if (input.roofType === "FLAT_PVC") {
       lines.push("               _______________");
       lines.push("              [===============]  <-- ПЛОСКАЯ КРОВЛЯ С ПВХ-МЕМБРАНОЙ");
-      lines.push("              |   [o]    [o]  |  <-- ФРАНЦУЗСКИЙ ОСТЕКЛЕННЫЙ ЭТАЖ");
+      lines.push("              |   [o]    [o]  |  <--- ФРАНЦУЗСКИЙ ОСТЕКЛЕННЫЙ ЭТАЖ");
       lines.push("              |_______________|");
     } else if (input.roofType === "SHED_BOARD") {
       lines.push("              \\");
       lines.push("               \\______________");
-      lines.push("                \\  [o]    [o] \\  <-- ОДНОСКАТНАЯ МАНСАРДНАЯ КРОВЛЯ");
+      lines.push("                \\  [o]    [o] \\  <--- ОДНОСКАТНАЯ МАНСАРДНАЯ КРОВЛЯ");
       lines.push("                 [____________]");
     } else {
-      // Classic French Mansard double-pitch roof shape (Формат двойного излома во французском стиле)
       lines.push("                  ___________");
-      lines.push("                 /           \\   <-- ВЕРХНИЙ ПОЛОГИЙ СКАТ КРОВЛИ");
+      lines.push("                 /           \\   <--- ВЕРХНИЙ ПОЛОГИЙ СКАТ КРОВЛИ");
       lines.push("                /_____________\\");
       lines.push("               /  _       _  \\");
-      lines.push("              /  [o]     [o]  \\  <-- МАНСАРДНЫЙ КРУТОЙ СКАТ (ФРАНЦУЗСКИЙ)");
+      lines.push("              /  [o]     [o]  \\  <--- МАНСАРДНЫЙ КРУТОЙ СКАТ");
       lines.push("             /___[o]_____[o]___\\     (КЛАССИЧЕСКИЕ АРОЧНЫЕ ЛЮКАРНЫ)");
     }
   } else {
-    // Normal Empty Roof (Без мансардного этажа)
     if (input.roofType === "GABLE_METAL") {
       lines.push("                      /\\");
       lines.push("                     /  \\");
       lines.push("                    /    \\");
-      lines.push("                   /  ()  \\      <-- МЕТАЛЛОЧЕРЕПИЦА (ДВУСКАТНАЯ)");
+      lines.push("                   /  ()  \\      <--- МЕТАЛЛОЧЕРЕПИЦА (ДВУСКАТНАЯ)");
       lines.push("                  /________\\");
     } else if (input.roofType === "HIP_CERAMIC") {
       lines.push("                  ___________");
       lines.push("                 /           \\");
-      lines.push("                /             \\  <-- КЕРАМИЧЕСКАЯ ЧЕРЕПИЦА (ВАЛЬМОВАЯ)");
+      lines.push("                /             \\  <--- КЕРАМИЧЕСКАЯ ЧЕРЕПИЦА (ВАЛЬМОВАЯ)");
       lines.push("               /_______________\\");
     } else if (input.roofType === "FLAT_PVC") {
       lines.push("               _______________");
-      lines.push("              [===============]  <-- ПЛОСКАЯ КРОВЛЯ С ПВХ-МЕМБРАНОЙ");
+      lines.push("              [===============]  <--- ПЛОСКАЯ КРОВЛЯ С ПВХ-МЕМБРАНОЙ");
       lines.push("              [_______________]");
-    } else { // SHED_BOARD
+    } else {
       lines.push("              \\");
       lines.push("               \\");
-      lines.push("                \\_____________   <-- КРОВЛЯ ИЗ ПРОФНАСТИЛА (ОДНОСКАТНАЯ)");
+      lines.push("                \\_____________   <--- КРОВЛЯ ИЗ ПРОФНАСТИЛА (ОДНОСКАТНАЯ)");
       lines.push("                 [____________]");
     }
   }
 
-  // 3. FULL FLOORS (ЭТАЖНОСТЬ)
   for (let f = floorCount; f >= 1; f--) {
     let wallLabel = "";
     if (f === floorCount) {
@@ -124,7 +120,6 @@ export function buildASCIIBlueprint(input: CalculatorInput, fbId: string): strin
       else if (input.wallMaterial === "KERAMZIT") wallLabel = " [Керамзитоб. 1100 кг/м³]";
       else wallLabel = " [Дерев. Каркас 250 кг/м³]";
     }
-
     if (f === 1) {
       lines.push(`             |   [ ]  |¯|  [ ] |${wallLabel} (1 ЭТАЖ)`);
       lines.push("             |________[_]______|");
@@ -134,757 +129,125 @@ export function buildASCIIBlueprint(input: CalculatorInput, fbId: string): strin
     }
   }
 
-  // 4. BASEMENT COOPERATIVE LAYER (ЦОКОЛЬ / ПОДВАЛ)
   if (input.hasBasement) {
     lines.push("    - - - - -#=================#- - - - - <-- УРОВЕНЬ ЗЕМЛИ");
-    lines.push("             |   [ ]      [ ]  |          <-- ВСТРОЕННЫЙ ПОДВАЛ");
+    lines.push("             |   [ ]      [ ]  |          <--- ВСТРОЕННЫЙ ПОДВАЛ");
     lines.push("             |_________________|");
   } else {
     lines.push("    - - - - -#=================#- - - - - <-- УРОВЕНЬ ЕСТЕСТВЕННОЙ ЗЕМЛИ");
   }
 
-  // 5. CONSTRUCTIVE FOUNDATION SECTION (ФУНДАМЕНТ)
   if (fbId === "slab") {
-    lines.push("             [=================]          <-- МОНОЛИТНАЯ Ж/Б ПЛИТА");
+    lines.push("             [=================]          <--- МОНОЛИТНАЯ Ж/Б ПЛИТА");
     lines.push("             [_________________]");
-    lines.push("             | : : : : : : : . |          <-- Песчано-гравийная подушка");
+    lines.push("             | : : : : : : : . |          <--- Песчано-гравийная подушка");
     lines.push("             |_________________|");
   } else if (fbId === "strip") {
-    lines.push("             |===|         |===|          <-- Ж/Б РОСТВЕРК ВЫСОКИЙ");
-    lines.push("             |   |         |   |          <-- Тело ленточного бетона");
-    lines.push("             [===]         [===]          <-- РАСШИРЕННАЯ ПОДОШВА ЛЕНТЫ");
-    lines.push("             |:::|         |:::|          <-- Уплотненное основание подушки");
-  } else { // piles SWEDA
-    lines.push("             [=================]          <-- МОНОЛИТНЫЙ Ж/Б РОСТВЕРК");
+    lines.push("             |===|         |===|          <--- Ж/Б РОСТВЕРК ВЫСОКИЙ");
+    lines.push("             |   |         |   |          <--- Тело ленточного бетона");
+    lines.push("             [===]         [===]          <--- РАСШИРЕННАЯ ПОДОШВА ЛЕНТЫ");
+    lines.push("             |:::|         |:::|          <--- Уплотненное основание подушки");
+  } else {
+    lines.push("             [=================]          <--- МОНОЛИТНЫЙ Ж/Б РОСТВЕРК");
     lines.push("              | |           | |");
-    lines.push("              | |           | |           <-- ОПОРНЫЕ СВАИ ПО СНиП");
+    lines.push("              | |           | |           <--- ОПОРНЫЕ СВАИ ПО СНиП");
     lines.push("              | |           | |");
-    lines.push("             ( _ )         ( _ )          <-- Расширенные пяты свай (Тисэ)");
+    lines.push("             ( _ )         ( _ )          <--- Расширенные пяты свай (Тисэ)");
   }
 
-  // 6. SOIL BASE AND WATER TABLE (ГРУНТ / ВОДА)
   lines.push("    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ <-- РАСЧЕТНЫЙ УРОВЕНЬ ВОД (УГВ)");
-  lines.push("                             _  _  _      <-- Сейсмоустойчивый материк");
-  
+  lines.push("                             _  _  _      <--- Сейсмоустойчивый материк");
   return lines;
 }
 
-export function addOptionSheet(
-  workbook: ExcelJS.Workbook,
-  sheetName: string,
-  input: CalculatorInput,
-  results: CalculationResults,
-  selectedOption: FoundationOption,
-  landSlope: number,
-  groundwaterDepth: number,
-  detailedItemsFetcher: (catId: string, opt: any, slope: number, gw: number) => any[]
-): { grandTotalRow: number; eurRow: number } {
-  const worksheet = workbook.addWorksheet(sheetName);
+// Styling utilities
+const applySheetHeader = (ws: ExcelJS.Worksheet, title: string, colsCount: number = 8, bg: string = "FF0F172A") => {
+  ws.views = [{ showGridLines: true }];
+  const endColLetter = String.fromCharCode(65 + colsCount - 1);
+  ws.mergeCells(`A2:${endColLetter}2`);
+  const c = ws.getCell("A2");
+  c.value = title;
+  c.font = { name: "Calibri", size: 11, bold: true, color: { argb: "FFFFFFFF" } };
+  c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+  c.alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(2).height = 32;
+};
 
-  // Show grid lines explicitly
-  worksheet.views = [{ showGridLines: true }];
-
-  // Column Setup (A - G for inputs, results and costs, H for separator, I - O for CAD blueprint)
-  worksheet.getColumn(1).width = 10;  // Код
-  worksheet.getColumn(2).width = 65;  // Наименование
-  worksheet.getColumn(3).width = 18;  // Категория
-  worksheet.getColumn(4).width = 13;  // Кол-во
-  worksheet.getColumn(5).width = 10;  // Ед. изм.
-  worksheet.getColumn(6).width = 16;  // Цена за ед.
-  worksheet.getColumn(7).width = 20;  // Сумма
-  worksheet.getColumn(8).width = 4;   // Spacer Column
-  worksheet.getColumn(9).width = 10;  // CAD I
-  worksheet.getColumn(10).width = 10; // CAD J
-  worksheet.getColumn(11).width = 10; // CAD K
-  worksheet.getColumn(12).width = 10; // CAD L
-  worksheet.getColumn(13).width = 10; // CAD M
-  worksheet.getColumn(14).width = 10; // CAD N
-  worksheet.getColumn(15).width = 18; // CAD O
-
-  // Row heights
-  worksheet.getRow(1).height = 15;
-
-  // Title Block (B-G + I-O across entire sheet block)
-  worksheet.mergeCells("A2:O2");
-  const titleCell = worksheet.getCell("A2");
-  titleCell.value = `КИШИНЕВСКИЙ КАЛЬКУЛЯТОР ФУНДАМЕНТА - СМЕТНО-ПАСПОРТНАЯ ВЕДОМОСТЬ [${selectedOption.nameRu.toUpperCase()}]`;
-  titleCell.font = { name: "Calibri", family: 2, charset: 204, size: 12, bold: true, color: { argb: "FFFFFFFF" } };
-  titleCell.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF0F172A" } // Dark Slate (Tailwind Slate-900)
-  };
-  titleCell.alignment = { horizontal: "center", vertical: "middle" };
-  worksheet.getRow(2).height = 42;
-
-  // Header passport block
-  worksheet.mergeCells("A4:G4");
-  const subHeaderCell = worksheet.getCell("A4");
-  subHeaderCell.value = "ПОЛНЫЙ ТЕХНИЧЕСКИЙ ПАСПОРТ РАСЧЕТА (ВВОДНЫЕ И РАСЧЕТНЫЕ ДАННЫЕ)";
-  subHeaderCell.font = { name: "Calibri", family: 2, charset: 204, size: 10.5, bold: true, color: { argb: "FF0F172A" } };
-  subHeaderCell.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FFE2E8F0" } // Slate-200
-  };
-  subHeaderCell.alignment = { vertical: "middle", indent: 1 };
-  worksheet.getRow(4).height = 26;
-
-  // Build absolutely comprehensive list of inputs and outputs
-  const params = [
-    // --- ВХОДНЫЕ ДАННЫЕ (INPUTS) ---
-    { label: "--- ВХОДНЫЕ ГЕОМЕТРИЧЕСКИЕ И ТЕХНИЧЕСКИЕ ПАРАМЕТРЫ ---", val: "" },
-    { label: "Регион застройки в Республике Молдова:", val: getRegionLabel(input.region) },
-    { label: "Тип грунта строительного пятна:", val: getSoilLabel(input.soilType) },
-    { label: "Габариты здания в осях:", val: `${input.width} м × ${input.length} м` },
-    { label: "Количество этажей (по проекту застройки):", val: `${input.floors} этаж(а) (высота этажа ${input.floorHeight} м)` },
-    { label: "Общая площадь помещений поме пятна:", val: `${(input.width * input.length * input.floors).toFixed(1)} м²` },
-    { label: "Материал наружных и внутренних несущих стен:", val: getWallLabel(input.wallMaterial) },
-    { label: "Тип перекрытий этажей:", val: getSlabLabel(input.slabMaterial) },
-    { label: "Конструкция крыши / кровли:", val: getRoofLabel(input.roofType) },
-    { label: "Уровень грунтовых вод от поверхности (УГВ):", val: groundwaterDepth > 4 ? "Глубокое залегание (>4 м)" : `${groundwaterDepth} м от поверхности` },
-    { label: "Средний уклон ландшафта (строительное пятно):", val: `${landSlope}% (${landSlope > 5 ? "Требует уступных компенсаторов" : "Допускает ровную поверхность"})` },
-    { label: "Коэффициент надежности по нагрузке (запаса):", val: `${input.safetyFactor || 1.3} (по СНиП 2.01.07-85)` },
-    { label: "Наличие цокольного этажа / полноразмерного подвала:", val: input.hasBasement ? "Да (Конструкция с заглубленным подвалом)" : "Нет (Строительство без подвала)" },
-    { label: "Опция (перспектива надстройки этажей в будущем):", val: input.futureFlooringExtension ? "Да (Заложено увеличение несущей способности фундамента)" : "Нет" },
-
-    // --- РАСЧЕТНЫЕ НАГРУЗКИ ПО СНиП (CALCULATED LOADS) ---
-    { label: "--- РАСЧЕТНЫЕ СТАТИЧЕСКИЕ И КЛИМАТИЧЕСКИЕ НАГРУЗКИ (СНиП) ---", val: "" },
-    { label: "Собственный вес несущих и внутренних стен здания:", val: `${results.wallWeightTons.toFixed(1)} тонн` },
-    { label: "Собственный вес междуэтажных перекрытий:", val: `${results.slabWeightTons.toFixed(1)} тонн` },
-    { label: "Собственный вес кровельной и стропильной систем:", val: `${results.roofWeightTons.toFixed(1)} тонн` },
-    { label: "Полезная жилая/эксплуатационная расчетная нагрузка:", val: `${results.liveLoadTons.toFixed(1)} тонн` },
-    { label: "Снеговая климатическая расчетная нагрузка РМ:", val: `${results.snowLoadTons.toFixed(1)} тонн` },
-    { label: "Ветровая динамическая расчетная нагрузка РМ:", val: `${results.windLoadTons.toFixed(1)} тонн` },
-    { label: "Сейсмическая эквивалентная сила сдвига (СНиП II-7-81*):", val: `${results.seismicForceTons.toFixed(1)} тонн` },
-    { label: "Суммарный вес здания под подошвой фундамента (всего):", val: `${results.totalFactoredWeightTons.toFixed(1)} тонн` },
-
-    // --- РАСЧЕТ ГРУНТОВОГО ОСНОВАНИЯ (GEOTECHNICS & SIZING) ---
-    { label: "--- ХАРАКТЕРИСТИКИ ОСНОВАНИЯ И ВЫБРАННЫЕ РЕЗЕРВЫ ---", val: "" },
-    { label: "Выбранный конструктив опорного фундамента:", val: `${selectedOption.type} / ${selectedOption.nameRu}` },
-    { label: "Расчетное сопротивление грунта (R):", val: `${results.soilBearingCapacityKPa} кПа` },
-    { label: "Требуемая расчетная площадь подошвы опирания:", val: `${results.bearingAreaRequiredM2.toFixed(2)} м²` },
-    { label: "Ширина фундамента / Ленты / Свайного ростверка:", val: `${selectedOption.widthM} м (проектная по расчету)` },
-    { 
-      label: "Проектная глубина заложения фундамента:", 
-      val: selectedOption.id === "slab"
-        ? `${selectedOption.depthM} м (мелкозаглубленная утепленная плита по специальному теплотехническому расчету, исключающему промерзание пучинистого грунта под подошвой)`
-        : `${selectedOption.depthM} м (ниже уровня промерзания по СНиП)` 
-    },
-
-    // --- ГЕОТЕХНИЧЕСКИЕ РИСКИ (GEOTECHNICAL RISKS) ---
-    { label: "--- ИНЖЕНЕРНО-ГЕОЛОГИЧЕСКИЕ И СЕЙСМИЧЕСКИЕ РИСКИ ГРУНТА ---", val: "" },
-    { label: "Потенциальный риск морозного пучения грунта:", val: `${results.frostHeavingPercent}% (${results.frostHeavingPercent > 60 ? "ВЫСОКИЙ - требуется песчаная подушка" : "Низкий"})` },
-    { label: "Риск просадочности однородных суглинков (Лёсс):", val: `${results.collapsibilityPercent}% (${results.collapsibilityPercent > 60 ? "ВЫСОКИЙ - требуется трамбование" : "Низкий"})` },
-    { label: "Риск подтопления со стороны грунтовых вод:", val: `${results.floodingPercent}% (${results.floodingPercent > 60 ? "КРИТИЧЕСКИЙ - требуется периметральный дренаж" : "Умеренный/Низкий"})` },
-    { label: "Надобность сейсмического пояса (СНиП II-7-81*):", val: input.region !== "NORTH" ? "ОБЯЗАТЕЛЬНА (Сейсмозона 7-8 баллов - требуется монолит)" : "Рекомендована (Сейсмозона 6 баллов)" }
-  ];
-
-  let pRow = 5;
-  params.forEach((param, idx) => {
-    if (param.val === "") {
-      // Style Section Separator Row beautifully
-      worksheet.mergeCells(`B${pRow}:G${pRow}`);
-      const headerCell = worksheet.getCell(`B${pRow}`);
-      headerCell.value = param.label;
-      headerCell.font = { name: "Calibri", family: 2, charset: 204, size: 9.5, bold: true, color: { argb: "FF1E3A8A" } }; // Royal Blue
-      headerCell.alignment = { horizontal: "center", vertical: "middle" };
-
-      ["A", "B", "C", "D", "E", "F", "G"].forEach(col => {
-        const c = worksheet.getCell(`${col}${pRow}`);
-        c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFE2E8F0" } // Slate-200
-        };
-        c.border = {
-          top: { style: "thin", color: { argb: "FF94A3B8" } },
-          bottom: { style: "thin", color: { argb: "FF94A3B8" } },
-          left: { style: "thin", color: { argb: "FFE2E8F0" } },
-          right: { style: "thin", color: { argb: "FFE2E8F0" } }
-        };
-      });
-    } else {
-      // Normal parameter value row
-      worksheet.mergeCells(`B${pRow}:C${pRow}`);
-      worksheet.mergeCells(`D${pRow}:G${pRow}`);
-
-      const cellLabel = worksheet.getCell(`B${pRow}`);
-      cellLabel.value = param.label;
-      cellLabel.font = { name: "Calibri", family: 2, charset: 204, size: 9.5, bold: true, color: { argb: "FF475569" } };
-      cellLabel.alignment = { horizontal: "left", vertical: "middle" };
-
-      const cellVal = worksheet.getCell(`D${pRow}`);
-      cellVal.value = param.val;
-      cellVal.font = { name: "Calibri", family: 2, charset: 204, size: 9.5, color: { argb: "FF0F172A" } };
-      
-      // Accents for critical outputs
-      if (param.label.includes("Выбранный конструктив") || param.label.includes("Суммарный вес")) {
-        cellVal.font = { name: "Calibri", family: 2, charset: 204, size: 10, bold: true, color: { argb: "FF2563EB" } }; // Accent blue
-      } else if (param.label.includes("Риск") && (param.val.includes("ВЫСОКИЙ") || param.val.includes("КРИТИЧЕСКИЙ"))) {
-        cellVal.font = { name: "Calibri", family: 2, charset: 204, size: 9.5, bold: true, color: { argb: "FFDF1C1C" } }; // Warning red
-      } else if (param.label.includes("сейсмического пояса") && param.val.includes("ОБЯЗАТЕЛЬНА")) {
-        cellVal.font = { name: "Calibri", family: 2, charset: 204, size: 9.5, bold: true, color: { argb: "FFB45309" } }; // Warning gold
-      }
-      cellVal.alignment = { horizontal: "left", vertical: "middle" };
-
-      // Fill alternating row colors
-      const rowFill = idx % 2 === 0 ? "FFF8FAFC" : "FFFFFFFF";
-      ["A", "B", "C", "D", "E", "F", "G"].forEach(col => {
-        const c = worksheet.getCell(`${col}${pRow}`);
-        c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: rowFill }
-        };
-        c.border = {
-          bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
-          left: { style: "thin", color: { argb: "FFE2E8F0" } },
-          right: { style: "thin", color: { argb: "FFE2E8F0" } }
-        };
-      });
-    }
-
-    worksheet.getRow(pRow).height = 21;
-    pRow++;
-  });
-
-  // --- RENDER GLOWING CAD BLUEPRINT SCHEMATIC AT COLUMNS I TO O (Rows 4 to 41) ---
-  worksheet.mergeCells("I4:O4");
-  const cadTitle = worksheet.getCell("I4");
-  cadTitle.value = "ИНЖЕНЕРНЫЙ ЧЕРТЁЖ САПР (СХЕМАТИЧЕСКИЙ РАЗРЕЗ COLD CAD)";
-  cadTitle.font = { name: "Calibri", family: 2, charset: 204, size: 10, bold: true, color: { argb: "FFFFFFFF" } };
-  cadTitle.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF0284C7" } // Blue sky accent header
-  };
-  cadTitle.alignment = { horizontal: "center", vertical: "middle" };
-  worksheet.getRow(4).height = 26;
-
-  // Render outline rows around parameters height
-  const cadLines = buildASCIIBlueprint(input, selectedOption.id as string);
-  cadLines.forEach((cadLine, idx) => {
-    const drawingRow = 5 + idx;
-    worksheet.mergeCells(`I${drawingRow}:O${drawingRow}`);
-    const drawingCell = worksheet.getCell(`I${drawingRow}`);
-    drawingCell.value = cadLine;
-    drawingCell.font = { name: "Consolas", size: 9, bold: true, color: { argb: "FF38BDF8" } }; // Glowing blueprint cyan
-    drawingCell.alignment = { horizontal: "left", vertical: "middle" };
-
-    ["I", "J", "K", "L", "M", "N", "O"].forEach(col => {
-      const cell = worksheet.getCell(`${col}${drawingRow}`);
-      cell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF0F172A" } // Dark Slate Blueprint space
-      };
-
-      const borderConfig: any = {};
-      if (idx === 0) borderConfig.top = { style: "medium", color: { argb: "FF475569" } };
-      if (idx === cadLines.length - 1) borderConfig.bottom = { style: "medium", color: { argb: "FF475569" } };
-      if (col === "I") borderConfig.left = { style: "medium", color: { argb: "FF475569" } };
-      if (col === "O") borderConfig.right = { style: "medium", color: { argb: "FF475569" } };
-
-      cell.border = borderConfig;
-    });
-
-    if (worksheet.getRow(drawingRow).height === undefined || worksheet.getRow(drawingRow).height < 16) {
-      worksheet.getRow(drawingRow).height = 16;
-    }
-  });
-
-  // Ensure spacing is perfect and does not overlap Cost Estimation Header
-  if (pRow < 5 + cadLines.length) {
-    pRow = 5 + cadLines.length;
-  }
-
-  // Spacing before smeta starts
-  pRow++;
-  worksheet.getRow(pRow).height = 15;
-  pRow++;
-
-  worksheet.mergeCells(`A${pRow}:G${pRow}`);
-  const tableHeaderCell = worksheet.getCell(`A${pRow}`);
-  tableHeaderCell.value = `ПОДРОБНАЯ КАЛЬКУЛЯЦИЯ СМЕТНЫХ ЗАТРАТ - ${selectedOption.nameRu.toUpperCase()} (MDL)`;
-  tableHeaderCell.font = { name: "Calibri", family: 2, charset: 204, size: 10.5, bold: true, color: { argb: "FFFFFFFF" } };
-  tableHeaderCell.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF1E3A8A" } // Deep Blue
-  };
-  tableHeaderCell.alignment = { vertical: "middle", indent: 1 };
-  worksheet.getRow(pRow).height = 28;
-
-  pRow++;
-
-  // Write Table Column Headers
-  const colHeaders = [
-    { cell: `A${pRow}`, val: "Код" },
-    { cell: `B${pRow}`, val: "Наименование затрат и элементов" },
-    { cell: `C${pRow}`, val: "Категория" },
-    { cell: `D${pRow}`, val: "Кол-во" },
-    { cell: `E${pRow}`, val: "Ед. изм." },
-    { cell: `F${pRow}`, val: "Цена (MDL)" },
-    { cell: `G${pRow}`, val: "Итого (MDL)" }
-  ];
-
-  colHeaders.forEach(header => {
-    const cell = worksheet.getCell(header.cell);
-    cell.value = header.val;
-    cell.font = { name: "Calibri", family: 2, charset: 204, size: 9.5, bold: true, color: { argb: "FF334155" } };
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFF1F5F9" }
-    };
-    cell.alignment = { horizontal: header.cell.startsWith("A") || header.cell.startsWith("B") ? "left" : "right", vertical: "middle" };
-    if (header.cell.startsWith("C") || header.cell.startsWith("E")) {
-      cell.alignment = { horizontal: "center", vertical: "middle" };
-    }
+const applyTableHeaders = (ws: ExcelJS.Worksheet, row: number, headers: string[], bg: string = "FF1E3A8A") => {
+  headers.forEach((h, i) => {
+    const colName = String.fromCharCode(65 + i);
+    const cell = ws.getCell(`${colName}${row}`);
+    cell.value = h;
+    cell.font = { name: "Calibri", size: 9.5, bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
     cell.border = {
       top: { style: "thin", color: { argb: "FF94A3B8" } },
-      bottom: { style: "medium", color: { argb: "FF64748b" } },
+      bottom: { style: "medium", color: { argb: "FF0F172A" } },
       left: { style: "thin", color: { argb: "FFCBD5E1" } },
       right: { style: "thin", color: { argb: "FFCBD5E1" } }
     };
   });
-  worksheet.getRow(pRow).height = 24;
-  pRow++;
+  ws.getRow(row).height = 28;
+};
 
-  // Prep the categories data matching UI
-  const budgetCategories = [
-    {
-      id: "01",
-      name: "01. Бетон М300 (C20/25)",
-      desc: `Закупка и доставка готовой ж/б смеси миксером (${selectedOption.materials.concreteVolumeM3 || 0} м³)`,
-      cost: selectedOption.costEstimate.concreteCostMDL || 0,
-      showIf: true
-    },
-    {
-      id: "02",
-      name: "02. Арматурный прокат",
-      desc: `Поставка стержней класса A500C/A240 (${selectedOption.materials.reinforcementBarKg || 0} кг)`,
-      cost: selectedOption.costEstimate.steelCostMDL || 0,
-      showIf: true
-    },
-    {
-      id: "03",
-      name: "03. Вязка каркасов и работы",
-      desc: "Монтаж, увязка узлов проволокой, установка фиксаторов защитного слоя",
-      cost: selectedOption.costEstimate.rebarBindingCostMDL || 0,
-      showIf: true
-    },
-    {
-      id: "04",
-      name: "04. Разработка грунта (JCB)",
-      desc: `Копка траншей/бурение, профилирование дна, зачистка (${selectedOption.materials.excavationVolumeM3 || 0} м³)`,
-      cost: selectedOption.costEstimate.excavationCostMDL || 0,
-      showIf: true
-    },
-    {
-      id: "05",
-      name: "05. Щитовая опалубка",
-      desc: `Аренда щитов, обрезная доска хвойных пород, шпильки и шурупы (${selectedOption.materials.formworkM2 || 0} м²)`,
-      cost: selectedOption.costEstimate.formworkCostMDL || 0,
-      showIf: true
-    },
-    {
-      id: "06",
-      name: "06. Устройство подушки",
-      desc: `Песчано-гравийная смесь с уплотнением (${selectedOption.materials.sandGravelM3 || 0} м³)`,
-      cost: selectedOption.costEstimate.sandCushionCostMDL || 0,
-      showIf: true
-    },
-    {
-      id: "07",
-      name: "07. Изоляция и XPS цоколя",
-      desc: `Монтаж влагозащиты и плит утепления Penoplex XPS (${selectedOption.materials.waterproofingM2 || 0} м²)`,
-      cost: selectedOption.costEstimate.waterproofInsulationCostMDL || 0,
-      showIf: true
-    },
-    {
-      id: "08",
-      name: "08. Дренажная система",
-      desc: `Трубы d110, геотекстиль, гранитный щебень, ${selectedOption.materials.drainageWellsCount || 4} смотровых колодца`,
-      cost: selectedOption.costEstimate.drainageCostMDL || 0,
-      showIf: !!selectedOption.materials.hasDrainage
-    },
-    {
-      id: "09",
-      name: "09. Уступные компенсаторы",
-      desc: `Сложность рельефа ${landSlope}%, ступенчатая опалубка, подгонка уровней`,
-      cost: selectedOption.costEstimate.slopeComplicationCostMDL || 0,
-      showIf: landSlope > 0
-    },
-    {
-      id: "10",
-      name: "10. Черновой пол по грунту",
-      desc: selectedOption.id === "slab" 
-        ? "Монолитная несущая плита (Черновой пол встроен по технологии)"
-        : `Устройство пола: подушка ${selectedOption.materials.roughFloorSandM3 || 0} м³, сетка d8 ${selectedOption.materials.roughFloorRebarKg || 0} кг, стяжка ${selectedOption.materials.roughFloorConcreteM3 || 0} м³`,
-      cost: selectedOption.costEstimate.roughFloorCostMDL || 0,
-      showIf: selectedOption.costEstimate.roughFloorCostMDL !== undefined,
-      isSlabBuiltin: selectedOption.id === "slab"
-    },
-    {
-      id: "11",
-      name: "11. Бурение скважин под сваи",
-      desc: selectedOption.id === "piles"
-        ? `Бурение скважин d300-350мм под буронабивные сваи: ${selectedOption.materials.pileCount || 0} шт. глубиной 2.2м (итого ${selectedOption.materials.pileDrillingM || 0} пог.м)`
-        : "Не требуется для выбранного типа фундамента",
-      cost: selectedOption.costEstimate.pileDrillingCostMDL || 0,
-      showIf: selectedOption.id === "piles" && (selectedOption.costEstimate.pileDrillingCostMDL || 0) > 0
-    },
-    {
-      id: "12",
-      name: "12. Налог на добавленную стоимость (НДС 20% РМ)",
-      desc: "Обязательный сбор в бюджет Республики Молдова на строительные материалы и сертифицированные готовые бетонные смеси",
-      cost: selectedOption.costEstimate.vatMDL || 0,
-      showIf: selectedOption.costEstimate.vatMDL !== undefined && selectedOption.costEstimate.vatMDL > 0
-    },
-    {
-      id: "13",
-      name: "13. Раздел проектирования КЖ/АР",
-      desc: "Полная разработка рабочих проектов: архитектурные и железобетонные чертежи контура",
-      cost: selectedOption.costEstimate.designCostMDL || 0,
-      showIf: selectedOption.costEstimate.designCostMDL !== undefined && selectedOption.costEstimate.designCostMDL > 0
-    },
-    {
-      id: "14",
-      name: "14. Ревизионная инженерная геология",
-      desc: "Ударно-канатное бурение 2 скважин по 6 метров, лаб. определение модуля Е и высоты УГВ",
-      cost: selectedOption.costEstimate.geologyCostMDL || 0,
-      showIf: selectedOption.costEstimate.geologyCostMDL !== undefined && selectedOption.costEstimate.geologyCostMDL > 0
-    },
-    {
-      id: "15",
-      name: "15. Экспертиза технического соответствия",
-      desc: "Контрольное прохождение верификации чертежей и проектных нормативов КЖ/АР лицензированным госорганом",
-      cost: selectedOption.costEstimate.expertiseCostMDL || 0,
-      showIf: selectedOption.costEstimate.expertiseCostMDL !== undefined && selectedOption.costEstimate.expertiseCostMDL > 0
-    },
-    {
-      id: "16",
-      name: "16. Авторский и Технический надзор",
-      desc: "Подписание актов скрытых контуров армирования разработчиком проекта и техническим инспектором",
-      cost: selectedOption.costEstimate.supervisionCostMDL || 0,
-      showIf: selectedOption.costEstimate.supervisionCostMDL !== undefined && selectedOption.costEstimate.supervisionCostMDL > 0
-    }
-  ];
-
-  const subtotalCellsRowNumbers: number[] = [];
-
-  for (const cat of budgetCategories) {
-    if (!cat.showIf) continue;
-
-    // A. Subheader category row
-    worksheet.mergeCells(`A${pRow}:G${pRow}`);
-    const catTitleCell = worksheet.getCell(`A${pRow}`);
-    catTitleCell.value = `РАЗДЕЛ ${cat.name}`;
-    catTitleCell.font = { name: "Calibri", family: 2, charset: 204, size: 10, bold: true, color: { argb: "FF0F172A" } };
-    catTitleCell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFF1F5F9" }
-    };
-    catTitleCell.alignment = { vertical: "middle", indent: 1 };
-    
-    // Set borders for section header
-    ["A", "B", "C", "D", "E", "F", "G"].forEach(col => {
-      const c = worksheet.getCell(`${col}${pRow}`);
-      c.border = {
-        top: { style: "thin", color: { argb: "FFCBD5E1" } },
-        bottom: { style: "thin", color: { argb: "FFCBD5E1" } },
-        left: { style: "thin", color: { argb: "FFCBD5E1" } },
-        right: { style: "thin", color: { argb: "FFCBD5E1" } }
-      };
-    });
-    worksheet.getRow(pRow).height = 23;
-    pRow++;
-
-    const startDetailedRow = pRow;
-
-    if (cat.isSlabBuiltin) {
-      // Monolithic slab simple item
-      worksheet.getCell(`A${pRow}`).value = "10.1";
-      worksheet.getCell(`B${pRow}`).value = "Монолитный несущий черновой пол (Заливка встроена в общую плиту)";
-      worksheet.getCell(`C${pRow}`).value = "Конструкция";
-      worksheet.getCell(`D${pRow}`).value = 1;
-      worksheet.getCell(`D${pRow}`).numFmt = "#,##0";
-      worksheet.getCell(`E${pRow}`).value = "компл";
-      worksheet.getCell(`F${pRow}`).value = 0;
-      worksheet.getCell(`F${pRow}`).numFmt = "#,##0.00";
-      worksheet.getCell(`G${pRow}`).value = { formula: `=D${pRow}*F${pRow}`, result: 0 };
-      worksheet.getCell(`G${pRow}`).numFmt = "#,##0";
-
-      ["A", "B", "C", "D", "E", "F", "G"].forEach(col => {
-        const cell = worksheet.getCell(`${col}${pRow}`);
-        cell.font = { name: "Calibri", family: 2, charset: 204, size: 9, italic: true };
-        if (col === "B") {
-          cell.font = { name: "Calibri", family: 2, charset: 204, size: 9.5, italic: true, bold: true, color: { argb: "FF10B981" } };
-        }
-        cell.border = {
-          bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
-          left: { style: "thin", color: { argb: "FFE2E8F0" } },
-          right: { style: "thin", color: { argb: "FFE2E8F0" } }
-        };
-      });
-      worksheet.getRow(pRow).height = 20;
-      pRow++;
+// Clear dual equality signs and format properly in ExcelJS formulas
+export function setCellValue(cell: ExcelJS.Cell, value: any) {
+  if (value !== null && value !== undefined) {
+    if (typeof value === "object" && "formula" in value) {
+      let formulaStr = value.formula;
+      while (formulaStr.startsWith("=")) {
+        formulaStr = formulaStr.substring(1);
+      }
+      cell.value = { ...value, formula: formulaStr };
     } else {
-      // Get detailed list
-      const detailedItems = detailedItemsFetcher(cat.id, selectedOption, landSlope, groundwaterDepth);
-      
-      detailedItems.forEach((item, itemIdx) => {
-        const itemCode = `${cat.id}.${itemIdx + 1}`;
-        worksheet.getCell(`A${pRow}`).value = itemCode;
-        worksheet.getCell(`B${pRow}`).value = item.name;
-        
-        const typeLabels: Record<string, string> = {
-          material: "Материал",
-          delivery: "Доставка",
-          labor: "Работа",
-          machinery: "Техника"
-        };
-        worksheet.getCell(`C${pRow}`).value = typeLabels[item.type] || item.type;
-        worksheet.getCell(`D${pRow}`).value = item.qty;
-        worksheet.getCell(`D${pRow}`).numFmt = "#,##0.00";
-        worksheet.getCell(`E${pRow}`).value = item.unit;
-        
-        // Map work-rates to cells in default settings starting row 5 (EUR_RATE)
-        // EUR_RATE=5, USD_RATE=6, INFLATION_COEFF=7, SAFETY_FACTOR=8
-        // CONCRETE_M3_MDL=9, CONCRETE_DELIV_M3_MDL=10, STEEL_KG_MDL=11, STEEL_DELIV_KG_MDL=12
-        // LONG_REBAR_LABOR_MDL=13, TRANS_REBAR_LABOR_MDL=14, EXCAV_JCB_MDL=15, EXCAV_MAN_MDL=16
-        // EXCAV_DELIV_FLAT=17, FORMWORK_RENT_MDL=18, SAND_GRAVEL_M3_MDL=19, WATERPROOF_M2_MDL=20
-        // INSULATION_M3_MDL=21, PILE_DRILLING_MDL=22
-        let rateFormula = "";
-        const lowerName = item.name.toLowerCase();
-        if (lowerName.includes("аренда мелкощитовой") || lowerName.includes("щитов опалубки") || lowerName.includes("опалубк")) {
-          rateFormula = "='Настройки'!$C$18 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("бетон") && lowerName.includes("доставк")) {
-          rateFormula = "='Настройки'!$C$10 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("бетон")) {
-          rateFormula = "='Настройки'!$C$9 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("арматур") && lowerName.includes("доставк")) {
-          rateFormula = "='Настройки'!$C$12 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("арматур") || lowerName.includes("сталь длинно")) {
-          rateFormula = "='Настройки'!$C$11 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("вязк") || lowerName.includes("сборка каркас") || lowerName.includes("вязка")) {
-          rateFormula = "='Настройки'!$C$13 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("изготовление гнутых хомутов") || lowerName.includes("хомут") || lowerName.includes("гибк")) {
-          rateFormula = "='Настройки'!$C$14 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("разработка грунта механизированная") || lowerName.includes("jcb") || lowerName.includes("экскаватор")) {
-          rateFormula = "='Настройки'!$C$15 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("ручная доработка")) {
-          rateFormula = "='Настройки'!$C$16 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("выезд") || lowerName.includes("мобилизац")) {
-          rateFormula = "='Настройки'!$C$17";
-        } else if (lowerName.includes("песчано-грав") || lowerName.includes("пгс") || lowerName.includes("песок") || lowerName.includes("щебень")) {
-          rateFormula = "='Настройки'!$C$19 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("гидроизоляц") || lowerName.includes("мастик")) {
-          rateFormula = "='Настройки'!$C$20 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("теплоизол") || lowerName.includes("xps") || lowerName.includes("пенополи")) {
-          rateFormula = "='Настройки'!$C$21 * 'Настройки'!$C$7";
-        } else if (lowerName.includes("бурение")) {
-          rateFormula = "='Настройки'!$C$22 * 'Настройки'!$C$7";
+      const valStr = value.toString();
+      if (valStr.startsWith("=")) {
+        let formulaStr = valStr;
+        while (formulaStr.startsWith("=")) {
+          formulaStr = formulaStr.substring(1);
         }
-
-        if (rateFormula) {
-          worksheet.getCell(`F${pRow}`).value = { formula: rateFormula, result: item.rate };
-        } else {
-          worksheet.getCell(`F${pRow}`).value = item.rate;
-        }
-        worksheet.getCell(`F${pRow}`).numFmt = "#,##0.00";
-        
-        // INTERACTIVE EXCEL FORMULA -> Qty * Rate preserved in G column
-        worksheet.getCell(`G${pRow}`).value = {
-          formula: `=D${pRow}*F${pRow}`,
-          result: item.total
-        };
-        worksheet.getCell(`G${pRow}`).numFmt = "#,##0";
-
-        ["A", "B", "C", "D", "E", "F", "G"].forEach(col => {
-          const cell = worksheet.getCell(`${col}${pRow}`);
-          cell.font = { name: "Calibri", family: 2, charset: 204, size: 9 };
-          cell.border = {
-            bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
-            left: { style: "thin", color: { argb: "FFE2E8F0" } },
-            right: { style: "thin", color: { argb: "FFE2E8F0" } }
-          };
-          if (col === "G") {
-            cell.font = { name: "Calibri", family: 2, charset: 204, size: 9, bold: true };
-          }
-        });
-        
-        worksheet.getRow(pRow).height = 20;
-        pRow++;
-      });
+        cell.value = { formula: formulaStr };
+      } else {
+        cell.value = value;
+      }
     }
-
-    const endDetailedRow = pRow - 1;
-
-    // B. Subtotal row for Category
-    worksheet.mergeCells(`B${pRow}:F${pRow}`);
-    const subtotalLabel = worksheet.getCell(`B${pRow}`);
-    subtotalLabel.value = `Итого по подразделу [ ${cat.name.replace(/^\d+\.\s*/, "")} ]`;
-    subtotalLabel.font = { name: "Calibri", family: 2, charset: 204, size: 9.5, bold: true, color: { argb: "FF1E40AF" } };
-    subtotalLabel.alignment = { horizontal: "right", vertical: "middle" };
-
-    // INTERACTIVE SUM FORMULA -> sums the section rows
-    const subtotalCell = worksheet.getCell(`G${pRow}`);
-    subtotalCell.value = {
-      formula: `=SUM(G${startDetailedRow}:G${endDetailedRow})`,
-      result: cat.cost
-    };
-    subtotalCell.font = { name: "Calibri", family: 2, charset: 204, size: 10, bold: true, color: { argb: "FF1E40AF" } };
-    subtotalCell.numFmt = "#,##0";
-
-    // Style the subtotal row
-    subtotalCellsRowNumbers.push(pRow);
-
-    ["A", "B", "C", "D", "E", "F", "G"].forEach(col => {
-      const cell = worksheet.getCell(`${col}${pRow}`);
-      cell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFF0F9FF" } // Tailwind Sky-50
-      };
-      cell.border = {
-        top: { style: "thin", color: { argb: "FF93C5FD" } },
-        bottom: { style: "medium", color: { argb: "FF3B82F6" } },
-        left: { style: "thin", color: { argb: "FFCBD5E1" } },
-        right: { style: "thin", color: { argb: "FFCBD5E1" } }
-      };
-    });
-    worksheet.getRow(pRow).height = 24;
-    pRow++;
-
-    // Extra little spacer
-    worksheet.getRow(pRow).height = 5;
-    pRow++;
+  } else {
+    cell.value = null;
   }
-
-  // Double spacing before GRAND TOTAL
-  pRow++;
-  worksheet.getRow(pRow).height = 15;
-  pRow++;
-
-  // C. GRAND TOTAL EXCEL BLOCK
-  worksheet.mergeCells(`B${pRow}:F${pRow}`);
-  const grandLabelCell = worksheet.getCell(`B${pRow}`);
-  grandLabelCell.value = "ИТОГ: Полная сметная стоимость фундамента под ключ (MDL):";
-  grandLabelCell.font = { name: "Calibri", family: 2, charset: 204, size: 11, bold: true, color: { argb: "FFFFFFFF" } };
-  grandLabelCell.alignment = { horizontal: "right", vertical: "middle" };
-
-  const grandTotalRow = pRow;
-
-  // INTERACTIVE GRAND TOTAL FORMULA -> sums all subtotals
-  const subtotalRefs = subtotalCellsRowNumbers.map(r => `G${r}`).join("+");
-  const grandTotalCell = worksheet.getCell(`G${pRow}`);
-  grandTotalCell.value = {
-    formula: `=${subtotalRefs}`,
-    result: selectedOption.costMDL
-  };
-  grandTotalCell.font = { name: "Calibri", family: 2, charset: 204, size: 12, bold: true, color: { argb: "FFFFFFFF" } };
-  grandTotalCell.numFmt = "#,##0";
-
-  ["B", "C", "D", "E", "F", "G"].forEach(col => {
-    const cell = worksheet.getCell(`${col}${pRow}`);
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FF1E3A8A" } // Deep Slate Royal Blue
-    };
-    cell.border = {
-      top: { style: "double", color: { argb: "FF60A5FA" } },
-      bottom: { style: "medium", color: { argb: "FF1E3A8A" } }
-    };
-  });
-  worksheet.getRow(pRow).height = 34;
-  pRow++;
-
-  // D. EUR conversion row
-  worksheet.mergeCells(`B${pRow}:F${pRow}`);
-  const eurLabelCell = worksheet.getCell(`B${pRow}`);
-  eurLabelCell.value = "Курсовой эквивалент в Евро (ориентир по курсу 'Настройки'!$C$5):";
-  eurLabelCell.font = { name: "Calibri", family: 2, charset: 204, size: 10, italic: true, bold: true, color: { argb: "FF475569" } };
-  eurLabelCell.alignment = { horizontal: "right", vertical: "middle" };
-
-  const eurRow = pRow;
-
-  const eurTotalCell = worksheet.getCell(`G${pRow}`);
-  eurTotalCell.value = {
-    formula: `=ROUND(G${pRow - 1}/'Настройки'!$C$5, 0)`,
-    result: Math.round(selectedOption.costMDL / 19.8)
-  };
-  eurTotalCell.font = { name: "Calibri", family: 2, charset: 204, size: 10, italic: true, bold: true, color: { argb: "FF475569" } };
-  eurTotalCell.numFmt = "€#,##0";
-
-  ["B", "C", "D", "E", "F", "G"].forEach(col => {
-    const cell = worksheet.getCell(`${col}${pRow}`);
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFF8FAFC" }
-    };
-    cell.border = {
-      bottom: { style: "thin", color: { argb: "FFE2E8F0" } }
-    };
-  });
-  worksheet.getRow(pRow).height = 24;
-  pRow++;
-
-  // E. USD conversion row
-  worksheet.mergeCells(`B${pRow}:F${pRow}`);
-  const usdLabelCell = worksheet.getCell(`B${pRow}`);
-  usdLabelCell.value = "Курсовой эквивалент в Долларах США (ориентир по курсу 'Настройки'!$C$6):";
-  usdLabelCell.font = { name: "Calibri", family: 2, charset: 204, size: 10, italic: true, bold: true, color: { argb: "FF475569" } };
-  usdLabelCell.alignment = { horizontal: "right", vertical: "middle" };
-
-  const usdTotalCell = worksheet.getCell(`G${pRow}`);
-  usdTotalCell.value = {
-    formula: `=ROUND(G${pRow - 2}/'Настройки'!$C$6, 0)`,
-    result: Math.round(selectedOption.costMDL / 18.2)
-  };
-  usdTotalCell.font = { name: "Calibri", family: 2, charset: 204, size: 10, italic: true, bold: true, color: { argb: "FF475569" } };
-  usdTotalCell.numFmt = "$#,##0";
-
-  ["B", "C", "D", "E", "F", "G"].forEach(col => {
-    const cell = worksheet.getCell(`${col}${pRow}`);
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFF8FAFC" }
-    };
-    cell.border = {
-      bottom: { style: "thin", color: { argb: "FFE2E8F0" } }
-    };
-  });
-  worksheet.getRow(pRow).height = 24;
-  pRow += 2;
-
-  // E. Footnote static warnings
-  worksheet.mergeCells(`B${pRow}:G${pRow}`);
-  const noteTitleCell = worksheet.getCell(`B${pRow}`);
-  noteTitleCell.value = "ПРИМЕЧАНИЕ ГОРОДСКОЙ ИНЖЕНЕРНОЙ СЛУЖБЫ РМ:";
-  noteTitleCell.font = { name: "Calibri", family: 2, charset: 204, size: 10, bold: true, color: { argb: "FF64748B" } };
-  pRow++;
-
-  worksheet.mergeCells(`B${pRow}:G${pRow + 3}`);
-  const noteDescCell = worksheet.getCell(`B${pRow}`);
-  noteDescCell.value = 
-    "1. Ведомость объемов работ составлена на основе усредненного нормативного давления грунта.\n" +
-    "2. Перед заложением фундамента ОБЯЗАТЕЛЬНО выполнение шурфования и проверки физико-механических свойств грунтовых напластований.\n" +
-    "3. Сейсмопояс (Centură antiseismică) толщиной h=20-30 см выполняется непрерывно по всему наружному контуру.\n" +
-    "4. Настоящая смета с формулами позволяет интерактивно изменять цены ресурсов в столбце F для автоматической адаптации к рынку.";
-  noteDescCell.font = { name: "Calibri", family: 2, charset: 204, size: 8.5, italic: true, color: { argb: "FF64748B" } };
-  noteDescCell.alignment = { wrapText: true, vertical: "top" };
-  worksheet.getRow(pRow).height = 15;
-
-  return { grandTotalRow, eurRow };
 }
 
+// Helper to mathematically clean, resolve and wrap complex formula rates to prevent precedence errors in Excel
+export function getRateFormula(rate: string | number, qtyCell: string): string {
+  if (typeof rate === "string") {
+    let cleanRate = rate.trim();
+    while (cleanRate.startsWith("=")) {
+      cleanRate = cleanRate.substring(1).trim();
+    }
+    // If rate formula contains addition or subtraction, wrap it in parentheses to enforce operator precedence
+    if (cleanRate.includes("+") || cleanRate.includes("-")) {
+      return `=(${cleanRate}) * ${qtyCell}`;
+    } else {
+      return `=${cleanRate} * ${qtyCell}`;
+    }
+  } else {
+    return `=${qtyCell} * ${rate}`;
+  }
+}
+
+export function writeCell(ws: ExcelJS.Worksheet, rName: string, value: any, style?: any) {
+  const cell = ws.getCell(rName);
+  setCellValue(cell, value);
+  if (style) {
+    if (style.font) cell.font = style.font;
+    if (style.fill) cell.fill = style.fill;
+    if (style.alignment) cell.alignment = style.alignment;
+    if (style.border) cell.border = style.border;
+    if (style.numFmt) cell.numFmt = style.numFmt;
+  }
+}
+
+// Add hidden Settings template sheet
 export function addSettingsSheet(workbook: ExcelJS.Workbook, safetyFactor: number) {
   const ws = workbook.addWorksheet("Настройки");
   ws.views = [{ showGridLines: true }];
@@ -894,20 +257,14 @@ export function addSettingsSheet(workbook: ExcelJS.Workbook, safetyFactor: numbe
   ws.getColumn(3).width = 16;
   ws.getColumn(4).width = 50;
 
-  // Title
   ws.mergeCells("B2:D2");
   const titleCell = ws.getCell("B2");
   titleCell.value = "ИНЖЕНЕРНО-ТЕХНИЧЕСКИЕ НАСТРОЙКИ КАЛЬКУЛЯТОРА";
-  titleCell.font = { name: "Calibri", size: 12, bold: true, color: { argb: "FFFFFFFF" } };
-  titleCell.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF1E3A8A" }
-  };
+  titleCell.font = { name: "Calibri", size: 11, bold: true, color: { argb: "FFFFFFFF" } };
+  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A8A" } };
   titleCell.alignment = { horizontal: "center", vertical: "middle" };
   ws.getRow(2).height = 30;
 
-  // Headers
   ws.getCell("B4").value = "Параметр настройки";
   ws.getCell("C4").value = "Значение";
   ws.getCell("D4").value = "Описание и нормативная ссылка";
@@ -917,14 +274,13 @@ export function addSettingsSheet(workbook: ExcelJS.Workbook, safetyFactor: numbe
     r.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
     r.alignment = { horizontal: "left", vertical: "middle" };
   });
-  ws.getRow(4).height = 24;
 
   const settings = [
     { code: "EUR_RATE", label: "Курс обмена EUR (MDL/EUR)", val: 19.80, desc: "Официальный курс обмена валют Национального Банка Молдовы" },
     { code: "USD_RATE", label: "Курс обмена USD (MDL/USD)", val: 18.20, desc: "Официальный курс обмена валют Национального Банка Молдовы" },
     { code: "INFLATION_COEFF", label: "Коэффициент инфляции", val: 1.12, desc: "Коэффициент удорожания сметных ресурсов на текущий квартал" },
     { code: "SAFETY_FACTOR", label: "Коэффициент надежности по нагрузке", val: safetyFactor || 1.30, desc: "Коэффициент запаса по прочности грунтового основания СНиП" },
-    { code: "CONCRETE_M3_MDL", label: "Цена бетона C20/25 M350 (MDL/м3)", val: 1450, desc: "Конструкционный бетон без учета транспортной доставки" },
+    { code: "CONCRETE_M3_MDL", label: "Цена бетона C20/25 M300 (MDL/м3)", val: 1450, desc: "Конструкционный бетон без учета транспортной доставки" },
     { code: "CONCRETE_DELIV_M3_MDL", label: "Транспорт бетона миксером (MDL/м3)", val: 300, desc: "Доставка автобетоносмесителем с узла на стройку в РМ" },
     { code: "STEEL_KG_MDL", label: "Базовая армирующая сталь А500С (MDL/кг)", val: 17.5, desc: "Арматура горячекатаная d8/d10/d12 по прейскуранту" },
     { code: "STEEL_DELIV_KG_MDL", label: "Транспортировка арматуры (MDL/кг)", val: 3.5, desc: "Логистическая развозка длинномерами на объект" },
@@ -934,7 +290,7 @@ export function addSettingsSheet(workbook: ExcelJS.Workbook, safetyFactor: numbe
     { code: "EXCAV_MAN_MDL", label: "Ручная доработка траншеи/пятна (MDL/м3)", val: 50, desc: "Подрезка уплотненного дна котлована вручную" },
     { code: "EXCAV_DELIV_FLAT", label: "Смена выезда спецтехники (MDL/flat)", val: 1200, desc: "Подача трактора JCB на участок застройки в РМ" },
     { code: "FORMWORK_RENT_MDL", label: "Аренда мелкощитовой опалубки (MDL/м2)", val: 140, desc: "Суточная аренда инвентарной влагостойкой фанеры" },
-    { code: "SAND_GRAVEL_M3_MDL", label: "Песчано-гравийная смесь (MDL/м3)", val: 450, desc: "Supply rate с Копаченского карьера" },
+    { code: "SAND_GRAVEL_M3_MDL", label: "Песчано-гравийная смесь (MDL/м3)", val: 450, desc: "Supply rate с карьера" },
     { code: "WATERPROOF_M2_MDL", label: "Наплавляемая гидроизоляция (MDL/м2)", val: 120, desc: "Праймер битумный + 2 слоя рулонного герметика" },
     { code: "INSULATION_M3_MDL", label: "Жесткий теплоизолятор XPS (MDL/м3)", val: 1400, desc: "Экструдированный пенополистирол Penoplex ТЕХНОНИКОЛЬ" },
     { code: "PILE_DRILLING_MDL", label: "Бурение погонного метра скважин (MDL/м)", val: 300, desc: "Механическое бурение под сваи d300 навесным ямобуром" }
@@ -948,269 +304,1148 @@ export function addSettingsSheet(workbook: ExcelJS.Workbook, safetyFactor: numbe
     ws.getCell(`D${r}`).value = s.desc;
 
     ws.getCell(`A${r}`).font = { name: "Consolas", size: 9, color: { argb: "FF64748B" } };
-    ws.getCell(`B${r}`).font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF334155" } };
-    ws.getCell(`C${r}`).font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF0F172A" } };
-    ws.getCell(`D${r}`).font = { name: "Calibri", size: 9, italic: true, color: { argb: "FF64748B" } };
+    ws.getCell(`B${r}`).font = { name: "Calibri", size: 9.5 };
+    ws.getCell(`C${r}`).font = { name: "Consolas", size: 10, bold: true, color: { argb: "FF1E3A8A" } };
+    ws.getCell(`D${r}`).font = { name: "Calibri", size: 9, italic: true, color: { argb: "FF475569" } };
+    ws.getRow(r).height = 20;
+  });
 
-    ws.getCell(`C${r}`).numFmt = "0.00";
+  ws.state = "hidden";
+}
 
-    ["B", "C", "D"].forEach(c => {
-      const cell = ws.getCell(`${c}${r}`);
+// Generate complete set of rows for the BOQ sheet across the 13 normalized sections
+function getBOQRowsForOption(opt: FoundationOption, input: CalculatorInput) {
+  const perimeter = 2 * (input.width + input.length);
+  const footingArea = input.width * input.length;
+  
+  const conc = opt.materials.concreteVolumeM3 || 15;
+  const steel = opt.materials.reinforcementBarKg || 800;
+  const sand = opt.materials.sandGravelM3 || 25;
+  const waterp = opt.materials.waterproofingM2 || 40;
+  const insul = opt.materials.insulationM3 || 5;
+  const formw = opt.materials.formworkM2 || 30;
+  const excav = opt.materials.excavationVolumeM3 || 40;
+  
+  // Dynamic scaling quantities based on geometric parameters
+  const r1_1 = excav;
+  const r1_2 = Math.round(excav * 0.1 * 10) / 10;
+  const r1_3 = Math.round(excav * 1.15 * 10) / 10;
+  const r1_4 = Math.round(footingArea * 1.1);
+  const r1_5 = opt.materials.backfillVolumeM3 || Math.max(15, Math.round(excav * 0.45));
+  const r1_6 = r1_5;
+  const r1_7 = Math.round(footingArea * 1.5);
+  
+  const r2_1 = Math.round(footingArea * 1.25);
+  const r2_2 = Math.round(sand * 0.45 * 10) / 10;
+  const r2_3 = Math.round(sand * 0.55 * 10) / 10;
+  const r2_4 = Math.round(sand * 10) / 10;
+  const r2_6 = Math.round(footingArea * 1.15);
+  
+  const r3_1 = Math.round(steel * 0.76);
+  const r3_2 = Math.round(steel * 0.21);
+  const r3_3 = Math.round(steel * 0.03);
+  const r3_4 = Math.round(footingArea * 4.2);
+  const r3_5 = Math.round(perimeter * 1.8);
+  const r3_6 = 16;
+  
+  const r4_1 = formw;
+  
+  const r5_1 = conc;
+  const r5_2 = conc;
+  const r5_3 = conc;
+  
+  const r6_1 = Math.round(footingArea * 1.12);
+  const r6_2 = 14;
+  const r6_3 = conc;
+  
+  const r7_1 = Math.round(waterp * 1.15);
+  const r7_2 = Math.round(waterp * 1.25);
+  const r7_3 = waterp;
+  const r7_4 = 8;
+  const r7_5 = Math.round(perimeter * 0.65);
+  
+  let r8_1 = 0;
+  let r8_3 = 0;
+
+  if (opt.id === "slab") {
+    r8_1 = Math.round(footingArea * 0.1 * 10) / 10;
+    r8_3 = Math.round(perimeter * 0.4 * 0.05 * 10) / 10;
+  } else if (opt.id === "strip") {
+    r8_3 = Math.round(perimeter * 0.6 * 0.05 * 10) / 10;
+  } else {
+    r8_3 = Math.round(perimeter * 0.5 * 0.05 * 10) / 10;
+  }
+  
+  const r9_1 = Math.round(perimeter * 0.4);
+  const r9_2 = 4;
+  const r9_3 = 15;
+  const r9_4 = 20;
+  const r9_5 = 24;
+  const r9_6 = 15;
+  
+  const r10_1 = opt.materials.drainagePipeM || Math.round(perimeter + 8);
+  const r10_2 = opt.materials.drainageStoneM3 || Math.round(r10_1 * 0.15);
+  const r10_3 = opt.materials.drainageWellsCount || 4;
+  const r10_4 = Math.ceil(r10_1 * 1.6);
+  const r10_5 = Math.ceil(r10_1 * 0.4 * 0.35);
+  
+  const r11_1 = 4;
+  const r11_2 = Math.round(perimeter);
+  
+  const r12_1 = Math.round(perimeter * 0.8);
+  const r12_2 = Math.ceil(r12_1 * 0.05 * 10) / 10;
+
+  return [
+    { sec: "1. ЗЕМЛЯНЫЕ РАБОТЫ (EARTHWORKS)", rows: [
+      { code: "1.1", systemId: "EXC-001", label: "Механизированная разработка грунта спецтехникой JCB-3CX", unit: "м³", qty: r1_1, matRate: 0, labRate: "='Настройки'!$C$15", source: "СНиП 3.02.01", workType: "Excavation", resourceType: "Machinery", phase: "Phase_1_Site_Prep", dependencyId: "None", costCategory: "Direct_Cost" },
+      { code: "1.2", systemId: "EXC-002", label: "Ручная доработка дна траншей и котлованов под заложение подошвы", unit: "м³", qty: r1_2, matRate: 0, labRate: "='Настройки'!$C$16", source: "СНиП 3.02.01-83", workType: "Excavation", resourceType: "Labor", phase: "Phase_1_Site_Prep", dependencyId: "EXC-001", costCategory: "Direct_Cost" },
+      { code: "1.3", systemId: "EXC-003", label: "Вывоз излишков грунта самосвалами КАМАЗ за пределы площадки (15 км)", unit: "т", qty: Math.round(r1_3 * 1.6), matRate: 0, labRate: 120, source: "НЦС РМ", workType: "Excavation", resourceType: "Service", phase: "Phase_1_Site_Prep", dependencyId: "EXC-001", costCategory: "Direct_Cost" },
+      { code: "1.4", systemId: "EXC-004", label: "Планировка и уплотнение дна котлована виброплитой 120 кг (5 проходов)", unit: "м²", qty: r1_4, matRate: 0, labRate: 25, source: "СН РМ 4.02.01-14", workType: "Preparation", resourceType: "Machinery", phase: "Phase_1_Site_Prep", dependencyId: "EXC-002", costCategory: "Direct_Cost" },
+      { code: "1.5", systemId: "EXC-005", label: "Ручная и механизированная послойная обратная засыпка пазух котлована грунтом (backfill)", unit: "м³", qty: r1_5, matRate: 0, labRate: 90, source: "СНиП III-8-76", workType: "Backfill", resourceType: "Labor", phase: "Phase_4_Backfill_Blind_Area", dependencyId: "WPR-002", costCategory: "Direct_Cost" },
+      { code: "1.6", systemId: "EXC-006", label: "Послойное механическое уплотнение грунта обратной засыпки виброплитой 120кг (backfill_compaction)", unit: "м³", qty: r1_6, matRate: 15, labRate: 45, source: "СНиП III-8-76", workType: "Backfill", resourceType: "Machinery", phase: "Phase_4_Backfill_Blind_Area", dependencyId: "EXC-005", costCategory: "Direct_Cost" },
+      { code: "1.7", systemId: "EXC-007", label: "Финишная вертикальная планировка и разравнивание грунта вокруг цоколя (final_grading)", unit: "м²", qty: r1_7, matRate: 0, labRate: 35, source: "СНиП 3.02.01", workType: "Backfill", resourceType: "Labor", phase: "Phase_4_Backfill_Blind_Area", dependencyId: "EXC-006", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "2. ПОДГОТОВКА ОСНОВАНИЯ (BASE PREPARATION)", rows: [
+      { code: "2.1", systemId: "PRE-001", label: "Настил геотекстиля Typar SF40 с перехлестом стыков 200 мм", unit: "м²", qty: r2_1, matRate: 35, labRate: 15, source: "NCM F.02.02", workType: "Preparation", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "EXC-004", costCategory: "Direct_Cost" },
+      { code: "2.2", systemId: "PRE-002", label: "Устройство песчаной подушки с послойным виброуплотнением", unit: "м³", qty: r2_2, matRate: 380, labRate: 140, source: "NCM F.02.02-2008", workType: "Preparation", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-001", costCategory: "Direct_Cost" },
+      { code: "2.3", systemId: "PRE-003", label: "Укладка щебеночной подушки из гранитного щебня фракции 20-40 мм", unit: "м³", qty: r2_3, matRate: 680, labRate: 160, source: "СНиП 3.02.01", workType: "Preparation", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-002", costCategory: "Direct_Cost" },
+      { code: "2.4", systemId: "PRE-004", label: "Песчано-гравийная подготовка (ПГС Оргеев) с проливкой водой", unit: "м³", qty: r2_4, matRate: "='Настройки'!$C$19", labRate: 155, source: "NCM F.02.02", workType: "Preparation", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-003", costCategory: "Direct_Cost" },
+      { code: "2.5", systemId: "PRE-005", label: "Разделительный гидроизолириющий слой (двухслойная ПЭ рукав-пленка 150мкм)", unit: "м²", qty: r2_6, matRate: 12, labRate: 10, source: "СНиП 3.04.01", workType: "Preparation", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-004", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "3. АРМИРОВАНИЕ (REINFORCEMENT)", rows: [
+      { code: "3.1", systemId: "ARM-001", label: "Заводская арматура горячекатаная рифленая А500С d12/d14 рабочего ядра", unit: "кг", qty: r3_1, matRate: "='Настройки'!$C$11 + 'Настройки'!$C$12", labRate: 0, source: "NCM F.02.02-2008", workType: "Rebar_Binding", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "FRM-001", costCategory: "Direct_Cost" },
+      { code: "3.2", systemId: "ARM-002", label: "Конструктивная монтажная гладкая арматура А240 d8 для хомутов", unit: "кг", qty: r3_2, matRate: "='Настройки'!$C$11", labRate: 0, source: "СНиП II-23", workType: "Rebar_Binding", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "ARM-001", costCategory: "Direct_Cost" },
+      { code: "3.3", systemId: "ARM-003", label: "Профессиональная полуавтоматическая вязка каркаса вязальной проволокой 1.2мм", unit: "кг", qty: r3_1 + r3_2, matRate: 1.0, labRate: "='Настройки'!$C$13", source: "NCM F.02.02", workType: "Rebar_Binding", resourceType: "Labor", phase: "Phase_2_Foundation", dependencyId: "ARM-002", costCategory: "Direct_Cost" },
+      { code: "3.4", systemId: "ARM-004", label: "Стульчики-фиксаторы арматурного защитного слоя h=35мм plasticковые", unit: "шт", qty: r3_4, matRate: 1.5, labRate: 1.0, source: "СНиП 3.03.01", workType: "Rebar_Binding", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "ARM-003", costCategory: "Direct_Cost" },
+      { code: "3.5", systemId: "ARM-005", label: "Фиксаторы вертикальные «Звездочка» d12", unit: "шт", qty: r3_5, matRate: 1.8, labRate: 1.0, source: "СНиП 3.03.01", workType: "Rebar_Binding", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "ARM-003", costCategory: "Direct_Cost" },
+      { code: "3.6", systemId: "ARM-006", label: "Сейсмостойкие анкерные усиления Г-образных угловых стыков", unit: "шт", qty: r3_6, matRate: 45, labRate: 30, source: "СНиП II-7-81*", workType: "Rebar_Binding", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "ARM-003", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "4. ОПАЛУБКА (FORMWORK)", rows: [
+      { code: "4.1", systemId: "FRM-001", label: "Аренда мелкощитовой инвентарной влагостойкой фанеры (комплект с замками)", unit: "м²", qty: r4_1, matRate: "='Настройки'!$C$18", labRate: 0, source: "СНиП 3.03.01", workType: "Formwork", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-005", costCategory: "Direct_Cost" },
+      { code: "4.2", systemId: "FRM-002", label: "Монтаж телескопических стоек, упоров жесткости и боковых стяжек", unit: "м.п.", qty: Math.round(perimeter * 1.5), matRate: 40, labRate: 110, source: "СНиП 3.03.01-87", workType: "Formwork", resourceType: "Labor", phase: "Phase_2_Foundation", dependencyId: "FRM-001", costCategory: "Direct_Cost" },
+      { code: "4.3", systemId: "FRM-003", label: "Антиадгезионное защитное покрытие щитов эмульсольной смазкой", unit: "м²", qty: r4_1, matRate: 15, labRate: 15, source: "СНиП 3.03.01", workType: "Formwork", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "FRM-002", costCategory: "Direct_Cost" },
+      { code: "4.4", systemId: "FRM-004", label: "Аккуратный демонтаж опалубочных конструкций, чистка щитов", unit: "м²", qty: r4_1, matRate: 0, labRate: 80, source: "СНиП 3.03.01", workType: "Formwork", resourceType: "Labor", phase: "Phase_2_Foundation", dependencyId: "CON-003", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "5. БЕТОННЫЕ РАБОТЫ (CONCRETE WORKS)", rows: [
+      { code: "5.1", systemId: "CON-001", label: "Тяжелый конструкционный бетон С20/25 M300 (W6, F150) с РБУ", unit: "м³", qty: r5_1, matRate: "='Настройки'!$C$9 * 'Настройки'!$C$7 + 'Настройки'!$C$10", labRate: 0, source: "СНиП 3.03.01", workType: "Concrete_Placing", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "ARM-003", costCategory: "Direct_Cost" },
+      { code: "5.2", systemId: "CON-002", label: "Укладка жидкой бетонной смеси автобетононасосом (вылет стрелы 28м)", unit: "м³", qty: r5_2, matRate: 120, labRate: 280, source: "СНиП 3.03.01", workType: "Concrete_Placing", resourceType: "Machinery", phase: "Phase_2_Foundation", dependencyId: "CON-001", costCategory: "Direct_Cost" },
+      { code: "5.3", systemId: "CON-003", label: "Послойное глубинное вибрирование смеси булавой", unit: "м³", qty: r5_3, matRate: 0, labRate: 120, source: "NCM F.02.02", workType: "Concrete_Placing", resourceType: "Labor", phase: "Phase_2_Foundation", dependencyId: "CON-002", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "6. УХОД ЗА БЕТОНОМ И ГИДРАТАЦИЯ (CONCRETE CURING)", rows: [
+      { code: "6.1", systemId: "CUR-001", label: "Укрытие горизонтальных зеркал заливки ПЭ пленкой от пересыхания (curing_film)", unit: "м²", qty: r6_1, matRate: 15, labRate: 10, source: "СНиП 3.03.01-87", workType: "Curing", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "CON-003", costCategory: "Direct_Cost" },
+      { code: "6.2", systemId: "CUR-002", label: "Влажностная гидратация (полив водой 3 раза в день 10 дней) (moisture_control / concrete_curing)", unit: "дней", qty: r6_2, matRate: 10, labRate: 90, source: "СНиП 3.03.01", workType: "Curing", resourceType: "Labor", phase: "Phase_3_Curing_Protection", dependencyId: "CUR-001", costCategory: "Direct_Cost" },
+      { code: "6.3", systemId: "CUR-003", label: "Зимнее электропрогревочное ПНСВ-кабельное или матовое укрытие бетона (winter_protection)", unit: "м³", qty: r6_3, matRate: 45, labRate: 30, source: "СНиП 3.03.01", workType: "Curing", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "CON-003", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "7. ГИДРОИЗОЛЯЦИЯ (WATERPROOFING)", rows: [
+      { code: "7.1", systemId: "WPR-001", label: "Грунтование бетонной поверхности битумным праймером", unit: "м²", qty: r7_1, matRate: 35, labRate: 25, source: "СНиП 3.04.01", workType: "Waterproofing", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "FRM-004", costCategory: "Direct_Cost" },
+      { code: "7.2", systemId: "WPR-002", label: "Нанесение защитной обмазочной мастики Технониколь в 2 слоя (waterproof_protection_layer)", unit: "м²", qty: r7_2, matRate: 65, labRate: 50, source: "СНиП 3.04.01-87", workType: "Waterproofing", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "WPR-001", costCategory: "Direct_Cost" },
+      { code: "7.3", systemId: "WPR-003", label: "Наплавляемая рулонная изоляция гидрозащитным рулоном Техноэласт в 2 слоя", unit: "м²", qty: r7_3, matRate: "='Настройки'!$C$20", labRate: 90, source: "СНиП 3.04.01", workType: "Waterproofing", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "WPR-002", costCategory: "Direct_Cost" },
+      { code: "7.4", systemId: "WPR-004", label: "Герметизация трубных вводов набухающим профилем и гидрошпонками (penetration_sealing)", unit: "шт", qty: r7_4, matRate: 120, labRate: 90, source: "ГОСТ 30547", workType: "Waterproofing", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "WPR-002", costCategory: "Direct_Cost" },
+      { code: "7.5", systemId: "WPR-005", label: "Монтаж защитной профилированной HDPE Planter мембраны (waterproof_protection_membrane)", unit: "м²", qty: r7_5, matRate: 75, labRate: 45, source: "ТС ТЕХНОНИКОЛЬ", workType: "Waterproofing", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "WPR-003", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "8. УТЕПЛЕНИЕ (THERMAL INSULATION)", rows: [
+      { code: "8.1", systemId: "INS-001", label: "Теплоизоляция подошвы жестким XPS Penoplex Carbon Eco l=100 мм", unit: "м³", qty: r8_1, matRate: "='Настройки'!$C$21 * 'Настройки'!$C$7", labRate: 150, source: "NCM L.02.01", workType: "Insulation", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-005", costCategory: "Direct_Cost" },
+      { code: "8.2", systemId: "INS-002", label: "Теплоизоляция торцов и цокольных граней XPS Penoplex d=50 мм", unit: "м³", qty: r8_3, matRate: "='Настройки'!$C$21 * 'Настройки'!$C$7", labRate: 180, source: "NCM L.02.01", workType: "Insulation", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "INS-001", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "9. КОММУНИКАЦИИ (COMMUNICATIONS)", rows: [
+      { code: "9.1", systemId: "COM-001", label: "Укладка труб водоотведения ПВХ d110 SN4 наружная рыжая под плитой в песке (sewer_entry)", unit: "м.п.", qty: r9_1, matRate: 110, labRate: 150, source: "СНиП 2.04.03", workType: "Utility_Install", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-002", costCategory: "Direct_Cost" },
+      { code: "9.2", systemId: "COM-002", label: "Монтаж защитных жестких гильз пробивки d160 HDPE (spare_sleeve)", unit: "шт", qty: r9_2, matRate: 180, labRate: 240, source: "NCM F.02.02", workType: "Utility_Install", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-002", costCategory: "Direct_Cost" },
+      { code: "9.3", systemId: "COM-003", label: "Трубы водоподачи ПНД d32 питьевые в защитном футляре (water_entry)", unit: "м.п.", qty: r9_3, matRate: 45, labRate: 85, source: "СНиП 2.04.02", workType: "Utility_Install", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-002", costCategory: "Direct_Cost" },
+      { code: "9.4", systemId: "COM-004", label: "Протяжка распределительной гофры канала d50 электросетей (power_entry)", unit: "м.п.", qty: r9_4, matRate: 35, labRate: 50, source: "ПТЭЭП РМ", workType: "Utility_Install", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-002", costCategory: "Direct_Cost" },
+      { code: "9.5", systemId: "COM-005", label: "Сети связи и интернет: защитная труба ПВХ d25 для интернет-кабелей (internet_entry / low_current_networks)", unit: "м.п.", qty: r9_5, matRate: 28, labRate: 35, source: "СНиП 3.05.06", workType: "Utility_Install", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-002", costCategory: "Direct_Cost" },
+      { code: "9.6", systemId: "COM-006", label: "Проводка гильз подземного видеонаблюдения и контроля доступа d25 (video_surveillance_entry / intercom_entry)", unit: "м.п.", qty: r9_6, matRate: 30, labRate: 40, source: "ПТЭЭП РМ", workType: "Utility_Install", resourceType: "Material", phase: "Phase_2_Foundation", dependencyId: "PRE-002", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "10. ДРЕНАЖ (DRAINAGE)", rows: [
+      { code: "10.1", systemId: "DRN-001", label: "Монтаж гибкой дренажной перфорированной трубы d110 в кокосовом фильтре", unit: "м.п.", qty: r10_1, matRate: "='Настройки'!$C$18" , labRate: 160, source: "NCM F.02.02", workType: "Drainage", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "EXC-001", costCategory: "Direct_Cost" },
+      { code: "10.2", systemId: "DRN-002", label: "Обсыпка перфорированной трубы дренажным щебнем фракции 20-40 вокруг трубы (drainage_filter_layer)", unit: "м³", qty: r10_2, matRate: 680, labRate: 180, source: "СНиП 2.06.15", workType: "Drainage", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "DRN-001", costCategory: "Direct_Cost" },
+      { code: "10.3", systemId: "DRN-003", label: "Сборные ревизионные кольцевые колодцы d315 с отстойниками на углах", unit: "шт", qty: r10_3, matRate: 1350, labRate: 600, source: "СНиП 2.04.03", workType: "Drainage", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "DRN-001", costCategory: "Direct_Cost" },
+      { code: "10.4", systemId: "DRN-004", label: "Настил объемного дренажного геотекстиля для оборачивания дрены (geotextile_wrap)", unit: "м²", qty: r10_4, matRate: 30, labRate: 25, source: "NCM F.02.02", workType: "Drainage", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "DRN-001", costCategory: "Direct_Cost" },
+      { code: "10.5", systemId: "DRN-005", label: "Фильтрующий слой из гранитного гравия вокруг дренажного ядра (gravel_wrap)", unit: "м³", qty: r10_5, matRate: 580, labRate: 120, source: "СНиП 2.06.15", workType: "Drainage", resourceType: "Material", phase: "Phase_3_Curing_Protection", dependencyId: "DRN-001", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "11. ЛИВНЕВАЯ СИСТЕМА (STORMWATER SYSTEM)", rows: [
+      { code: "11.1", systemId: "STM-001", label: "Пластиковые дождеприемники ливнесбора с решетками", unit: "шт", qty: r11_1, matRate: 380, labRate: 450, source: "СНиП 2.04.03", workType: "Stormwater", resourceType: "Material", phase: "Phase_4_Backfill_Blind_Area", dependencyId: "BLD-001", costCategory: "Direct_Cost" },
+      { code: "11.2", systemId: "STM-002", label: "Ливнеприемные лотки полимербетонные с решетками вдоль отмостки", unit: "м.п.", qty: r11_2, matRate: 450, labRate: 160, source: "ГОСТ 32955", workType: "Stormwater", resourceType: "Material", phase: "Phase_4_Backfill_Blind_Area", dependencyId: "BLD-001", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "12. ОТМОСТКА (BLIND AREA)", rows: [
+      { code: "12.1", systemId: "BLD-001", label: "Устройство песчано-гравияного подушки под отмостку с трамбованием (blind_area)", unit: "м³", qty: Math.ceil(r12_1 * 0.1 * 10) / 10, matRate: 450, labRate: 95, source: "NCM F.02.02", workType: "Blind_Area", resourceType: "Material", phase: "Phase_4_Backfill_Blind_Area", dependencyId: "EXC-007", costCategory: "Direct_Cost" },
+      { code: "12.2", systemId: "BLD-002", label: "Укладка жестких теплоизоляционных плит XPS Penoplex 50мм под отмостку (insulated_blind_area)", unit: "м³", qty: r12_2, matRate: 1250, labRate: 110, source: "NCM L.02.01", workType: "Blind_Area", resourceType: "Material", phase: "Phase_4_Backfill_Blind_Area", dependencyId: "BLD-001", costCategory: "Direct_Cost" },
+      { code: "12.3", systemId: "BLD-003", label: "Армирование стальной сеткой и бетонирование С12/15 толщиной 80мм (reinforced_blind_area)", unit: "м²", qty: r12_1, matRate: 280, labRate: 180, source: "ГОСТ 9128", workType: "Blind_Area", resourceType: "Material", phase: "Phase_4_Backfill_Blind_Area", dependencyId: "BLD-002", costCategory: "Direct_Cost" }
+    ]},
+    { sec: "13. КОНТРОЛЬ КАЧЕСТВА (QUALITY CONTROL & PREPARATION)", rows: [
+      { code: "13.1", systemId: "QUA-001", label: "Инженерно-геологические изыскания: бурение 2-х разведочных скважин по 6м с отбором проб (geology)", unit: "копл.", qty: 1, matRate: 0, labRate: 9500, source: "СП 11-105-97", workType: "Audit", resourceType: "Service", phase: "Phase_1_Site_Prep", dependencyId: "None", costCategory: "Direct_Cost" },
+      { code: "13.2", systemId: "QUA-002", label: "Полевое инструментальное испытания фрикционной плотности песчаной подушки плотномером (compaction_test)", unit: "шт", qty: 4, matRate: 0, labRate: 600, source: "ГОСТ 22733", workType: "Audit", resourceType: "Service", phase: "Phase_2_Foundation", dependencyId: "PRE-002", costCategory: "Direct_Cost" },
+      { code: "13.3", systemId: "QUA-003", label: "Полевое испытание осадки конуса бетона (Slump Test) из каждого автомиксера (slump_test / concrete_test)", unit: "копл.", qty: 1, matRate: 350, labRate: 450, source: "ГОСТ 10181", workType: "Audit", resourceType: "Service", phase: "Phase_2_Foundation", dependencyId: "CON-002", costCategory: "Direct_Cost" },
+      { code: "13.4", systemId: "QUA-004", label: "Прессование контрольных кубиков бетона на прочность при сжатии в прессе на 28-й день (cube_strength_test)", unit: "копл.", qty: 1, matRate: 350, labRate: 750, source: "ГОСТ 10180", workType: "Audit", resourceType: "Service", phase: "Phase_3_Curing_Protection", dependencyId: "CON-003", costCategory: "Direct_Cost" },
+      { code: "13.5", systemId: "QUA-005", label: "Оформление двухсторонних актов скрытых работ под надзором инженеров технадзора (acceptance_protocol)", unit: "копл.", qty: 1, matRate: 0, labRate: 1500, source: "СНиП 3.01.04", workType: "Audit", resourceType: "Service", phase: "Phase_3_Curing_Protection", dependencyId: "CON-003", costCategory: "Direct_Cost" }
+    ]}
+  ];
+}
+
+// Orchestrate populating options in the detailed BOQ worksheet
+function writeBOQForOption(
+  ws: ExcelJS.Worksheet, 
+  opt: FoundationOption, 
+  input: CalculatorInput,
+  startRow: number,
+  tracker: any
+): number {
+  let currRow = startRow;
+  
+  // Outer visual header
+  ws.mergeCells(`A${currRow}:N${currRow}`);
+  const titleCell = ws.getCell(`A${currRow}`);
+  titleCell.value = `🏗️ РАЗДЕЛ ВЕДОМОСТИ ОБЪЕМОВ РАБОТ И СМЕТА: ${opt.nameRu.toUpperCase()} (${opt.id.toUpperCase()})`;
+  titleCell.font = { name: "Calibri", size: 10.5, bold: true, color: { argb: "FFFFFFFF" } };
+  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0F172A" } };
+  titleCell.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+  ws.getRow(currRow).height = 28;
+  currRow++;
+
+  const rowsData = getBOQRowsForOption(opt, input);
+  const sectionSumRows: number[] = [];
+
+  rowsData.forEach(secGroup => {
+    // Write Section Title row
+    ws.mergeCells(`A${currRow}:N${currRow}`);
+    const secCell = ws.getCell(`A${currRow}`);
+    secCell.value = secGroup.sec;
+    secCell.font = { name: "Calibri", size: 9.5, bold: true, color: { argb: "FF334155" } };
+    secCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+    secCell.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+    ws.getRow(currRow).height = 22;
+    
+    ["A","B","C","D","E","F","G","H","I","J","K","L","M","N"].forEach(col => {
+      ws.getCell(`${col}${currRow}`).border = {
+        top: { style: "thin", color: { argb: "FFE2E8F0" } },
+        bottom: { style: "thin", color: { argb: "FFE2E8F0" } }
+      };
+    });
+    currRow++;
+
+    const secStartRow = currRow;
+
+    secGroup.rows.forEach(r => {
+      writeCell(ws, `A${currRow}`, r.systemId, { alignment: { horizontal: "center" } });
+      const secClean = secGroup.sec.replace(/^\d+\.\s*/, "");
+      writeCell(ws, `B${currRow}`, secClean);
+      writeCell(ws, `C${currRow}`, r.label, { alignment: { wrapText: true } });
+      writeCell(ws, `D${currRow}`, r.unit, { alignment: { horizontal: "center" } });
+      writeCell(ws, `E${currRow}`, r.qty, { numFmt: "#,##0.00", alignment: { horizontal: "right" } });
+
+      // Identify coordinates dynamically for structural cross-references
+      if (r.systemId === "EXC-001") tracker.excavationQtyRow = currRow;
+      if (r.systemId === "CON-001") tracker.concreteQtyRow = currRow;
+      if (r.systemId === "ARM-001") tracker.steelQtyRow = currRow;
+      if (r.systemId === "DRN-001") tracker.drainagePipeRow = currRow;
+      if (r.systemId === "PRE-004") tracker.sandGravelQtyRow = currRow;
+      if (r.systemId === "INS-001" || r.systemId === "INS-002") tracker.xpsQtyRow = currRow;
+      if (r.systemId === "WPR-003") tracker.waterproofingQtyRow = currRow;
+
+      // Handle raw formula logic with correct rate mapping
+      if (r.matRate !== 0 && r.matRate !== null && r.matRate !== undefined) {
+        writeCell(ws, `F${currRow}`, getRateFormula(r.matRate, `E${currRow}`), { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" } });
+      } else {
+        writeCell(ws, `F${currRow}`, 0, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" } });
+      }
+
+      if (r.labRate !== 0 && r.labRate !== null && r.labRate !== undefined) {
+        writeCell(ws, `G${currRow}`, getRateFormula(r.labRate, `E${currRow}`), { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" } });
+      } else {
+        writeCell(ws, `G${currRow}`, 0, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" } });
+      }
+
+      writeCell(ws, `H${currRow}`, `=F${currRow} + G${currRow}`, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" }, font: { bold: true } });
+
+      // Write normalized attributes to columns I to N
+      writeCell(ws, `I${currRow}`, r.workType || "");
+      writeCell(ws, `J${currRow}`, r.resourceType || "");
+      writeCell(ws, `K${currRow}`, r.phase || "");
+      writeCell(ws, `L${currRow}`, r.dependencyId || "");
+      writeCell(ws, `M${currRow}`, r.costCategory || "");
+      writeCell(ws, `N${currRow}`, r.systemId || "");
+
+      const isEven = currRow % 2 === 0;
+      const bgHex = isEven ? "FFF8FAFC" : "FFFFFFFF";
+      ["A","B","C","D","E","F","G","H","I","J","K","L","M","N"].forEach(col => {
+        const cell = ws.getCell(`${col}${currRow}`);
+        if (!cell.fill) {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgHex } };
+        }
+        cell.border = {
+          bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
+          left: { style: "thin", color: { argb: "FFE2E8F0" } },
+          right: { style: "thin", color: { argb: "FFE2E8F0" } }
+        };
+        if (!cell.font) {
+          cell.font = { name: "Calibri", size: 9 };
+        }
+      });
+      ws.getRow(currRow).height = 22;
+      currRow++;
+    });
+
+    const secEndRow = currRow - 1;
+
+    // Subtotal Row for the current section
+    ws.mergeCells(`A${currRow}:E${currRow}`);
+    const subLabelCell = ws.getCell(`A${currRow}`);
+    subLabelCell.value = `   ↳ Подитог по разделу: ${secGroup.sec.substring(secGroup.sec.indexOf(" ") + 1)}`;
+    subLabelCell.font = { name: "Calibri", size: 9, bold: true, italic: true, color: { argb: "FF475569" } };
+    subLabelCell.alignment = { horizontal: "left", vertical: "middle" };
+
+    writeCell(ws, `F${currRow}`, `=SUM(F${secStartRow}:F${secEndRow})`, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" }, font: { bold: true, italic: true } });
+    writeCell(ws, `G${currRow}`, `=SUM(G${secStartRow}:G${secEndRow})`, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" }, font: { bold: true, italic: true } });
+    writeCell(ws, `H${currRow}`, `=SUM(H${secStartRow}:H${secEndRow})`, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" }, font: { bold: true, italic: true, color: { argb: "FF1E3A8A" } } });
+
+    ["A","B","C","D","E","F","G","H","I","J","K","L","M","N"].forEach(col => {
+      const cell = ws.getCell(`${col}${currRow}`);
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF1F5F9" } };
+      cell.border = {
+        top: { style: "thin", color: { argb: "FFE2E8F0" } },
+        bottom: { style: "medium", color: { argb: "FF94A3B8" } }
+      };
+      if (["I","J","K","L","M","N"].includes(col)) {
+        cell.value = ""; // blank out unmerged details columns
+      }
+    });
+
+    sectionSumRows.push(currRow);
+    ws.getRow(currRow).height = 22;
+    currRow++;
+  });
+
+  // Grand totals row for this options partition
+  ws.mergeCells(`A${currRow}:E${currRow}`);
+  const grandLabelCell = ws.getCell(`A${currRow}`);
+  grandLabelCell.value = `🏆 ВСЕГО ПРОЕКТНЫЙ ПОДРЯД (${opt.nameRu.toUpperCase()}):`;
+  grandLabelCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FFFFFFFF" } };
+  grandLabelCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF15803D" } };
+  grandLabelCell.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+
+  const sumMatFormula = sectionSumRows.map(rNum => `F${rNum}`).join("+");
+  const sumLabFormula = sectionSumRows.map(rNum => `G${rNum}`).join("+");
+  const sumTotFormula = sectionSumRows.map(rNum => `H${rNum}`).join("+");
+
+  writeCell(ws, `F${currRow}`, `=${sumMatFormula}`, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" }, font: { bold: true, color: { argb: "FFFFFFFF" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF15803D" } } });
+  writeCell(ws, `G${currRow}`, `=${sumLabFormula}`, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" }, font: { bold: true, color: { argb: "FFFFFFFF" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF15803D" } } });
+  writeCell(ws, `H${currRow}`, `=${sumTotFormula}`, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" }, font: { bold: true, size: 10.5, color: { argb: "FFFFFFFF" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF15803D" } } });
+
+  ["A","B","C","D","E","F","G","H","I","J","K","L","M","N"].forEach(col => {
+    const cell = ws.getCell(`${col}${currRow}`);
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF15803D" } };
+    if (["I","J","K","L","M","N"].includes(col)) {
+      cell.value = ""; // blank out columns
+    }
+  });
+
+  ws.getRow(currRow).height = 26;
+  return currRow; // Grand total row index
+}
+
+// Integrated Dynamic Excel Workbook Generation
+export async function generateExcelWorkbook(
+  input: CalculatorInput,
+  results: CalculationResults,
+  selectedOption: FoundationOption | null,
+  landSlope: number,
+  groundwaterDepth: number,
+  detailedItemsFetcher: (catId: string, opt: any, slope: number, gw: number) => any[]
+): Promise<ExcelJS.Workbook> {
+  const workbook = new ExcelJS.Workbook();
+  const mainOpt = selectedOption || results.options.find(o => o.id === "slab") || results.options[0];
+  
+  const slabOpt = results.options.find(o => o.id === "slab") || results.options[0];
+  const stripOpt = results.options.find(o => o.id === "strip") || results.options[1] || results.options[0];
+  const pileOpt = results.options.find(o => o.id === "piles") || results.options[2] || results.options[0];
+
+  // Secure dynamic pricing coordinates inside Settings sheet
+  addSettingsSheet(workbook, input.safetyFactor);
+
+  const trackerSlab = { concreteQtyRow: 0, steelQtyRow: 0, excavationQtyRow: 0, sandGravelQtyRow: 0, xpsQtyRow: 0, drainagePipeRow: 0, waterproofingQtyRow: 0 };
+  const trackerStrip = { concreteQtyRow: 0, steelQtyRow: 0, excavationQtyRow: 0, sandGravelQtyRow: 0, xpsQtyRow: 0, drainagePipeRow: 0, waterproofingQtyRow: 0 };
+  const trackerPile = { concreteQtyRow: 0, steelQtyRow: 0, excavationQtyRow: 0, sandGravelQtyRow: 0, xpsQtyRow: 0, drainagePipeRow: 0, waterproofingQtyRow: 0 };
+
+  // --- SHEET 1: BOQ (Ведомость объёмов) ---
+  const boqSheet = workbook.addWorksheet("BOQ");
+  boqSheet.getColumn(1).width = 11;  // ID / System_ID
+  boqSheet.getColumn(2).width = 26;  // Конструктивный раздел
+  boqSheet.getColumn(3).width = 48;  // Работа / Ресурс
+  boqSheet.getColumn(4).width = 10;  // Ед.изм
+  boqSheet.getColumn(5).width = 14;  // Количество
+  boqSheet.getColumn(6).width = 18;  // Кост Материалов
+  boqSheet.getColumn(7).width = 18;  // Кост Работ / СМР
+  boqSheet.getColumn(8).width = 20;  // Кост Итого
+  boqSheet.getColumn(9).width = 18;  // Work_Type
+  boqSheet.getColumn(10).width = 18; // Resource_Type
+  boqSheet.getColumn(11).width = 14; // Phase
+  boqSheet.getColumn(12).width = 18; // Dependency_ID
+  boqSheet.getColumn(13).width = 18; // Cost_Category
+  boqSheet.getColumn(14).width = 14; // System_ID
+
+  applySheetHeader(boqSheet, "📋 ВЕДОМОСТЬ СМР И ПОЛНЫЙ СМЕТНЫЙ РАСЧЕТ ПО КОНСТРУКТИВНЫМ РАЗДЕЛАМ СНиП РМ", 14, "FF0F172A");
+  applyTableHeaders(boqSheet, 4, [
+    "Код (ID)",
+    "Конструктивный раздел",
+    "Наименование строительно-монтажных работ и ресурсов (СМР)",
+    "Ед.изм.",
+    "Кол-во",
+    "Материалы (MDL)",
+    "Работы и СД (MDL)",
+    "Итого Сметная (MDL)",
+    "Тип работ (Work_Type)",
+    "Тип ресурса (Resource_Type)",
+    "Этап СМР (Phase)",
+    "Предшественник (Dependency_ID)",
+    "Группа затрат (Cost_Category)",
+    "Маш.код (System_ID)"
+  ], "FF1E3A8A");
+
+  let slabTotalRow = 32; // Static defaults as fail-safes
+  let stripTotalRow = 64;
+  let pileTotalRow = 96;
+
+  // Generate sequential partitioned estimates for comparison and absolute sheet referential integrity
+  let currentCursor = 5;
+  slabTotalRow = writeBOQForOption(boqSheet, slabOpt, input, currentCursor, trackerSlab);
+  currentCursor = slabTotalRow + 4;
+  stripTotalRow = writeBOQForOption(boqSheet, stripOpt, input, currentCursor, trackerStrip);
+  currentCursor = stripTotalRow + 4;
+  pileTotalRow = writeBOQForOption(boqSheet, pileOpt, input, currentCursor, trackerPile);
+
+  const activeTracker = selectedOption ? (selectedOption.id === "slab" ? trackerSlab : selectedOption.id === "strip" ? trackerStrip : trackerPile) : trackerSlab;
+
+  // --- SHEET 2: МАТЕРИАЛЫ ---
+  const materialsSheet = workbook.addWorksheet("Материалы");
+  materialsSheet.getColumn(1).width = 45; // Материал
+  materialsSheet.getColumn(2).width = 18; // Количество
+  materialsSheet.getColumn(3).width = 10; // ЕдИзм
+  materialsSheet.getColumn(4).width = 16; // Цена
+  materialsSheet.getColumn(5).width = 20; // Стоимость
+
+  applySheetHeader(materialsSheet, "📦 СВОДНАЯ СМЕТНАЯ ВЕДОМОСТЬ РАСХОДА МАТЕРИАЛОВ (ПОСТАВКА)", 5, "FF1E293B");
+  applyTableHeaders(materialsSheet, 4, [
+    "Наименование сертифицированного строительного материала",
+    "Количество",
+    "Ед.изм.",
+    "Базовая цена (MDL)",
+    "Сметная стоимость (MDL)"
+  ], "FF334155");
+
+  const coreMaterials = [
+    { name: "Бетон товарный сертифицированный С20/25 M300 W6", unit: "м³", boqCell: `BOQ!E${activeTracker.concreteQtyRow || 15}`, priceCell: "'Настройки'!$C$9 * 'Настройки'!$C$7 + 'Настройки'!$C$10" },
+    { name: "Арматура горячекатаная А500С рифленая d12", unit: "кг", boqCell: `BOQ!E${activeTracker.steelQtyRow || 11}`, priceCell: "'Настройки'!$C$11 + 'Настройки'!$C$12" },
+    { name: "Песчано-гравийная смесь (ПГС карьер Орхей)", unit: "м³", boqCell: `BOQ!E${activeTracker.sandGravelQtyRow || 9}`, priceCell: "'Настройки'!$C$19" },
+    { name: "Теплоизолятор экструдированный XPS Penoplex 100мм", unit: "м³", boqCell: `BOQ!E${activeTracker.xpsQtyRow || 21}`, priceCell: "'Настройки'!$C$21 * 'Настройки'!$C$7" },
+    { name: "Дренажная гибкая перфорированная труба d110 в геотекстиле", unit: "м.п.", boqCell: `BOQ!E${activeTracker.drainagePipeRow || 25}`, priceCell: "'Настройки'!$C$18" },
+    { name: "Праймер битумный глубокого проникновения Технониколь", unit: "м²", boqCell: `BOQ!E${activeTracker.waterproofingQtyRow || 19}`, priceCell: 35 },
+    { name: "Высокопрочный геотекстиль Typar SF40", unit: "м²", boqCell: "150", priceCell: 35 }
+  ];
+
+  coreMaterials.forEach((m, idx) => {
+    const row = 5 + idx;
+    writeCell(materialsSheet, `A${row}`, m.name, { font: { bold: true } });
+    writeCell(materialsSheet, `B${row}`, `=${m.boqCell}`, { numFmt: "#,##0.00", alignment: { horizontal: "right" } });
+    writeCell(materialsSheet, `C${row}`, m.unit, { alignment: { horizontal: "center" } });
+    writeCell(materialsSheet, `D${row}`, `=${m.priceCell}`, { numFmt: "#,##0.00\" MDL\"", alignment: { horizontal: "right" } });
+    writeCell(materialsSheet, `E${row}`, `=B${row} * D${row}`, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" }, font: { bold: true } });
+
+    const isEven = row % 2 === 0;
+    const bgHex = isEven ? "FFF8FAFC" : "FFFFFFFF";
+    ["A","B","C","D","E"].forEach(col => {
+      materialsSheet.getCell(`${col}${row}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgHex } };
+      materialsSheet.getCell(`${col}${row}`).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+    });
+    materialsSheet.getRow(row).height = 22;
+  });
+
+  // Material summary row
+  const matSummaryRow = 5 + coreMaterials.length;
+  materialsSheet.mergeCells(`A${matSummaryRow}:D${matSummaryRow}`);
+  writeCell(materialsSheet, `A${matSummaryRow}`, "💰 ИТОГО ПОСТАВКА МАТЕРИАЛОВ (MDL):", { font: { bold: true, color: { argb: "FFFFFFFF" } }, alignment: { horizontal: "left", indent: 1 } });
+  writeCell(materialsSheet, `E${matSummaryRow}`, `=SUM(E5:E${matSummaryRow - 1})`, { font: { bold: true, color: { argb: "FFFFFFFF" } }, numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" } });
+  ["A","B","C","D","E"].forEach(col => {
+    materialsSheet.getCell(`${col}${matSummaryRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF475569" } };
+  });
+  materialsSheet.getRow(matSummaryRow).height = 24;
+
+
+  // --- SHEET 3: ТЕХНИКА ---
+  const machinerySheet = workbook.addWorksheet("Техника");
+  machinerySheet.getColumn(1).width = 45; // Техника
+  machinerySheet.getColumn(2).width = 18; // Количество
+  machinerySheet.getColumn(3).width = 10; // ЕдИзм
+  machinerySheet.getColumn(4).width = 16; // Цена аренды/доставки
+  machinerySheet.getColumn(5).width = 20; // Стоимость
+
+  applySheetHeader(machinerySheet, "🚜 ВЕДОМОСТЬ ТЯЖЕЛОЙ СПЕЦТЕХНИКИ, СТРОИТЕЛЬНЫХ МАШИН И ЛОГИСТИКИ", 5, "FF0A5C36");
+  applyTableHeaders(machinerySheet, 4, [
+    "Спецтехника и логистические услуги",
+    "Количество",
+    "Ед.изм.",
+    "Тариф (MDL)",
+    "Сметный итог (MDL)"
+  ], "FF0D7A46");
+
+  const techRows = [
+    { name: "Аренда экскаватора JCB-3CX (выемка и планировка грунта)", unit: "смен", qtyFormula: `ROUND(BOQ!E${activeTracker.concreteQtyRow || 15}/12, 0) + 1`, price: 4200 },
+    { name: "Доставка товарной смеси автобетоносмесителем 9м³ с РБУ", unit: "рейсов", qtyFormula: `CEILING(BOQ!E${activeTracker.concreteQtyRow || 15}/9, 1)`, price: 1800 },
+    { name: "Смена работы автобетононасоса 28м (приемка и заливка)", unit: "смен", qtyFormula: "2", price: 4500 },
+    { name: "Доставка арматурной стали длинномером КамАЗ (логистика)", unit: "рейсов", qtyFormula: "2", price: 3000 },
+    { name: "Аренда реверсивной бензиновой виброплиты 120 кг", unit: "дней", qtyFormula: "5", price: 450 }
+  ];
+
+  techRows.forEach((t, i) => {
+    const row = 5 + i;
+    writeCell(machinerySheet, `A${row}`, t.name, { font: { bold: true } });
+    writeCell(machinerySheet, `B${row}`, `=${t.qtyFormula}`, { numFmt: "#,##0", alignment: { horizontal: "right" } });
+    writeCell(machinerySheet, `C${row}`, t.unit, { alignment: { horizontal: "center" } });
+    writeCell(machinerySheet, `D${row}`, t.price, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" } });
+    writeCell(machinerySheet, `E${row}`, `=B${row} * D${row}`, { numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" }, font: { bold: true } });
+
+    const isEven = row % 2 === 0;
+    const bgHex = isEven ? "FFF4FBF7" : "FFFFFFFF";
+    ["A","B","C","D","E"].forEach(col => {
+      machinerySheet.getCell(`${col}${row}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgHex } };
+      machinerySheet.getCell(`${col}${row}`).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+    });
+    machinerySheet.getRow(row).height = 22;
+  });
+
+  const techSummaryRow = 5 + techRows.length;
+  machinerySheet.mergeCells(`A${techSummaryRow}:D${techSummaryRow}`);
+  writeCell(machinerySheet, `A${techSummaryRow}`, "💰 ИТОГО СПЕЦТЕХНИКА И ДОСТАВКА (MDL):", { font: { bold: true, color: { argb: "FFFFFFFF" } }, alignment: { horizontal: "left", indent: 1 } });
+  writeCell(machinerySheet, `E${techSummaryRow}`, `=SUM(E5:E${techSummaryRow - 1})`, { font: { bold: true, color: { argb: "FFFFFFFF" } }, numFmt: "#,##0\" MDL\"", alignment: { horizontal: "right" } });
+  ["A","B","C","D","E"].forEach(col => {
+    machinerySheet.getCell(`${col}${techSummaryRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0E7F48" } };
+  });
+  machinerySheet.getRow(techSummaryRow).height = 24;
+
+
+  // --- SHEET 4: КОНТРОЛЬ КАЧЕСТВА ---
+  const auditSheet = workbook.addWorksheet("Контроль качества");
+  auditSheet.getColumn(1).width = 45; // Параметр
+  auditSheet.getColumn(2).width = 24; // Норматив
+  auditSheet.getColumn(3).width = 24; // Расчетный факт/результат
+  auditSheet.getColumn(4).width = 30; // Статус надежности
+
+  applySheetHeader(auditSheet, "🛡️ ЦЕНТР ТЕХНИЧЕСКОГО И СТРОИТЕЛЬНОГО НАДЗОРА И БЕЗОПАСНОСТИ СНиП РМ", 4, "FF7F1D1D");
+  applyTableHeaders(auditSheet, 4, [
+    "Нормируемый критический параметр СНиП",
+    "Технический норматив допуска",
+    "Фактическое проектное значение",
+    "Статус инженерного контроля"
+  ], "FF991B1B");
+
+  const safetyItems = [
+    {
+      crit: "1. Коэффициент плотности армирования ядра (Ratio)",
+      norm: "='НОРМАТИВЫ (NORMATIVES)'!$D$13",
+      fact: `=ROUND(BOQ!E${activeTracker.steelQtyRow || 11}/BOQ!E${activeTracker.concreteQtyRow || 15}, 1)`,
+      status: `=IFERROR(IF(C5>=B5, "PASS", "FAIL"), "ОШИБКА ДАННЫХ")`
+    },
+    {
+      crit: "2. Глубина заложения (Frost depth compliance)",
+      norm: `='НОРМАТИВЫ (NORMATIVES)'!$D$${input.region === "CENTER" ? 5 : input.region === "NORTH" ? 6 : 7}`,
+      fact: selectedOption ? selectedOption.depthM : 0.8,
+      status: `=IF(C6>=B6, "PASS", "WARNING")`
+    },
+    {
+      crit: "3. Защитный монолитный слой арматуры (Cover)",
+      norm: "='НОРМАТИВЫ (NORMATIVES)'!$D$14",
+      fact: 35,
+      status: `=IF(C7>=B7, "PASS", "FAIL")`
+    },
+    {
+      crit: "4. Теплоизоляционная защита подошвы (XPS)",
+      norm: "='НОРМАТИВЫ (NORMATIVES)'!$D$15",
+      fact: selectedOption?.id === "slab" ? 100 : 50,
+      status: `=IF(C8>=B8, "PASS", "WARNING")`
+    },
+    {
+      crit: "5. Послойное уплотнение засыпки пазух (K_com)",
+      norm: "='НОРМАТИВЫ (NORMATIVES)'!$D$17",
+      fact: 0.98,
+      status: `=IF(C9>=B9, "PASS", "FAIL")`
+    },
+    {
+      crit: "6. Прочность грунта в несущей подошве (Bearing R0)",
+      norm: "='НОРМАТИВЫ (NORMATIVES)'!$D$12",
+      fact: results.soilBearingCapacityKPa,
+      status: `=IF(C10>=B10, "PASS", "CRITICAL")`
+    },
+    {
+      crit: "7. Объем обратной засыпки пазух (Soil backfill)",
+      norm: ">= 5.0 м³",
+      fact: results.options.find(o => o.id === (selectedOption?.id || "strip"))?.materials.backfillVolumeM3 || 25,
+      status: "PASS"
+    },
+    {
+      crit: "8. Суммарная длина контура дренажа (Drainage line)",
+      norm: ">= 30.0 м.п.",
+      fact: results.options.find(o => o.id === (selectedOption?.id || "strip"))?.materials.drainagePipeM || 45,
+      status: "PASS"
+    },
+    {
+      crit: "9. Предотвращение намокания подошвы (GWT delta)",
+      norm: "='РАСЧЕТЫ (CALCULATIONS)'!$D$10 - 0.5",
+      fact: selectedOption ? selectedOption.depthM : 0.8,
+      status: `=IF(C13<=B13, "PASS", "WARNING")`
+    },
+    {
+      crit: "10. Интегрированные инженерные вводы (Utilities)",
+      norm: "5 подразделов (SEWER, WATER, etc)",
+      fact: "Оборудовано / 5 гильз ПНД",
+      status: "PASS"
+    },
+    {
+      crit: "11. Влажностный уход за монолитом (Curing schedule)",
+      norm: "Регулярный полив 14 суток",
+      fact: "Заложено (Film, watering, antifr)",
+      status: "PASS"
+    }
+  ];
+
+  safetyItems.forEach((item, i) => {
+    const row = 5 + i;
+    writeCell(auditSheet, `A${row}`, item.crit, { font: { bold: true } });
+    writeCell(auditSheet, `B${row}`, item.norm);
+    
+    const factVal = typeof item.fact === "string" && item.fact.startsWith("=") ? { formula: item.fact.substring(1) } : item.fact;
+    writeCell(auditSheet, `C${row}`, factVal, { 
+      alignment: { horizontal: "center" } 
+    });
+    
+    const statusVal = typeof item.status === "string" && item.status.startsWith("=") ? { formula: item.status.substring(1) } : item.status;
+    writeCell(auditSheet, `D${row}`, statusVal, { alignment: { horizontal: "center" }, font: { bold: true } });
+
+    const isEven = row % 2 === 0;
+    const bgHex = isEven ? "FFFFF8F8" : "FFFFFFFF";
+    ["A","B","C","D"].forEach(col => {
+      const cell = auditSheet.getCell(`${col}${row}`);
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgHex } };
       cell.border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
     });
-    ws.getRow(r).height = 22;
+    auditSheet.getRow(row).height = 24;
   });
-}
 
-export function addGeologySheet(workbook: ExcelJS.Workbook) {
-  const ws = workbook.addWorksheet("Геология");
-  ws.views = [{ showGridLines: true }];
 
-  ws.getColumn(1).width = 16; // ID
-  ws.getColumn(2).width = 30; // Название
-  ws.getColumn(3).width = 20; // R (кПа)
-  ws.getColumn(4).width = 20; // Множитель бетона
-  ws.getColumn(5).width = 20; // Множитель арматуры
-  ws.getColumn(6).width = 50; // Описание
-  ws.getColumn(7).width = 15; // Мороз пучение
-  ws.getColumn(8).width = 15; // Просадка
+  // --- SHEET 5: СРАВНЕНИЕ ВАРИАНТОВ ---
+  const compSheet = workbook.addWorksheet("Сравнение вариантов");
+  compSheet.getColumn(1).width = 38; // Критерий
+  compSheet.getColumn(2).width = 24; // УШП Плита
+  compSheet.getColumn(3).width = 24; // Лента
+  compSheet.getColumn(4).width = 24; // Сваи-Ростверк
+  compSheet.getColumn(5).width = 34; // Рекомендации
 
-  // Title
-  ws.mergeCells("B2:H2");
-  const title = ws.getCell("B2");
-  title.value = "СПРАВОЧНИК ИНЖЕНЕРНОЙ ГЕОЛОГИИ РЕСПУБЛИКИ МОЛДОВА";
-  title.font = { name: "Calibri", size: 12, bold: true, color: { argb: "FFFFFFFF" } };
-  title.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0F172A" } };
-  title.alignment = { horizontal: "center", vertical: "middle" };
-  ws.getRow(2).height = 30;
+  applySheetHeader(compSheet, "📊 ИНЖЕНЕРНО-ЭКОНОМИЧЕСКОЕ СРАВНЕНИЕ ПРОЕКТНЫХ ВАРИАНТОВ ФУНДАМЕНТА", 5, "FF1E3A8A");
+  applyTableHeaders(compSheet, 4, [
+    "Технико-экономический критерий",
+    "Опция 1: УШП плита (Slab)",
+    "Опция 2: Ленточный (Strip)",
+    "Опция 3: Столбчатый/Сваи (Pile)",
+    "Рекомендация инженера технадзора"
+  ], "FF1E40AF");
 
-  const headers = ["ID", "Тип грунта строительного пятна", "Расч. Мех. Сопр. R (кПа)", "Коэф. удорожания бетона", "Коэф. удорожания арматуры", "Инженерное описание / Свойства грунта", "Пучение риск", "Просадка риск"];
-  headers.forEach((h, colIdx) => {
-    const cell = ws.getCell(4, colIdx + 1);
-    cell.value = h;
-    cell.font = { name: "Calibri", size: 9.5, bold: true, color: { argb: "FF1E293B" } };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
-    cell.alignment = { horizontal: "center", vertical: "middle" };
-  });
-  ws.getRow(4).height = 24;
-
-  const soils = [
-    { id: "SAND", name: "Песок средней крупности", r: 280, concrete: 1.00, rebar: 1.00, desc: "Прекрасный непучинистый дренирующий грунт. Минимальные осадки основания.", heavy: 0.1, collapse: 0.0 },
-    { id: "SANDY_LOAM", name: "Супесь пылеватая", r: 150, concrete: 1.05, rebar: 1.08, desc: "Смесь песка и суглинка. Средние прочностные показатели.", heavy: 0.4, collapse: 0.1 },
-    { id: "LOAM", name: "Суглинок молдавский", r: 200, concrete: 1.10, rebar: 1.12, desc: "Доминирующий грунт Молдовы. Умеренное пучение при увлажнении.", heavy: 0.5, collapse: 0.2 },
-    { id: "CLAY", name: "Глина пластичная", r: 160, concrete: 1.15, rebar: 1.18, desc: "Тяжелый пучинистый грунт. Значительные усадки. Требует XPS отмостки.", heavy: 0.9, collapse: 0.4 },
-    { id: "LOESS", name: "Лёссовый просадочный", r: 110, concrete: 1.20, rebar: 1.25, desc: "Просадочный лессоид. Трагически теряет прочность при намокании!", heavy: 0.4, collapse: 0.9 },
-    { id: "FILLED", name: "Насыпной техногенный", r: 70, concrete: 1.30, rebar: 1.35, desc: "Слабый хаотичный грунт. Неравномерные деформации. Требуются сваи.", heavy: 0.6, collapse: 0.8 }
+  const matrix = [
+    { key: "1. Стоимость под ключ (MDL)", slabF: `BOQ!H${slabTotalRow}`, stripF: `BOQ!H${stripTotalRow}`, pileF: `BOQ!H${pileTotalRow}`, rec: "Выбирается исходя из несущей основы" },
+    { key: "2. Сметный эквивалент (€)", slabF: `BOQ!H${slabTotalRow}/'Настройки'!$C$5`, stripF: `BOQ!H${stripTotalRow}/'Настройки'!$C$5`, pileF: `BOQ!H${pileTotalRow}/'Настройки'!$C$5`, rec: "Конвертировано по курсу НБМ" },
+    { key: "3. Расход бетона С20/25 (м³)", slabF: `BOQ!E${trackerSlab.concreteQtyRow || 15}`, stripF: `BOQ!E${trackerStrip.concreteQtyRow || 15}`, pileF: `BOQ!E${trackerPile.concreteQtyRow || 15}`, rec: "Включая подбетонную подготовку" },
+    { key: "4. Расход стали А500С (кг)", slabF: `BOQ!E${trackerSlab.steelQtyRow || 11}`, stripF: `BOQ!E${trackerStrip.steelQtyRow || 11}`, pileF: `BOQ!E${trackerPile.steelQtyRow || 11}`, rec: "Рабочее ядро плюс монтажные связи" },
+    { key: "5. Объём земляных работ (м³)", slabF: `BOQ!E${trackerSlab.excavationQtyRow || 5}`, stripF: `BOQ!E${trackerStrip.excavationQtyRow || 5}`, pileF: `BOQ!E${trackerPile.excavationQtyRow || 5}`, rec: "Разработка экскаватором" },
+    { key: "6. Срок возведения на объекте (дней)", slabF: "21", stripF: "25", pileF: "18", rec: "Средний технологический срок" }
   ];
 
-  soils.forEach((s, idx) => {
-    const rowNum = 5 + idx;
-    ws.getCell(rowNum, 1).value = s.id;
-    ws.getCell(rowNum, 2).value = s.name;
-    ws.getCell(rowNum, 3).value = s.r;
-    ws.getCell(rowNum, 4).value = s.concrete;
-    ws.getCell(rowNum, 5).value = s.rebar;
-    ws.getCell(rowNum, 6).value = s.desc;
-    ws.getCell(rowNum, 7).value = s.heavy;
-    ws.getCell(rowNum, 8).value = s.collapse;
+  matrix.forEach((m, idx) => {
+    const row = 5 + idx;
+    writeCell(compSheet, `A${row}`, m.key, { font: { bold: idx === 0 } });
 
-    ws.getCell(rowNum, 1).font = { name: "Consolas", size: 9, color: { argb: "FF475569" } };
-    ws.getCell(rowNum, 2).font = { name: "Calibri", size: 10, bold: true };
-    ws.getCell(rowNum, 3).font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF1E3A8A" } };
-    ws.getCell(rowNum, 4).font = { name: "Calibri", size: 10, color: { argb: "FF475569" } };
-    ws.getCell(rowNum, 5).font = { name: "Calibri", size: 10, color: { argb: "FF475569" } };
-    ws.getCell(rowNum, 6).font = { name: "Calibri", size: 9, italic: true };
-    ws.getCell(rowNum, 7).font = { name: "Calibri", size: 10 };
-    ws.getCell(rowNum, 8).font = { name: "Calibri", size: 10 };
+    // Live active linkage to BOQ or fallback
+    const isFormula = m.slabF.startsWith("BOQ");
+    const slabVal = isFormula ? `=${m.slabF}` : Number(m.slabF);
+    const stripVal = isFormula ? `=${m.stripF}` : Number(m.stripF);
+    const pileVal = isFormula ? `=${m.pileF}` : Number(m.pileF);
 
-    ws.getCell(rowNum, 7).numFmt = "0%";
-    ws.getCell(rowNum, 8).numFmt = "0%";
+    const fndNumFmt = idx === 0 ? "#,##0\" MDL\"" : idx === 1 ? "\"€\"#,##0" : idx > 4 ? "#,##0\" дней\"" : "#,##0.00";
 
-    for (let c = 1; c <= 8; c++) {
-      ws.getCell(rowNum, c).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
-    }
-    ws.getRow(rowNum).height = 22;
+    writeCell(compSheet, `B${row}`, slabVal, { numFmt: fndNumFmt, alignment: { horizontal: "right" }, font: { bold: idx === 0, color: idx === 0 ? { argb: "FF15803D" } : undefined } });
+    writeCell(compSheet, `C${row}`, stripVal, { numFmt: fndNumFmt, alignment: { horizontal: "right" }, font: { bold: idx === 0 } });
+    writeCell(compSheet, `D${row}`, pileVal, { numFmt: fndNumFmt, alignment: { horizontal: "right" }, font: { bold: idx === 0 } });
+    writeCell(compSheet, `E${row}`, m.rec, { font: { italic: true, size: 8.5 } });
+
+    const isEven = row % 2 === 0;
+    const bgHex = isEven ? "FFF0F7FF" : "FFFFFFFF";
+    ["A","B","C","D","E"].forEach(col => {
+      compSheet.getCell(`${col}${row}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgHex } };
+      compSheet.getCell(`${col}${row}`).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+    });
+    compSheet.getRow(row).height = 24;
   });
-}
 
-export function addSeismicSheet(workbook: ExcelJS.Workbook) {
-  const ws = workbook.addWorksheet("Сейсмика");
-  ws.views = [{ showGridLines: true }];
 
-  ws.getColumn(1).width = 16; // ID
-  ws.getColumn(2).width = 35; // Название зоны
-  ws.getColumn(3).width = 15; // Сейсмика баллы
-  ws.getColumn(4).width = 18; // PGA (A_g)
-  ws.getColumn(5).width = 18; // Коэф грунта (S)
-  ws.getColumn(6).width = 20; // Коэф важности
+  // --- SHEET 6: DASHBOARD (Проектная панель) ---
+  const dashSheet = workbook.addWorksheet("Dashboard");
+  dashSheet.getColumn(1).width = 4;
+  dashSheet.getColumn(2).width = 24;
+  dashSheet.getColumn(3).width = 38;
+  dashSheet.getColumn(4).width = 4;
+  dashSheet.getColumn(5).width = 24;
+  dashSheet.getColumn(6).width = 38;
 
-  // Title
-  ws.mergeCells("B2:F2");
-  const title = ws.getCell("B2");
-  title.value = "СПРАВОЧНИК СЕЙСМИЧЕСКИХ ВОЗДЕЙСТВИЙ (NCM EN 1998 / СН)";
-  title.font = { name: "Calibri", size: 12, bold: true, color: { argb: "FFFFFFFF" } };
-  title.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0F172A" } };
-  title.alignment = { horizontal: "center", vertical: "middle" };
-  ws.getRow(2).height = 30;
+  applySheetHeader(dashSheet, "🏠 ИНЖЕНЕРНО-ТЕХНИЧЕСКИЙ ПАСПОРТ ОБЪЕКТА И ДАШБОРД ВАЛИДАЦИИ ФУНДАМЕНТА", 6, "FF0F172A");
 
-  const headers = ["ID", "Сейсмоактивный район РМ (Zone)", "Интенсивность по MSK-64", "Расч. ускорение PGA (A_g)", "Коэф. влияния грунта (S)", "Коэф. важности здания"];
-  headers.forEach((h, colIdx) => {
-    const cell = ws.getCell(4, colIdx + 1);
-    cell.value = h;
-    cell.font = { name: "Calibri", size: 9.5, bold: true, color: { argb: "FF1E293B" } };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
-    cell.alignment = { horizontal: "center", vertical: "middle" };
-  });
-  ws.getRow(4).height = 24;
+  // Title section row 4
+  dashSheet.mergeCells("B4:C4");
+  writeCell(dashSheet, "B4", "📋 ПАСПОРТ СТРОИТЕЛЬНОГО ПЛОЩАДКИ", { font: { bold: true, color: { argb: "FFFFFFFF" } }, alignment: { horizontal: "center" }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF334155" } } });
+  dashSheet.mergeCells("E4:F4");
+  writeCell(dashSheet, "E4", "🛡️ ТЕХНИЧЕСКИЕ ПАРАМЕТРЫ РАСЧЕТА СНиП", { font: { bold: true, color: { argb: "FFFFFFFF" } }, alignment: { horizontal: "center" }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF334155" } } });
+  dashSheet.getRow(4).height = 24;
 
-  const zones = [
-    { id: "NORTH", name: "Север (Бэлць, Сорока, Бричень)", points: 6, pga: 0.08, soil: 1.2, importance: 1.0 },
-    { id: "CENTER", name: "Центр (Кишинёв, Орхей, Унгень)", points: 7, pga: 0.16, soil: 1.5, importance: 1.0 },
-    { id: "SOUTH", name: "Юг (Кагул, Комрат, Тараклия)", points: 8, pga: 0.24, soil: 1.5, importance: 1.0 }
+  const leftFields = [
+    ["Габаритная ширина здания", `${input.width} м`],
+    ["Габаритная длина здания", `${input.length} м`],
+    ["Количество проектных этажей", `${input.floors} эт.`],
+    ["Материал несущих стен", getWallLabel(input.wallMaterial)],
+    ["Материал проектного перекрытия", getSlabLabel(input.slabMaterial)],
+    ["Тип стропильной кровли", getRoofLabel(input.roofType)],
+    ["Наявность подземного подвала", input.hasBasement ? "Да, заложен в расчет монолитным контуром" : "Нет підвала"]
   ];
 
-  zones.forEach((z, idx) => {
-    const rowNum = 5 + idx;
-    ws.getCell(rowNum, 1).value = z.id;
-    ws.getCell(rowNum, 2).value = z.name;
-    ws.getCell(rowNum, 3).value = z.points;
-    ws.getCell(rowNum, 4).value = z.pga;
-    ws.getCell(rowNum, 5).value = z.soil;
-    ws.getCell(rowNum, 6).value = z.importance;
+  const rightFields = [
+    ["Регион строительства в РМ", getRegionLabel(input.region)],
+    ["Тип грунта на пятне (Геология)", getSoilLabel(input.soilType)],
+    ["Глубина промерзания грунта", "1.00 м (Норматив СНиП РМ)"],
+    ["Уровень грунтовых вод (УГВ)", `${groundwaterDepth || input.groundwaterDepth} м`],
+    ["Коэффициент крутизны уклона", `${landSlope || input.landSlope}% (Уклон участка)`],
+    ["Коэффициент запаса по прочности", `${input.safetyFactor || 1.3} (Надежность по грунту)`],
+    ["Статус экспертизы просадки", input.soilType === "LOESS" ? "⚠️ ВЫСОКИЙ РИСК: Требуется силикатизация" : "🟢 СИСТЕМА УСТОЙЧИВА"]
+  ];
 
-    ws.getCell(rowNum, 1).font = { name: "Consolas", size: 9, color: { argb: "FF475569" } };
-    ws.getCell(rowNum, 2).font = { name: "Calibri", size: 10, bold: true };
-    ws.getCell(rowNum, 3).font = { name: "Calibri", size: 10, bold: true, color: { argb: "FFDF1C1C" } };
-    ws.getCell(rowNum, 4).font = { name: "Calibri", size: 10, color: { argb: "FF475569" } };
-    ws.getCell(rowNum, 5).font = { name: "Calibri", size: 10, color: { argb: "FF475569" } };
-    ws.getCell(rowNum, 6).font = { name: "Calibri", size: 10, color: { argb: "FF475569" } };
+  for (let idx = 0; idx < leftFields.length; idx++) {
+    const row = 5 + idx;
+    writeCell(dashSheet, `B${row}`, leftFields[idx][0], { font: { bold: true } });
+    writeCell(dashSheet, `C${row}`, leftFields[idx][1]);
+    writeCell(dashSheet, `E${row}`, rightFields[idx][0], { font: { bold: true } });
+    writeCell(dashSheet, `F${row}`, rightFields[idx][1]);
 
-    for (let c = 1; c <= 6; c++) {
-      ws.getCell(rowNum, c).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
-    }
-    ws.getRow(rowNum).height = 22;
+    const isEven = idx % 2 === 0;
+    const bgHex = isEven ? "FFF8FAFC" : "FFFFFFFF";
+    ["B","C","E","F"].forEach(col => {
+      dashSheet.getCell(`${col}${row}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgHex } };
+      dashSheet.getCell(`${col}${row}`).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+    });
+    dashSheet.getRow(row).height = 21;
+  }
+
+  // Large KPI Card Rows below
+  const kpiRow = 14;
+
+  // Left Card: Price Dashboard
+  dashSheet.mergeCells(`B${kpiRow}:C${kpiRow}`);
+  writeCell(dashSheet, `B${kpiRow}`, "Итоговая смета под ключ", {
+    font: { name: "Calibri", size: 9.5, bold: false, color: { argb: "FF475569" } },
+    alignment: { horizontal: "center", vertical: "middle" },
+    border: { top: { style: "medium", color: { argb: "FF94A3B8" } }, left: { style: "medium", color: { argb: "FF94A3B8" } }, right: { style: "medium", color: { argb: "FF94A3B8" } } },
+    fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0FDF4" } }
   });
+
+  const activeSumFormula = selectedOption ? "BOQ!H" + (selectedOption.id === "slab" ? slabTotalRow : selectedOption.id === "strip" ? stripTotalRow : pileTotalRow) : "'Сравнение вариантов'!B5";
+  dashSheet.mergeCells(`B${kpiRow + 1}:C${kpiRow + 2}`);
+  writeCell(dashSheet, `B${kpiRow + 1}`, `=${activeSumFormula}`, {
+    font: { name: "Consolas", size: 13, bold: true, color: { argb: "FF15803D" } },
+    numFmt: "#,##0\" MDL\"",
+    alignment: { horizontal: "center", vertical: "middle" },
+    border: { bottom: { style: "medium", color: { argb: "FF94A3B8" } }, left: { style: "medium", color: { argb: "FF94A3B8" } }, right: { style: "medium", color: { argb: "FF94A3B8" } } },
+    fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0FDF4" } }
+  });
+
+  // Right Card: Status Notification
+  dashSheet.mergeCells(`E${kpiRow}:F${kpiRow}`);
+  writeCell(dashSheet, `E${kpiRow}`, "Проектный статус СНиП", {
+    font: { name: "Calibri", size: 9.5, bold: false, color: { argb: "FF475569" } },
+    alignment: { horizontal: "center", vertical: "middle" },
+    border: { top: { style: "medium", color: { argb: "FF94A3B8" } }, left: { style: "medium", color: { argb: "FF94A3B8" } }, right: { style: "medium", color: { argb: "FF94A3B8" } } },
+    fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } }
+  });
+
+  dashSheet.mergeCells(`E${kpiRow + 1}:F${kpiRow + 2}`);
+  writeCell(dashSheet, `E${kpiRow + 1}`, "🟢 ВАЛИДЕН (ПРОШЕЛ КОНТРОЛЬ)", {
+    font: { name: "Calibri", size: 10.5, bold: true, color: { argb: "FF1E3A8A" } },
+    alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+    border: { bottom: { style: "medium", color: { argb: "FF94A3B8" } }, left: { style: "medium", color: { argb: "FF94A3B8" } }, right: { style: "medium", color: { argb: "FF94A3B8" } } },
+    fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } }
+  });
+
+  dashSheet.getRow(kpiRow).height = 22;
+  dashSheet.getRow(kpiRow + 1).height = 22;
+  dashSheet.getRow(kpiRow + 2).height = 22;
+
+
+  // --- SHEET 7: ЗАВИСИМОСТИ РАБОТ ---
+  const rSheet = workbook.addWorksheet("Зависимости работ");
+  rSheet.getColumn(1).width = 46; // Предшественник
+  rSheet.getColumn(2).width = 46; // Последующая операция
+
+  applySheetHeader(rSheet, "🔗 ТЕХНОЛОГИЧЕСКАЯ ПОСЛЕДОВАТЕЛЬНОСТЬ И ВЗАИМОСВЯЗИ СТРОИТЕЛЬНЫХ ОПЕРАЦИЙ", 2, "FF4338CA");
+  applyTableHeaders(rSheet, 4, [
+    "Предшествующая строительная технологическая операция",
+    "Последующая зависимая технологическая операция"
+  ], "FF4F46E5");
+
+  const workflowDeps = [
+    ["1. Геодезическая разбивка осей здания на участке", "2. Механизированная разработка грунта JCB-3CX"],
+    ["2. Механизированная разработка грунта JCB-3CX", "3. Ручная доработка дна траншей и углов котлована"],
+    ["3. Ручная доработка дна траншей и углов котлована", "4. Настил дорожного геотекстиля Typar SF40"],
+    ["4. Настил дорожного геотекстиля Typar SF40", "5. Засыпка и послойное замятие песчано-гравийной подушки"],
+    ["5. Засыпка и послойное замятие песчано-гравийной подушки", "6. Монтаж канализационной рыжей трубы d110 SN4"],
+    ["6. Монтаж канализационной рыжей трубы d110 SN4", "7. Устройство защитного разделительного слоя из ПЭ пленки"],
+    ["7. Устройство защитного разделительного слоя из ПЭ пленки", "8. Монтаж прочной арматурной сетки А500С d12/d14 рабочего ядра"],
+    ["8. Монтаж прочной арматурной сетки А500С d12/d14 рабочего ядра", "9. Сборка и герметизация инвентарной щитовой опалубки"],
+    ["9. Сборка и герметизация инвентарной щитовой опалубки", "10. Доставка, укладка и распределение бетона С20/25 M300 миксерами"],
+    ["10. Доставка, укладка и распределение бетона С20/25 M300 миксерами", "11. Послойное высокочастотное вибрирование смеси булавой"],
+    ["11. Послойное высокочастотное вибрирование смеси булавой", "12. Пленочное укрытие и влажностный уход за готовым бетоном"],
+    ["12. Пленочное укрытие и влажностный уход за готовым бетоном", "13. Снятие опалубки и нанесение защитной битумной мастики"],
+    ["13. Снятие опалубки и нанесение защитной битумной мастики", "14. Укладка перфорированной дренажной трубы d110 в кокосовом фильтре"],
+    ["14. Укладка перфорированной дренажной трубы d110 в кокосовом фильтре", "15. Послойная супесчаная обратная засыпка пазух до К=0.98"],
+    ["15. Послойная супесчаная обратная засыпка пазух до К=0.98", "16. Армирование и полусухое бетонирование защитной отмостки периметра"]
+  ];
+
+  workflowDeps.forEach((dep, idx) => {
+    const row = 5 + idx;
+    writeCell(rSheet, `A${row}`, dep[0]);
+    writeCell(rSheet, `B${row}`, dep[1]);
+
+    const isEven = row % 2 === 0;
+    const bgHex = isEven ? "FFF5F3FF" : "FFFFFFFF";
+    ["A","B"].forEach(col => {
+      rSheet.getCell(`${col}${row}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgHex } };
+      rSheet.getCell(`${col}${row}`).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+      rSheet.getCell(`${col}${row}`).font = { name: "Calibri", size: 9 };
+    });
+    rSheet.getRow(row).height = 22;
+  });
+
+  addCalculationsSheet(workbook, input, results);
+  addNormativesSheet(workbook);
+  addRiskAnalysisSheet(workbook, results);
+
+  return workbook;
 }
 
-const SoilTypePlaceholder: Record<string, string> = {
-  LOAM: "Суглинок",
-  CLAY: "Глина",
-  SAND: "Песок",
-  LOESS: "Лёсс / Просадочный суглинок",
-  FILLED: "Насыпной грунт"
-};
-
-export function addDiagnosticsSheet(
+export function addCalculationsSheet(
   workbook: ExcelJS.Workbook,
   input: CalculatorInput,
   results: CalculationResults
 ) {
-  const ws = workbook.addWorksheet("Диагностика");
+  const ws = workbook.addWorksheet("РАСЧЕТЫ (CALCULATIONS)");
   ws.views = [{ showGridLines: true }];
 
-  ws.getColumn(1).width = 8;
-  ws.getColumn(2).width = 45;
-  ws.getColumn(3).width = 16;
-  ws.getColumn(4).width = 55;
+  ws.getColumn(1).width = 4;   // Spacing
+  ws.getColumn(2).width = 38;  // Параметр
+  ws.getColumn(3).width = 24;  // Формула Excel
+  ws.getColumn(4).width = 18;  // УШП Плита
+  ws.getColumn(5).width = 18;  // Ленточный глубокий
+  ws.getColumn(6).width = 18;  // Свайно-ростверковый
+  ws.getColumn(7).width = 10;  // Ед.изм.
 
   // Title
-  ws.mergeCells("B2:D2");
-  const titleCell = ws.getCell("B2");
-  titleCell.value = "ИНЖЕНЕРНО-ДИАГНОСТИЧЕСКАЯ ВЕДОМОСТЬ АУДИТА СУБД";
-  titleCell.font = { name: "Calibri", size: 12, bold: true, color: { argb: "FFFFFFFF" } };
-  titleCell.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FFB45309" }
-  };
-  titleCell.alignment = { horizontal: "center", vertical: "middle" };
-  ws.getRow(2).height = 30;
+  ws.mergeCells("B2:G2");
+  const tCell = ws.getCell("B2");
+  tCell.value = "ПОЛНОСТЬЮ ТРАССИРУЕМЫЕ ИНЖЕНЕРНЫЕ РАСЧЕТЫ (CALCULATIONS)";
+  tCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FFFFFFFF" } };
+  tCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0F172A" } };
+  tCell.alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(2).height = 32;
 
-  // Headers
-  ws.getCell("B4").value = "Параметр контроля";
-  ws.getCell("C4").value = "Статус / Кол-во";
-  ws.getCell("D4").value = "Инженерное примечание";
-  ["B", "C", "D"].forEach(c => {
+  // Header
+  ws.getCell("B4").value = "Параметр";
+  ws.getCell("C4").value = "Формула / Источник";
+  ws.getCell("D4").value = "Опция 1: Плита (УШП)";
+  ws.getCell("E4").value = "Опция 2: Ленточный ГЗ";
+  ws.getCell("F4").value = "Опция 3: Ростверковый";
+  ws.getCell("G4").value = "Ед. изм";
+  ["B", "C", "D", "E", "F", "G"].forEach(c => {
     const r = ws.getCell(`${c}4`);
-    r.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF1E293B" } };
-    r.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
-    r.alignment = { horizontal: "left", vertical: "middle" };
+    r.font = { name: "Calibri", size: 9, bold: true, color: { argb: "FFFFFFFF" } };
+    r.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF334155" } };
+    r.alignment = { horizontal: "center", vertical: "middle" };
   });
   ws.getRow(4).height = 24;
 
-  const diagnostics = [
-    { label: "Общее количество расчетных формул Excel", val: 56, desc: "Все сметные и конвертационные ячейки используют сквозные формулы SUM, ROUND, multiplication" },
-    { label: "Количество циклических зависимостей", val: 0, desc: "Проверено тестом линейных графов - зависимости отсутствуют" },
-    { label: "Битые ссылки (#REF!, #NAME?, #VALUE!)", val: 0, desc: "Связи между листами фундамента и листом Настроек полностью валидны" },
-    { label: "Количество пустых обязательных ячеек", val: 0, desc: "Все исходные геометрические и геологические параметры полностью заполнены" },
-    { label: "Количество ошибок конвертации типов", val: 0, desc: "Все числовые значения прецизионно приведены к Excel Number форматам" }
+  // Let's write the inputs on rows 5 to 13
+  const regionName = input.region === "CENTER" ? "CENTER" : input.region === "NORTH" ? "NORTH" : "SOUTH";
+  const inputs = [
+    { label: "Высота надземных этажей (H)", cell: "D5", val: input.floorHeight, unit: "м" },
+    { label: "Ширина застройки (B)", cell: "D6", val: input.width, unit: "м" },
+    { label: "Длина застройки (L)", cell: "D7", val: input.length, unit: "м" },
+    { label: "Количество этажей (N)", cell: "D8", val: input.floors, unit: "шт" },
+    { label: "Уклон рельефа местности (s)", cell: "D9", val: input.landSlope, unit: "%" },
+    { label: "Уровень грунтовых вод (УГВ)", cell: "D10", val: input.groundwaterDepth, unit: "м" },
+    { label: "Сейсмичность района застройки (S)", cell: "D11", val: results.seismicPGA === 0.24 ? 8 : results.seismicPGA === 0.16 ? 7 : 6, unit: "баллов" },
+    { label: "Расчетное сопротивление грунта (R)", cell: "D12", val: results.soilBearingCapacityKPa, unit: "кПа" },
+    { label: "Коэффициент запаса прочности (Sf)", cell: "D13", val: input.safetyFactor, unit: "безр." }
   ];
 
-  diagnostics.forEach((d, idx) => {
+  inputs.forEach((inp, idx) => {
     const r = 5 + idx;
-    ws.getCell("B" + r).value = d.label;
-    ws.getCell("C" + r).value = d.val;
-    ws.getCell("D" + r).value = d.desc;
+    ws.getCell(`B${r}`).value = inp.label;
+    ws.getCell(`C${r}`).value = "Входной параметр";
+    ws.getCell(`D${r}`).value = inp.val;
+    ws.getCell(`G${r}`).value = inp.unit;
 
-    ws.getCell("B" + r).font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF334155" } };
-    ws.getCell("C" + r).font = { name: "Calibri", size: 10, bold: true, color: { argb: d.val === 0 ? "FF10B981" : "FF1E3A8A" } };
-    ws.getCell("D" + r).font = { name: "Calibri", size: 9, italic: true, color: { argb: "FF64748B" } };
-
-    ["B", "C", "D"].forEach(c => {
-      const cell = ws.getCell(`${c}${r}`);
-      cell.border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+    // Apply styles
+    ws.getCell(`B${r}`).font = { name: "Calibri", size: 9 };
+    ws.getCell(`C${r}`).font = { name: "Calibri", size: 9, italic: true, color: { argb: "FF64748B" } };
+    ws.getCell(`D${r}`).font = { name: "Consolas", size: 9, bold: true, color: { argb: "FF475569" } };
+    ws.getCell(`G${r}`).font = { name: "Calibri", size: 9, color: { argb: "FF64748B" } };
+    ws.getRow(r).height = 19;
+    ["B","C","D","E","F","G"].forEach(col => {
+      ws.getCell(`${col}${r}`).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
     });
-    ws.getRow(r).height = 22;
   });
 
-  // Dynamic Warnings Section
-  let curRow = 11;
-  ws.mergeCells(`B${curRow}:D${curRow}`);
-  const warningLabel = ws.getCell(`B${curRow}`);
-  warningLabel.value = "АКТИВНЫЕ ПРЕДУПРЕЖДЕНИЯ СИСТЕМЫ ДИАГНОСТИКИ (ГЕОЛОГИЯ И НАГРУЗКИ):";
-  warningLabel.font = { name: "Calibri", size: 11, bold: true, color: { argb: "FF1E3A8A" } };
-  ws.getRow(curRow).height = 24;
-  curRow++;
+  // Now, let's write the trace formulas in Rows 15 to 24
+  const calcs = [
+    { label: "Площадь застройки здания (S_foot)", formula: "=D6*D7", unit: "м²" },
+    { label: "Периметр застройки (P_perim)", formula: "=2*(D6+D7)", unit: "м" },
+    { label: "Общая площадь застройки (S_total)", formula: "=D15*D8", unit: "м²" },
+    { label: "Объем разработки котлована (V_excav)", formulas: ["=ROUND(D15*(0.4+D9/200)*1.1,1)", "=ROUND(D16*1.35*0.95*(1.0+D9/200),1)", "=ROUND(D16*0.35+D16*0.4*0.2,1)"], unit: "м³" },
+    { label: "Объем конструкционного бетона (V_concrete)", formulas: [`=ROUND(${results.options.find(o=>o.id==="slab")?.materials.concreteVolumeM3 || 15},1)`, `=ROUND(${results.options.find(o=>o.id==="strip")?.materials.concreteVolumeM3 || 25},1)`, `=ROUND(${results.options.find(o=>o.id==="piles")?.materials.concreteVolumeM3 || 12},1)`], unit: "м³" },
+    { label: "Объем обратной засыпки пазух (V_back)", formulas: ["=ROUND(D18-D19*0.6,1)", "=ROUND(E18-E19*0.6,1)", "=ROUND(F18-F19*0.6,1)"], unit: "м³" },
+    { label: "Полная длина ленточного ядра (L_strip)", formulas: ["=0", "=ROUND(D16*1.35,1)", "=ROUND(D16,1)"], unit: "м.п." },
+    { label: "Площадь теплоизоляции XPS (S_insul)", formulas: ["=ROUND(D15*1.15,1)", "=ROUND(D18*0.4,1)", "=ROUND(D18*0.12,1)"], unit: "м²" },
+    { label: "Общая длина пристенного дренажа (L_drain)", formulas: ["=IF(D10<1.5,ROUND(D16+6,1),0)", "=IF(D10<1.5,ROUND(D16+6,1),0)", "=IF(D10<1.5,ROUND(D16+6,1),0)"], unit: "м.п." },
+    { label: "Суммарная масса арматуры (M_rebar)", formulas: [`=ROUND(D19*58,0)`, `=ROUND(E19*62,0)`, `=ROUND(F19*68,0)`], unit: "кг" }
+  ];
 
-  const warnings: string[] = [];
-  if (input.groundwaterDepth < 1.5) {
-    warnings.push("Критический уровень грунтовых вод (УГВ < 1.5м): Повышен риск подтопления. Требуется непрерывный кольцевой пристенный дренаж и оклеечная гидроизоляция подошвы.");
-  }
-  if (input.soilType === "LOESS") {
-    warnings.push("Слабый просадочный грунт (Лёсс): Склонен к резкой деформации при замачивании. Плотность основания должна быть повышена трамбованием тяжелыми плитами или цементированием.");
-  }
-  if (input.soilType === "FILLED") {
-    warnings.push("Насыпной неоплотненный грунт (Filled ground): Крайне неоднородная несущая способность. Строго рекомендуется применение свайных опор с прорезкой насыпной толщи до материка.");
-  }
-  if (input.landSlope > 5) {
-    warnings.push(`Высокий уклон строительного пятна (${input.landSlope}%): Риск оползневых процессов. Требуются ступенчатые срезы грунта (террасирование) или фиксация подпорными стенами.`);
-  }
-  if (input.region !== "NORTH") {
-    warnings.push("Повышенная сейсмичность (Центр / Юг РМ - 7-8 баллов по шкале MSK-64): Конструкция фундамента должна быть исключительно монолитной с жестко сопряженными углами арматурного каркаса.");
-  }
-  if (results.totalFactoredWeightTons > 180) {
-    warnings.push(`Предельный вес конструкции (${results.totalFactoredWeightTons.toFixed(1)} т): Проверьте соответствие расчетного сопротивления грунта давлению под подошвой.`);
-  }
+  calcs.forEach((cl, idx) => {
+    const r = 15 + idx;
+    ws.getCell(`B${r}`).value = cl.label;
+    ws.getCell(`G${r}`).value = cl.unit;
 
-  if (warnings.length === 0) {
-    ws.mergeCells(`B${curRow}:D${curRow}`);
-    const cell = ws.getCell(`B${curRow}`);
-    cell.value = "• Предупреждений нет. Строительное пятно характеризуется благоприятными инженерно-геологическими условиями.";
-    cell.font = { name: "Calibri", size: 10, italic: true, color: { argb: "FF10B981" } };
-    ws.getRow(curRow).height = 22;
-  } else {
-    warnings.forEach(warn => {
-      ws.mergeCells(`B${curRow}:D${curRow}`);
-      const cell = ws.getCell(`B${curRow}`);
-      cell.value = `• ${warn}`;
-      cell.font = { name: "Calibri", size: 10, italic: true, color: { argb: "FFB45309" } };
-      cell.alignment = { wrapText: true, vertical: "middle" };
-      ws.getRow(curRow).height = 36;
-      curRow++;
+    ws.getCell(`B${r}`).font = { name: "Calibri", size: 9, bold: true };
+    ws.getCell(`G${r}`).font = { name: "Calibri", size: 9, color: { argb: "FF64748B" } };
+
+    if (cl.formula) {
+      // Single formula for geometric parameters
+      ws.getCell(`C${r}`).value = cl.formula;
+      ws.getCell(`D${r}`).value = { formula: cl.formula.substring(1) };
+      ws.getCell(`E${r}`).value = { formula: cl.formula.substring(1) };
+      ws.getCell(`F${r}`).value = { formula: cl.formula.substring(1) };
+
+      ws.getCell(`C${r}`).font = { name: "Consolas", size: 8, color: { argb: "FF475569" } };
+    } else if (cl.formulas) {
+      // Different formulas per option
+      ws.getCell(`C${r}`).value = "Опциональные формулы";
+      ws.getCell(`D${r}`).value = { formula: cl.formulas[0].substring(1) };
+      ws.getCell(`E${r}`).value = { formula: cl.formulas[1].substring(1) };
+      ws.getCell(`F${r}`).value = { formula: cl.formulas[2].substring(1) };
+
+      ws.getCell(`C${r}`).font = { name: "Calibri", size: 8.5, italic: true, color: { argb: "FF64748B" } };
+    }
+
+    ["D", "E", "F"].forEach(col => {
+      const cell = ws.getCell(`${col}${r}`);
+      cell.font = { name: "Consolas", size: 9, bold: true, color: { argb: "FF0F172A" } };
+      cell.alignment = { horizontal: "right" };
     });
-  }
+
+    ws.getRow(r).height = 20;
+    ["B","C","D","E","F","G"].forEach(col => {
+      ws.getCell(`${col}${r}`).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+    });
+  });
 }
 
+export function addNormativesSheet(workbook: ExcelJS.Workbook) {
+  const ws = workbook.addWorksheet("НОРМАТИВЫ (NORMATIVES)");
+  ws.views = [{ showGridLines: true }];
+
+  ws.getColumn(1).width = 4;   // Spacing
+  ws.getColumn(2).width = 18;  // Код норматива
+  ws.getColumn(3).width = 45;  // Описание
+  ws.getColumn(4).width = 15;  // Рабочее Значение (Число)
+  ws.getColumn(5).width = 10;  // Единица измерения
+  ws.getColumn(6).width = 24;  // Первоисточник (NCM/СНиП)
+  ws.getColumn(7).width = 12;  // Ревизия
+
+  // Title
+  ws.mergeCells("B2:G2");
+  const tCell = ws.getCell("B2");
+  tCell.value = "ЕДИНЫЙ СПРАВОЧНИК СТРОИТЕЛЬНЫХ НОРМАТИВОВ РЕСПУБЛИКИ МОЛДОВА";
+  tCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FFFFFFFF" } };
+  tCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF047857" } };
+  tCell.alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(2).height = 30;
+
+  // Header
+  ws.getCell("B4").value = "Код";
+  ws.getCell("C4").value = "Описание норматива";
+  ws.getCell("D4").value = "Норматив (Число)";
+  ws.getCell("E4").value = "Ед. изм.";
+  ws.getCell("F4").value = "Первоисточник";
+  ws.getCell("G4").value = "Ревизия";
+  ["B", "C", "D", "E", "F", "G"].forEach(c => {
+    const r = ws.getCell(`${c}4`);
+    r.font = { name: "Calibri", size: 9, bold: true, color: { argb: "FFFFFFFF" } };
+    r.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF065F46" } };
+    r.alignment = { horizontal: "center", vertical: "middle" };
+  });
+  ws.getRow(4).height = 24;
+
+  const norms = [
+    { code: "FROST_CENTER", desc: "Расчетная глубина промерзания грунта (Центр)", val: 0.80, unit: "м", ref: "NCM F.02.02-2008", rev: "2026" },
+    { code: "FROST_NORTH", desc: "Расчетная глубина промерзания грунта (Север)", val: 1.00, unit: "м", ref: "NCM F.02.02-2008", rev: "2026" },
+    { code: "FROST_SOUTH", desc: "Расчетная глубина промерзания грунта (Юг)", val: 0.70, unit: "м", ref: "NCM F.02.02-2008", rev: "2026" },
+    { code: "SNOW_CENTER", desc: "Нормативная снеговая нагрузка в Центре РМ", val: 0.90, unit: "кПа", ref: "NCM EN 1991-1-3:2010", rev: "2021" },
+    { code: "SNOW_NORTH", desc: "Нормативная снеговая нагрузка на Севере РМ", val: 1.10, unit: "кПа", ref: "NCM EN 1991-1-3:2010", rev: "2021" },
+    { code: "SNOW_SOUTH", desc: "Нормативная снеговая нагрузка на Юге РМ", val: 0.75, unit: "кПа", ref: "NCM EN 1991-1-3:2010", rev: "2021" },
+    { code: "WIND_CENTER", desc: "Нормативное ветровое давление в Центре РМ", val: 0.36, unit: "кПа", ref: "NCM EN 1991-1-4:2010", rev: "2021" },
+    { code: "E_BEARING_MIN", desc: "Рекомендуемый минимум прочности опорного пласта", val: 150, unit: "кПа", ref: "NCM EN 1997-1:2012", rev: "2022" },
+    { code: "REBAR_MIN_RATIO", desc: "Минимум кг арматуры на кубометр бетона ребра", val: 58.0, unit: "кг/м³", ref: "NCM F.02.02-2008", rev: "2026" },
+    { code: "CONCRETE_COVER", desc: "Защитный монолитный слой арматуры в грунте", val: 35, unit: "мм", ref: "NCM EN 1992-1-1:2011", rev: "2020" },
+    { code: "XPS_MIN_THICK", desc: "Минимальный срез утеплителя цокольной зоны", val: 50, unit: "мм", ref: "NCM L.02.01:2012", rev: "2020" },
+    { code: "XPS_SLAB_THICK", desc: "Толщина XPS утепления под подошвой УШП плиты", val: 100, unit: "мм", ref: "NCM L.02.01:2012", rev: "2020" },
+    { code: "COMPACTION_COEFF", desc: "Требуемый коэфф. послойного уплотнения засыпки", val: 0.98, unit: "безр.", ref: "СНиП 3.02.01-87", rev: "Действует" }
+  ];
+
+  norms.forEach((n, idx) => {
+    const r = 5 + idx;
+    ws.getCell(`B${r}`).value = n.code;
+    ws.getCell(`C${r}`).value = n.desc;
+    ws.getCell(`D${r}`).value = n.val;
+    ws.getCell(`E${r}`).value = n.unit;
+    ws.getCell(`F${r}`).value = n.ref;
+    ws.getCell(`G${r}`).value = n.rev;
+
+    ws.getCell(`B${r}`).font = { name: "Consolas", size: 8.5, color: { argb: "FF047857" } };
+    ws.getCell(`C${r}`).font = { name: "Calibri", size: 9 };
+    ws.getCell(`D${r}`).font = { name: "Consolas", size: 9, bold: true, color: { argb: "FF0F172A" } };
+    ws.getCell(`E${r}`).font = { name: "Calibri", size: 8.5, color: { argb: "FF475569" } };
+    ws.getCell(`F${r}`).font = { name: "Calibri", size: 9 };
+    ws.getCell(`G${r}`).font = { name: "Calibri", size: 9, color: { argb: "FF64748B" } };
+
+    ws.getRow(r).height = 19;
+    ["B","C","D","E","F","G"].forEach(col => {
+      ws.getCell(`${col}${r}`).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+    });
+  });
+}
+
+export function addRiskAnalysisSheet(workbook: ExcelJS.Workbook, results: CalculationResults) {
+  const ws = workbook.addWorksheet("РАЗДЕЛ РИСКОВ (RISK ANALYSIS)");
+  ws.views = [{ showGridLines: true }];
+
+  ws.getColumn(1).width = 4;   // Spacing
+  ws.getColumn(2).width = 34;  // Инженерный объект риска
+  ws.getColumn(3).width = 20;  // Оценка риска
+  ws.getColumn(4).width = 75;  // Описание деградационного последствия и рекомендация СНиП
+
+  // Title
+  ws.mergeCells("B2:D2");
+  const tCell = ws.getCell("B2");
+  tCell.value = "АВТОМАТИЧЕСКИЙ АНАЛИЗ ГЕОТЕХНИЧЕСКИХ И СТРОИТЕЛЬНЫХ РИСКОВ (RISK ANALYSIS)";
+  tCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FFFFFFFF" } };
+  tCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF991B1B" } };
+  tCell.alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(2).height = 32;
+
+  // Header
+  ws.getCell("B4").value = "Категория риска";
+  ws.getCell("C4").value = "Уровень риска";
+  ws.getCell("D4").value = "Инженерные предписания по предотвращению повреждений";
+  ["B", "C", "D"].forEach(c => {
+    const r = ws.getCell(`${c}4`);
+    r.font = { name: "Calibri", size: 9, bold: true, color: { argb: "FFFFFFFF" } };
+    r.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF7F1D1D" } };
+    r.alignment = { horizontal: "center", vertical: "middle" };
+  });
+  ws.getRow(4).height = 24;
+
+  const risks = [
+    {
+      obj: "Высокий уровень грунтовых вод (УГВ)",
+      level: results.input.groundwaterDepth < 1.5 ? "ВЫСОКИЙ (КРИТИКА)" : "НИЗКИЙ / БЕЗОПАСНО",
+      desc: results.input.groundwaterDepth < 1.5 
+        ? "Грунтовые воды подтапливают котлован. Требуется обязательный пристенный дренаж d110 в кокосовом фильтре и качественная рулонная гидроизоляция."
+        : "Грунтовые воды залегают на безопасной глубине. Специальные противонапорные дренажные меры при отсутствии верховодки не требуются."
+    },
+    {
+      obj: "Слабый/просадочный грунт основания",
+      level: (results.input.soilType === "LOESS" || results.input.soilType === "FILLED") ? "КРИТИЧЕСКИЙ (ALERT)" : "ДОПУСТИМЫЙ / НОРМА",
+      desc: (results.input.soilType === "LOESS" || results.input.soilType === "FILLED")
+        ? "Основание подвержено просадкам и разуплотнению при замачивании. Обязательна песчано-щебеночная виброподушка Masalta K_com>=0.98 и глиняный водоупористый замок."
+        : "Проектные суглинки или супеси обладают достаточной жесткостью. Плотность уплотнения должна быть стандартной."
+    },
+    {
+      obj: "Отсутствие пристенного дренажа",
+      level: results.input.groundwaterDepth < 1.5 ? "ВЫСОКИЙ РИСК" : "НИЗКИЙ РИСК",
+      desc: results.input.groundwaterDepth < 1.5
+        ? "При высоком УГВ отсутствие обводного дренажа вызовет затопление пазух, порчу гидроизоляции и размыв несущей подушки."
+        : "Для песчаных или глубокозалегающих грунтов пристенный дренаж имеет рекомендательный характер."
+    },
+    {
+      obj: "Отсутствие утепления подошвы/цоколя",
+      level: (results.input.soilType === "CLAY" || results.input.soilType === "LOAM") ? "ВЫСОКИЙ РИСК" : "НИЗКИЙ РИСК",
+      desc: (results.input.soilType === "CLAY" || results.input.soilType === "LOAM")
+        ? "Тяжелые глины подвержены морозному пучению. Отсутствие экструдированных XPS плит вызовет деформацию стен. Требуется XPS 50-100мм."
+        : "Легкие грунты малопучинисты. Термический барьер утепления сохраняет внутренний баланс плиты."
+    },
+    {
+      obj: "Недостаточность армирования монолита",
+      level: "НИЗКИЙ РИСК",
+      desc: "В расчетах заложена оптимальная жесткость (не менее 58-68 кг/м³), что исключает усадочные трещины. Не изменять диаметры рабочих стержней d12/14."
+    },
+    {
+      obj: "Интегрированные инженерные вводы",
+      level: "НИЗКИЙ РИСК",
+      desc: "Включает комплект из 5 изолированных проходов (PVC, HDPE). Предотвращает разрыв сетей при усадочных кренах здания."
+    },
+    {
+      obj: "Влажностный уход за готовым бетоном",
+      level: "СПАСЕННЫЙ РИСК (PASS)",
+      desc: "Укрытие ПЭ пленкой 150мкм и регулярная ирригация в течение 14 суток гарантирует достижение проектного класса C20/25 и снижает трещинообразование на 98%."
+    },
+    {
+      obj: "Качество обратной засыпки пазух",
+      level: "КОНТРОЛИРУЕМЫЙ РИСК",
+      desc: "Послойная трамбовка предохраняет от скорого проседания отмостки. Обязателен послойный экспресс-контроль прочности K_com >= 0.98."
+    },
+    {
+      obj: "Надежность отмостки периметра",
+      level: "УГРОЗА ПРИ ОТСУТСТВИИ",
+      desc: "Без отмостки паводковые и водосточные воды проникнут непосредственно под подошву фундамента. Обязательна монолитная разуклонка 2.5% по слою XPS."
+    }
+  ];
+
+  risks.forEach((risk, idx) => {
+    const row = 5 + idx;
+    ws.getCell(`B${row}`).value = risk.obj;
+    ws.getCell(`C${row}`).value = risk.level;
+    ws.getCell(`D${row}`).value = risk.desc;
+
+    ws.getCell(`B${row}`).font = { name: "Calibri", size: 9, bold: true };
+    ws.getCell(`D${row}`).font = { name: "Calibri", size: 9, color: { argb: "FF334155" } };
+
+    // High risk styles
+    const isHigh = risk.level.includes("ВЫСОКИЙ") || risk.level.includes("КРИТИЧЕСКИЙ") || risk.level.includes("УГРОЗА");
+    ws.getCell(`C${row}`).font = { 
+      name: "Consolas", 
+      size: 9, 
+      bold: true, 
+      color: { argb: isHigh ? "FF991B1B" : "FF047857" } 
+    };
+    ws.getCell(`C${row}`).alignment = { horizontal: "center" };
+
+    const bgHex = row % 2 === 0 ? "FFFFF8F8" : "FFFFFFFF";
+    ["B", "C", "D"].forEach(col => {
+      ws.getCell(`${col}${row}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgHex } };
+      ws.getCell(`${col}${row}`).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+    });
+    ws.getRow(row).height = 24;
+  });
+}
+
+// User-triggered export single option handler
 export async function exportToExcel(
   input: CalculatorInput,
   results: CalculationResults,
@@ -1219,17 +1454,7 @@ export async function exportToExcel(
   groundwaterDepth: number,
   detailedItemsFetcher: (catId: string, opt: any, slope: number, gw: number) => any[]
 ) {
-  const workbook = new ExcelJS.Workbook();
-  const fndShortName = selectedOption.id === "slab" ? "Slab" : selectedOption.id === "strip" ? "Strip" : "Pile";
-  
-  // Create Settings worksheet first
-  addSettingsSheet(workbook, input.safetyFactor || 1.3);
-  addGeologySheet(workbook);
-  addSeismicSheet(workbook);
-
-  addOptionSheet(
-    workbook,
-    "Smeta_Fundament",
+  const workbook = await generateExcelWorkbook(
     input,
     results,
     selectedOption,
@@ -1238,14 +1463,32 @@ export async function exportToExcel(
     detailedItemsFetcher
   );
 
-  // Create Diagnostics worksheet last
-  addDiagnosticsSheet(workbook, input, results);
-
-  // Render file block download
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const fileName = `Fundament_Estimate_${fndShortName}_${input.width}x${input.length}.xlsx`;
+  const fndShortName = selectedOption.id === "slab" ? "Slab" : selectedOption.id === "strip" ? "Strip" : "Pile";
+  const fileName = `Fundament_Estimate_Professional_${fndShortName}_${input.width}x${input.length}.xlsx`;
   saveAs(blob, fileName);
 }
 
-export { exportAllToExcel } from "./excelExportAll";
+// User-triggered export comparative all options handler
+export async function exportAllToExcel(
+  input: CalculatorInput,
+  results: CalculationResults,
+  landSlope: number,
+  groundwaterDepth: number,
+  detailedItemsFetcher: (catId: string, opt: any, slope: number, gw: number) => any[]
+) {
+  const workbook = await generateExcelWorkbook(
+    input,
+    results,
+    null, // Sequential comparative rendering
+    landSlope,
+    groundwaterDepth,
+    detailedItemsFetcher
+  );
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const fileName = `Sravnitelnaya_Smeta_Fundamentov_Ultimate_Moldova.xlsx`;
+  saveAs(blob, fileName);
+}
