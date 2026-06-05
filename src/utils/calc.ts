@@ -26,7 +26,8 @@ import {
   OptionExplanation,
   UtilitySubsystemWork,
   BIMEntityMaterial,
-  BIMQualityCheck
+  BIMQualityCheck,
+  ResolvedReinforcement
 } from "../types";
 
 // 5.5. Unified Central Normatives Database (NCM & СНиП) - Stage 8 & 1
@@ -47,6 +48,775 @@ export const NORMATIVES = {
   XPS_SLAB_THICK: { code: "XPS_SLAB_THICK", desc: "Толщина XPS утепления под подошвой УШП плиты", val: 100, unit: "мм", ref: "NCM L.02.01:2012", rev: "2020" },
   COMPACTION_COEFF: { code: "COMPACTION_COEFF", desc: "Требуемый коэфф. послойного уплотнения засыпки", val: 0.98, unit: "безр.", ref: "СНиП 3.02.01-87", rev: "Действует" },
 };
+
+export function getRebarWeightPerMeter(diameter: number): number {
+  const table: Record<number, number> = {
+    6: 0.222,
+    8: 0.395,
+    10: 0.617,
+    12: 0.888,
+    14: 1.21,
+    16: 1.58,
+    18: 2.00,
+    20: 2.47
+  };
+  return table[diameter] || (diameter * diameter * 0.00617);
+}
+
+export function resolveReinforcementParams(
+  input: CalculatorInput,
+  fndId: string,
+  info: { perimeter: number; footingArea: number; depthM: number; concreteVolumeM3: number; heightAboveGround?: number }
+): ResolvedReinforcement {
+  const isSlab = fndId === "slab" || fndId === "classic_slab" || fndId === "ribbed_slab" || fndId === "ush";
+  const isStrip = fndId === "strip" || fndId === "mzlf" || fndId === "strip_with_slab";
+  const isPiles = fndId === "piles" || fndId === "drilled_piles" || fndId === "tise" || fndId === "column_footing";
+  
+  const sources: any = {
+    foundation_type: "AUTO",
+    rebar_class_main: "AUTO",
+    rebar_class_secondary: "AUTO",
+    main_bar_diameter: "AUTO",
+    secondary_bar_diameter: "AUTO",
+    longitudinal_bars_count: "AUTO",
+    top_belt_count: "AUTO",
+    bottom_belt_count: "AUTO",
+    stirrup_spacing: "AUTO",
+    protective_layer_bottom: "AUTO",
+    protective_layer_side: "AUTO",
+    protective_layer_top: "AUTO",
+    lap_length: "AUTO",
+    corner_reinforcement: "AUTO",
+    u_bars: "AUTO",
+    l_bars: "AUTO",
+    starter_bars: "AUTO",
+    chairs_count: "AUTO",
+    spacers_count: "AUTO",
+  };
+
+  // --- SEISMIC SCALING MODULE (Requirement 4) ---
+  let seismicPoints = 7;
+  if (input.region === MoldovaRegion.NORTH) seismicPoints = 6;
+  else if (input.region === MoldovaRegion.SOUTH) seismicPoints = 8;
+
+  // Manual overrides for seismic parameters
+  if (input.seismicZone) {
+    if (input.seismicZone === "6_POINTS") seismicPoints = 6;
+    else if (input.seismicZone === "7_POINTS") seismicPoints = 7;
+    else if (input.seismicZone === "8_POINTS") seismicPoints = 8;
+  }
+  
+  const seismicClassLabel = input.seismicClass || "CLASS_II";
+  const seismicFactorCoeff = input.seismicFactor !== undefined ? input.seismicFactor : 1.0;
+
+  // Seismic amplification multiplier
+  let seismic_scale_factor = 1.0;
+  if (seismicPoints === 7) seismic_scale_factor = 1.15;
+  else if (seismicPoints === 8) seismic_scale_factor = 1.35;
+  
+  if (seismicClassLabel === "CLASS_I") seismic_scale_factor *= 1.25; // Critical buildings
+  else if (seismicClassLabel === "CLASS_III") seismic_scale_factor *= 0.8; // Auxiliary objects
+
+  seismic_scale_factor *= seismicFactorCoeff;
+
+  // Determine defaults based on user's selected mode (Requirement 6)
+  const mode = input.reinforcementChoice || "AUTO";
+  
+  let defRebarClassMain = "A500C";
+  let defRebarClassSecondary = "A240";
+  let defMainBarDiameter = 12;
+  let defSecondaryBarDiameter = 8;
+  let defLongitudinalBarsCount = 0;
+  let defTopBeltCount = 0;
+  let defBottomBeltCount = 0;
+  let defStirrupSpacing = 200;
+  let defProtectiveLayerBottom = 50;
+  let defProtectiveLayerSide = 40;
+  let defProtectiveLayerTop = 40;
+  let defCornerReinforcement = false;
+  let defUBars = false;
+  let defLBars = false;
+  let defStarterBars = false;
+
+  const buildingWeight = input.width * input.length * (input.floors || 1) * 1.5;
+  const isHeavy = buildingWeight > 150 || input.wallMaterial === BuildingWallMaterial.KOTELET || input.wallMaterial === BuildingWallMaterial.BRICK;
+
+  if (mode === "RECOMMENDED") {
+    // Rigid non-optimized ultra-safe traditional specifications
+    if (isStrip) {
+      defMainBarDiameter = 16;
+      defSecondaryBarDiameter = 10;
+      defLongitudinalBarsCount = 8;
+      defTopBeltCount = 4;
+      defBottomBeltCount = 4;
+      defStirrupSpacing = 150;
+      defProtectiveLayerBottom = 70;
+      defProtectiveLayerSide = 50;
+      defProtectiveLayerTop = 40;
+      defCornerReinforcement = true;
+      defUBars = true;
+      defLBars = true;
+      defStarterBars = true;
+    } else if (isSlab) {
+      defMainBarDiameter = 14;
+      defSecondaryBarDiameter = 10;
+      defLongitudinalBarsCount = 0;
+      defTopBeltCount = 0;
+      defBottomBeltCount = 0;
+      defStirrupSpacing = 150;
+      defProtectiveLayerBottom = 50;
+      defProtectiveLayerSide = 40;
+      defProtectiveLayerTop = 40;
+      defCornerReinforcement = true;
+      defUBars = true;
+      defLBars = false;
+      defStarterBars = true;
+    } else { // Piles / column footing
+      defMainBarDiameter = 16;
+      defSecondaryBarDiameter = 8;
+      defLongitudinalBarsCount = 6;
+      defTopBeltCount = 3;
+      defBottomBeltCount = 3;
+      defStirrupSpacing = 150;
+      defProtectiveLayerBottom = 50;
+      defProtectiveLayerSide = 45;
+      defProtectiveLayerTop = 40;
+      defCornerReinforcement = true;
+      defUBars = true;
+      defLBars = true;
+      defStarterBars = true;
+    }
+  } else {
+    // AUTO Dynamic engineering logic based on Eurocode 2 & NCM (Requirement 3)
+    if (isStrip) {
+      // Main Bar Diameter
+      if (isHeavy || seismicPoints === 8 || info.depthM >= 1.2) {
+        defMainBarDiameter = 16;
+      } else if (seismicPoints === 7) {
+        defMainBarDiameter = 14;
+      } else {
+        defMainBarDiameter = 12;
+      }
+      
+      // Secondary Bar Diameter
+      defSecondaryBarDiameter = defMainBarDiameter >= 16 ? 10 : 8;
+
+      // longitudinal bars based on depth & height of the beam
+      const beamHeight = info.depthM + (info.heightAboveGround || 0.4);
+      if (beamHeight < 0.8) {
+        defLongitudinalBarsCount = 4;
+        defTopBeltCount = 2;
+        defBottomBeltCount = 2;
+      } else if (beamHeight < 1.1) {
+        defLongitudinalBarsCount = 6;
+        defTopBeltCount = 3;
+        defBottomBeltCount = 3;
+      } else {
+        defLongitudinalBarsCount = 8;
+        defTopBeltCount = 4;
+        defBottomBeltCount = 4;
+      }
+
+      // Add shear reinforcement for high seismicity
+      if (seismicPoints === 8) {
+        defLongitudinalBarsCount += 2; // Extra constructive face bars
+        defTopBeltCount += 1;
+        defBottomBeltCount += 1;
+      }
+
+      // Stirrup Spacing
+      if (seismicPoints === 8) defStirrupSpacing = 150;
+      else if (seismicPoints === 7) defStirrupSpacing = 200;
+      else defStirrupSpacing = 250;
+
+      defProtectiveLayerBottom = 70; // 70mm is normative in direct contact with natural ground
+      defProtectiveLayerSide = 50;
+      defProtectiveLayerTop = 40;
+      
+      // Seismic elements
+      defCornerReinforcement = seismicPoints >= 7;
+      defUBars = seismicPoints >= 7;
+      defLBars = seismicPoints >= 7;
+      defStarterBars = isHeavy || seismicPoints >= 7;
+
+    } else if (isSlab) {
+      if (isHeavy || seismicPoints === 8) {
+        defMainBarDiameter = 12;
+        defStirrupSpacing = 150; // closer mesh
+      } else {
+        defMainBarDiameter = 10;
+        defStirrupSpacing = 200;
+      }
+      defSecondaryBarDiameter = 10;
+      defLongitudinalBarsCount = 0; // Not applicable for standard slabs (using double grid mesh)
+      defTopBeltCount = 0;
+      defBottomBeltCount = 0;
+      
+      defProtectiveLayerBottom = 50;
+      defProtectiveLayerSide = 40;
+      defProtectiveLayerTop = 40;
+      
+      defCornerReinforcement = seismicPoints >= 7;
+      defUBars = true; // Edge closure rings
+      defLBars = false;
+      defStarterBars = isHeavy || seismicPoints >= 7;
+
+    } else if (isPiles) {
+      // Pile cages
+      if (isHeavy || seismicPoints === 8) {
+        defMainBarDiameter = 16;
+        defStirrupSpacing = 150; // closer rings in piles and grillage
+      } else {
+        defMainBarDiameter = 14;
+        defStirrupSpacing = 200;
+      }
+      defSecondaryBarDiameter = 8;
+      // Longitudinal bars count in pile cage
+      defLongitudinalBarsCount = seismicPoints === 8 ? 6 : 4;
+      defTopBeltCount = 2;
+      defBottomBeltCount = 2;
+      defProtectiveLayerBottom = 50;
+      defProtectiveLayerSide = 40;
+      defProtectiveLayerTop = 40;
+      
+      defCornerReinforcement = true;
+      defUBars = true;
+      defLBars = true;
+      defStarterBars = true;
+    }
+  }
+
+  // Overlay user manual modifications if present
+  const rebar_class_main = input.rebarClassMain || defRebarClassMain;
+  if (input.rebarClassMain) sources.rebar_class_main = "USER";
+
+  const rebar_class_secondary = input.rebarClassSecondary || defRebarClassSecondary;
+  if (input.rebarClassSecondary) sources.rebar_class_secondary = "USER";
+
+  const main_bar_diameter = input.mainBarDiameter !== undefined ? input.mainBarDiameter : defMainBarDiameter;
+  if (input.mainBarDiameter !== undefined) sources.main_bar_diameter = "USER";
+
+  const secondary_bar_diameter = input.secondaryBarDiameter !== undefined ? input.secondaryBarDiameter : defSecondaryBarDiameter;
+  if (input.secondaryBarDiameter !== undefined) sources.secondary_bar_diameter = "USER";
+
+  const longitudinal_bars_count = input.longitudinalBarsCount !== undefined ? input.longitudinalBarsCount : defLongitudinalBarsCount;
+  if (input.longitudinalBarsCount !== undefined) sources.longitudinal_bars_count = "USER";
+
+  const top_belt_count = input.topBeltCount !== undefined ? input.topBeltCount : defTopBeltCount;
+  if (input.topBeltCount !== undefined) sources.top_belt_count = "USER";
+
+  const bottom_belt_count = input.bottomBeltCount !== undefined ? input.bottomBeltCount : defBottomBeltCount;
+  if (input.bottomBeltCount !== undefined) sources.bottom_belt_count = "USER";
+
+  const stirrup_spacing = input.stirrupSpacing !== undefined ? input.stirrupSpacing : defStirrupSpacing;
+  if (input.stirrupSpacing !== undefined) sources.stirrup_spacing = "USER";
+
+  const protective_layer_bottom = input.protectiveLayerBottom !== undefined ? input.protectiveLayerBottom : defProtectiveLayerBottom;
+  if (input.protectiveLayerBottom !== undefined) sources.protective_layer_bottom = "USER";
+
+  const protective_layer_side = input.protectiveLayerSide !== undefined ? input.protectiveLayerSide : defProtectiveLayerSide;
+  if (input.protectiveLayerSide !== undefined) sources.protective_layer_side = "USER";
+
+  const protective_layer_top = input.protectiveLayerTop !== undefined ? input.protectiveLayerTop : defProtectiveLayerTop;
+  if (input.protectiveLayerTop !== undefined) sources.protective_layer_top = "USER";
+
+  // Seismic zone increases lap and anchorage requirements
+  let defLapLengthMultiplier = 40;
+  if (seismicPoints === 7) defLapLengthMultiplier = 45;
+  else if (seismicPoints === 8) defLapLengthMultiplier = 55;
+  
+  let defLapLength = defLapLengthMultiplier * main_bar_diameter;
+  const lap_length = input.lapLength !== undefined ? input.lapLength : defLapLength;
+  if (input.lapLength !== undefined) sources.lap_length = "USER";
+
+  const corner_reinforcement = input.cornerReinforcement !== undefined ? input.cornerReinforcement : defCornerReinforcement;
+  if (input.cornerReinforcement !== undefined) sources.corner_reinforcement = "USER";
+
+  const u_bars = input.uBars !== undefined ? input.uBars : defUBars;
+  if (input.uBars !== undefined) sources.u_bars = "USER";
+
+  let l_bars = input.lBars !== undefined ? input.lBars : defLBars;
+  if (corner_reinforcement) {
+    l_bars = true;
+  }
+  if (input.lBars !== undefined) sources.l_bars = "USER";
+
+  const starter_bars = input.starterBars !== undefined ? input.starterBars : defStarterBars;
+  if (input.starterBars !== undefined) sources.starter_bars = "USER";
+
+  // PHYSICAL STEEL REBAR CALCULATING ENGINE (M0LDOVA-10)
+  const waste_percent = 6; // Standard 6% detailing waste
+  let main_bars_weight_kg = 0;
+  let secondary_bars_weight_kg = 0;
+  let additional_elements_weight_kg = 0;
+  let chairs_count = 0;
+  let spacers_count = 0;
+  let frogs_count = 0;
+  let frogs_spacing = 0;
+  let corner_reinforcements_count = 0;
+  let intersection_reinforcements_count = 0;
+  
+  // Parametric breakdown outputs
+  let l_bars_count = 0;
+  let u_bars_count = 0;
+  let starter_bars_count = 0;
+  let longitudinal_total_length_m = 0;
+  let transverse_total_length_m = 0;
+  let clamps_total_length_m = 0;
+  let starters_total_length_m = 0;
+  let anchorages_total_length_m = 0;
+  let laps_total_length_m = 0;
+  let longitudinal_total_weight_kg = 0;
+  let clamps_total_weight_kg = 0;
+  let reinforcements_total_weight_kg = 0;
+  let starters_total_weight_kg = 0;
+  let anchorages_total_weight_kg = 0;
+  let laps_total_weight_kg = 0;
+
+  let layout_scheme_ru = "";
+  let layout_scheme_ro = "";
+
+  const mainWeightPerMeter = getRebarWeightPerMeter(main_bar_diameter);
+  const secondaryWeightPerMeter = getRebarWeightPerMeter(secondary_bar_diameter);
+
+  if (isStrip) {
+    // Strip layout physical calculation
+    const L_total = info.perimeter * 1.35; // Total beams length under bearing walls
+    
+    // Main longitudinal bars including standard 11.7m rebar overlap laps
+    const barsCount = longitudinal_bars_count || 6;
+    const baseLength = L_total * barsCount;
+    const overlapsCount = Math.floor(baseLength / 11.5);
+    const overlapLengthTotal = overlapsCount * (lap_length / 1000);
+    
+    longitudinal_total_length_m = baseLength + overlapLengthTotal;
+    longitudinal_total_weight_kg = longitudinal_total_length_m * mainWeightPerMeter;
+    laps_total_length_m = overlapLengthTotal;
+    laps_total_weight_kg = laps_total_length_m * mainWeightPerMeter;
+    
+    // Transverse stirrups (clamps)
+    const spacingM = stirrup_spacing / 1000;
+    const clampsCount = Math.ceil(L_total / spacingM);
+    // Average cross section parameters mapped
+    const widthStrip = info.footingArea / info.perimeter || 0.45;
+    const avgTotalHeight = info.depthM + (info.heightAboveGround || 0.4);
+    const coreW = widthStrip - (2 * protective_layer_side) / 1000;
+    const coreH = avgTotalHeight - (protective_layer_bottom + protective_layer_top) / 1000;
+    const clampPerimeter = 2 * (Math.max(0.1, coreW) + Math.max(0.1, coreH)) + 0.25; // perimeter + structural hooks
+    
+    clamps_total_length_m = clampsCount * clampPerimeter;
+    transverse_total_length_m = clamps_total_length_m;
+    clamps_total_weight_kg = clamps_total_length_m * secondaryWeightPerMeter;
+    
+    // Corner reinforcements and nodes (G-shaped & T-shaped)
+    corner_reinforcements_count = 4; // Typical perimeter corners
+    intersection_reinforcements_count = Math.ceil(info.perimeter / 8); // T-intersections of inner columns
+    const cornersTotal = corner_reinforcements_count + intersection_reinforcements_count;
+    
+    // L-shaped G-bars (each corner node utilizes 4 L-bars: d_main, 1.2m leg)
+    l_bars_count = l_bars ? cornersTotal * 4 : 0;
+    anchorages_total_length_m = l_bars_count * 1.2;
+    anchorages_total_weight_kg = anchorages_total_length_m * mainWeightPerMeter;
+
+    // U-shaped P-bars
+    u_bars_count = u_bars ? cornersTotal * 4 : 0;
+    const u_bars_total_length = u_bars_count * 0.8;
+    const u_bars_total_weight_kg = u_bars_total_length * secondaryWeightPerMeter;
+
+    reinforcements_total_weight_kg = anchorages_total_weight_kg + u_bars_total_weight_kg;
+    
+    // Wall and column starter pins
+    starter_bars_count = starter_bars ? Math.ceil(info.perimeter / 1.2) * 4 : 0;
+    starters_total_length_m = starter_bars_count * 1.0;
+    starters_total_weight_kg = starters_total_length_m * mainWeightPerMeter;
+
+    main_bars_weight_kg = longitudinal_total_weight_kg;
+    secondary_bars_weight_kg = clamps_total_weight_kg;
+    additional_elements_weight_kg = reinforcements_total_weight_kg + starters_total_weight_kg;
+    
+    chairs_count = 0;
+    spacers_count = Math.ceil(L_total * 5); // Side wall spacers (5 per meter)
+    
+    layout_scheme_ru = `Пространственный рамный каркас из ${barsCount} продольных рабочих стержней d${main_bar_diameter}мм (класс ${rebar_class_main}), связанных хомутами d${secondary_bar_diameter}мм с шагом ${stirrup_spacing}мм в единую коробку.`;
+    layout_scheme_ro = `Carcasă spațială formată din ${barsCount} bare longitudinale principale d${main_bar_diameter}mm (clasa ${rebar_class_main}), legate cu etrieri d${secondary_bar_diameter}mm la pasul de ${stirrup_spacing}mm.`;
+
+  } else if (isSlab) {
+    // Slabs orthogonal grid mesh physical calculation (Eurocode 2 / EC2 & NCM EN 1992-1-1)
+    const gridSpacingM = stirrup_spacing / 1000;
+    const widthSlab = input.width;
+    const lengthSlab = input.length;
+    
+    // Layout consists of TWO orthogonal meshes: Lower Mesh and Upper Mesh (Mesh X and Mesh Y in both layers)
+    const numRowsX = Math.ceil(widthSlab / gridSpacingM) + 1;
+    const numRowsY = Math.ceil(lengthSlab / gridSpacingM) + 1;
+    
+    const meshX_total_length = numRowsX * lengthSlab; // Longitudinal lines
+    const meshY_total_length = numRowsY * widthSlab;  // Transverse lines
+    
+    // Total for one mesh layer (Lower Mesh X + Y)
+    const lower_mesh_total_length = meshX_total_length + meshY_total_length;
+    // Upper Mesh is identical
+    const upper_mesh_total_length = meshX_total_length + meshY_total_length;
+    
+    const totalLinearMeters = lower_mesh_total_length + upper_mesh_total_length;
+    
+    // overlap laps (12%) for standard 11.7m delivery bar cuts
+    const overlaps_length = totalLinearMeters * 0.12;
+    const finalLinearMeters = totalLinearMeters + overlaps_length;
+    
+    longitudinal_total_length_m = finalLinearMeters;
+    longitudinal_total_weight_kg = longitudinal_total_length_m * mainWeightPerMeter;
+    laps_total_length_m = overlaps_length;
+    laps_total_weight_kg = laps_total_length_m * mainWeightPerMeter;
+    
+    // Frogs ("лягушки") - spacers that separate and support the top mesh (1.5 per m2 of slab)
+    frogs_count = Math.ceil(info.footingArea * 1.5);
+    frogs_spacing = 800; // spacing between frogs in mm
+    const frogLength = 0.85; // total length of rebar per frog
+    
+    clamps_total_length_m = frogs_count * frogLength;
+    transverse_total_length_m = clamps_total_length_m;
+    clamps_total_weight_kg = clamps_total_length_m * secondaryWeightPerMeter;
+    
+    // Corner G-bars (L-bars) are 0 for Slab to prevent mixing with Strip foundation logic
+    l_bars_count = 0;
+    anchorages_total_length_m = 0;
+    anchorages_total_weight_kg = 0;
+
+    // Edge boundary reinforcements (U-shaped boundary closure rings for slabs / Armare bordaj contur)
+    u_bars_count = u_bars ? Math.ceil(info.perimeter / gridSpacingM) * 2 : 0;
+    const u_bars_total_length = u_bars_count * 0.9;
+    const u_bars_total_weight_kg = u_bars_total_length * mainWeightPerMeter;
+
+    // Slabs reinforcement zones: Punching reinforcement & boundary wall starter bars
+    const column_zones_weight_kg = u_bars ? 4 * 4 * 1.8 * mainWeightPerMeter : 0; // Column stiffener reinforcement zones
+    const wall_zones_weight_kg = u_bars ? Math.ceil(info.perimeter * 0.25) * mainWeightPerMeter : 0; // Wall boundary rib zones
+
+    reinforcements_total_weight_kg = u_bars_total_weight_kg + column_zones_weight_kg + wall_zones_weight_kg;
+    
+    // Starters for foundation pins/shpils under bearing walls or pillars
+    starter_bars_count = starter_bars ? Math.ceil(info.perimeter * 0.8) * 4 : 0;
+    starters_total_length_m = starter_bars_count * 1.0;
+    starters_total_weight_kg = starters_total_length_m * mainWeightPerMeter;
+
+    main_bars_weight_kg = longitudinal_total_weight_kg;
+    secondary_bars_weight_kg = clamps_total_weight_kg;
+    additional_elements_weight_kg = reinforcements_total_weight_kg + starters_total_weight_kg;
+    
+    chairs_count = Math.ceil(info.footingArea * 1.2); // Lower grid concrete spacers (1.2 per m2)
+    spacers_count = Math.ceil(info.footingArea * 5); // Side spacer counts
+    
+    layout_scheme_ru = `Двойной сетчатый каркас из рабочей арматуры d${main_bar_diameter}мм (класс ${rebar_class_main}) с ячейкой ${stirrup_spacing}х${stirrup_spacing}мм (нижняя и верхняя сетка плиты), с П-образными торцевыми хомутами d${main_bar_diameter}мм и разделительными лягушками d${secondary_bar_diameter}мм.`;
+    layout_scheme_ro = `Armătură în rețea dublă (plasă inferioară și superioară) din bare d${main_bar_diameter}mm (clasa ${rebar_class_main}) cu ochiuri de ${stirrup_spacing}x${stirrup_spacing}mm, cu agrafe U de contur d${main_bar_diameter}mm și capre din bare d${secondary_bar_diameter}mm.`;
+
+  } else if (isPiles) {
+    // Pile cages + small grillage beams physical calculation
+    const basePileCount = Math.ceil(info.perimeter / 1.7);
+    const actualPileCount = input.soilType === SoilType.FILLED ? Math.ceil(basePileCount * 1.35) : basePileCount;
+    const pileDepthM = info.depthM || 2.2;
+    
+    // 1. Pile reinforcement
+    const pileLongCount = longitudinal_bars_count || 4;
+    // Pile cage length = actual depth + 0.50m grillage linkage starters
+    const cageLength = pileDepthM + 0.50;
+    const pileMainLinearM = actualPileCount * pileLongCount * cageLength;
+    const pileMainWeight = pileMainLinearM * mainWeightPerMeter;
+    
+    // Spiral rings on piles
+    const ringStepM = 0.15; // 150mm standard step inside piles
+    const ringsPerPile = Math.ceil(pileDepthM / ringStepM);
+    const pileDiameter = 0.30; // 300mm standard pile diameter
+    const ringCircumference = Math.PI * (pileDiameter - 0.08) + 0.10; // core diameter + tie length
+    const pileSecWeight = actualPileCount * ringsPerPile * ringCircumference * getRebarWeightPerMeter(6); // spirals are d6
+    
+    // 2. Grillage (rosverk) reinforcement on top of piles (similar to shallow strip)
+    const grillageLength = info.perimeter * 1.35;
+    const grillageLongBarsCount = 4; // 2 top, 2 bottom
+    const grillageMainLinearM = grillageLength * grillageLongBarsCount * 1.10; // adding 10% overlaps
+    const grillageMainWeight = grillageMainLinearM * mainWeightPerMeter;
+    
+    const grillageStirrupSpacingM = stirrup_spacing / 1000;
+    const grillageStirrupsCount = Math.ceil(grillageLength / grillageStirrupSpacingM);
+    const grillageHeightM = 0.45; // 450mm grillage height
+    const grillageWidthM = 0.40; // 400mm grillage width
+    const grillageClampPerimeter = 2 * (grillageWidthM - 0.08) + 2 * (grillageHeightM - 0.08) + 0.20;
+    const grillageSecWeight = grillageStirrupsCount * grillageClampPerimeter * secondaryWeightPerMeter;
+    
+    longitudinal_total_length_m = pileMainLinearM + grillageMainLinearM;
+    longitudinal_total_weight_kg = pileMainWeight + grillageMainWeight;
+    laps_total_length_m = grillageMainLinearM * 0.10;
+    laps_total_weight_kg = grillageMainLinearM * 0.10 * mainWeightPerMeter;
+
+    clamps_total_length_m = (actualPileCount * ringsPerPile * ringCircumference) + (grillageStirrupsCount * grillageClampPerimeter);
+    transverse_total_length_m = clamps_total_length_m;
+    clamps_total_weight_kg = pileSecWeight + grillageSecWeight;
+    
+    corner_reinforcements_count = 4;
+    intersection_reinforcements_count = Math.ceil(info.perimeter / 10);
+    const totalCorners = corner_reinforcements_count + intersection_reinforcements_count;
+    
+    // L-bars linking piles to grillage + corners
+    l_bars_count = l_bars ? (totalCorners * 4 + actualPileCount * pileLongCount) : 0;
+    anchorages_total_length_m = l_bars_count * 1.2;
+    anchorages_total_weight_kg = anchorages_total_length_m * mainWeightPerMeter;
+
+    u_bars_count = u_bars ? totalCorners * 4 : 0;
+    const u_bars_total_length = u_bars_count * 0.8;
+    const u_bars_total_weight_kg = u_bars_total_length * secondaryWeightPerMeter;
+
+    reinforcements_total_weight_kg = anchorages_total_weight_kg + u_bars_total_weight_kg;
+
+    // Starter pins under columns or walls
+    starter_bars_count = starter_bars ? Math.ceil(info.perimeter / 1.5) * 4 : 0;
+    starters_total_length_m = starter_bars_count * 1.0;
+    starters_total_weight_kg = starters_total_length_m * mainWeightPerMeter;
+
+    main_bars_weight_kg = longitudinal_total_weight_kg;
+    secondary_bars_weight_kg = clamps_total_weight_kg;
+    additional_elements_weight_kg = reinforcements_total_weight_kg + starters_total_weight_kg;
+    
+    chairs_count = 0;
+    spacers_count = Math.ceil(grillageLength * 4 + actualPileCount * 3);
+    
+    layout_scheme_ru = `Буронабивные сваи с арматурными каркасами из ${pileLongCount} стержней d${main_bar_diameter}мм, заведенными в монолитный ростверк сечением 400х450мм аналогичного класса рабочей арматуры.`;
+    layout_scheme_ro = `Piloni forați cu carcase din ${pileLongCount} bare d${main_bar_diameter}mm introduce în grinda de fundație (soclu) monolită de 400x450mm armată similar.`;
+  }
+
+  // --- SEISMIC SCALING (M0LDOVA-10) ---
+  longitudinal_total_weight_kg *= seismic_scale_factor;
+  clamps_total_weight_kg *= seismic_scale_factor;
+  reinforcements_total_weight_kg *= seismic_scale_factor;
+  starters_total_weight_kg *= seismic_scale_factor;
+  anchorages_total_weight_kg *= seismic_scale_factor;
+  laps_total_weight_kg *= seismic_scale_factor;
+
+  main_bars_weight_kg = longitudinal_total_weight_kg;
+  secondary_bars_weight_kg = clamps_total_weight_kg;
+  additional_elements_weight_kg = reinforcements_total_weight_kg + starters_total_weight_kg;
+
+  const base_steel_mass = (main_bars_weight_kg + secondary_bars_weight_kg + additional_elements_weight_kg);
+  const total_rebar_weight = base_steel_mass * (1 + waste_percent/100);
+
+  // DETAILED ELEMENT-BY-ELEMENT ENGINEERING AUDIT (M0LDOVA-10)
+  const audit_checks: BIMQualityCheck[] = [];
+
+  const mainElemPrefix_ru = isSlab ? "Плита:" : isPiles ? "Сваи:" : "Лента:";
+
+  const b_strip = isSlab ? 1000 : (info.footingArea / info.perimeter || 0.45) * 1000; // in mm
+  const h_concrete = isSlab ? info.depthM * 1000 : (info.depthM + (info.heightAboveGround || 0.4)) * 1000; // in mm
+  const Ac = b_strip * h_concrete; // concrete core area mm2
+  
+  // Rule 1: Minimum reinforcement area (As,min)
+  const AsMin = Ac * 0.0013;
+  const singleBarAs = (Math.PI / 4) * main_bar_diameter * main_bar_diameter;
+  const barsUsed = isSlab ? Math.ceil(1000 / stirrup_spacing) * 2 : (longitudinal_bars_count || 6);
+  const actualAs = barsUsed * singleBarAs;
+  const minAsStatus = actualAs >= AsMin ? "PASS" : actualAs >= AsMin * 0.8 ? "WARNING" : "FAIL";
+
+  audit_checks.push({
+    criterion: `${mainElemPrefix_ru} Мин. площадь арматуры As,min (NCM EN 1992-1-1 / EC2)`,
+    status: minAsStatus,
+    value: `${Math.round(actualAs)} мм² (норма: ${Math.round(AsMin)} мм²)`,
+    norm: "NCM EN 1992-1-1 / Eurocode 2: Площадь продольного армирования несущего элемента должна составлять не менее 0.13% от рабочей площади бетона."
+  });
+
+  // Rule 2: Maximum reinforcement area (As,max)
+  const AsMax = Ac * 0.04;
+  const maxAsStatus = actualAs <= AsMax ? "PASS" : "FAIL";
+  audit_checks.push({
+    criterion: `${mainElemPrefix_ru} Макс. площадь арматуры As,max (NCM EN 1992-1-1 / EC2)`,
+    status: maxAsStatus,
+    value: `${Math.round(actualAs)} мм² (лимит: ${Math.round(AsMax)} мм²)`,
+    norm: "NCM EN 1992-1-1: Вне зон нахлестки площадь сечения продольной арматуры не должна превышать As,max = 0.04 * Ac во избежание переармирования."
+  });
+
+  // Rule 3: Percentage / ratio rho
+  const rhoValue = (actualAs / Ac) * 100;
+  let rhoStatus: "PASS" | "WARNING" | "FAIL" = "PASS";
+  if (rhoValue < 0.15) {
+    rhoStatus = seismicPoints >= 7 ? "FAIL" : "WARNING";
+  }
+  audit_checks.push({
+    criterion: `${mainElemPrefix_ru} Коэффициент армирования ρ (%) / Procentul de armare`,
+    status: rhoStatus,
+    value: `${rhoValue.toFixed(3)}% (класс ${rebar_class_main})`,
+    norm: "NCM EN 1992-1-1 разд. 9.2: Минимальный рекомендуемый процент армирования в районах с повышенной сейсмичностью 7-8 баллов составляет 0.150%."
+  });
+
+  // Rule 4: Spacing between bars s,min
+  const sMinAllowed = Math.max(20, main_bar_diameter, 25);
+  const clearSpacing = isSlab ? (stirrup_spacing - main_bar_diameter) : (b_strip - 2 * protective_layer_side - (barsUsed / 2) * main_bar_diameter) / Math.max(1, (barsUsed / 2) - 1);
+  const sMinStatus = clearSpacing >= sMinAllowed ? "PASS" : "FAIL";
+  audit_checks.push({
+    criterion: `${mainElemPrefix_ru} Мин. расстояние между стержнями s,min / Distanța minimă`,
+    status: sMinStatus,
+    value: `факт ${Math.round(clearSpacing)} мм (номинал ${Math.round(sMinAllowed)} мм)`,
+    norm: "NCM EN 1992-1-1 разд 8.2: Чтобы обеспечить надежное сцепление бетона с арматурой, свет между продольными стержнями должен быть не менее наибольшего диаметра d, или 20мм."
+  });
+
+  // Rule 5: Max spacing of longitudinal bars
+  const sMaxAllowed = isSlab ? Math.min(400, 1.5 * h_concrete) : 350;
+  const sMaxStatus = (isSlab ? stirrup_spacing : (b_strip / Math.max(1, (barsUsed / 2) - 1))) <= sMaxAllowed ? "PASS" : "FAIL";
+  audit_checks.push({
+    criterion: `${mainElemPrefix_ru} Макс. шаг продольных стержней s,max / Pasul maxim al barelor`,
+    status: sMaxStatus,
+    value: `принято ${isSlab ? stirrup_spacing : Math.round(b_strip / Math.max(1, (barsUsed / 2) - 1))} мм при пределе ${Math.round(sMaxAllowed)} мм`,
+    norm: "СНиП 52-01 / NCM EN 1992: Максимальное расстояние между растянутыми рабочими стержнями монолитных элементов - не более 350мм для обеспечения жесткости."
+  });
+
+  // Rule 6: Stirrup spacing s,w,max
+  let maxStirrupStep = Math.min(300, 15 * main_bar_diameter);
+  if (seismicPoints >= 7) {
+    maxStirrupStep = Math.min(150, 10 * main_bar_diameter);
+  }
+  const stirrupStepStatus = stirrup_spacing <= maxStirrupStep ? "PASS" : "FAIL";
+  audit_checks.push({
+    criterion: `${isSlab ? "Плита" : "Ростверк"}: Макс. шаг хомутов s,w,max / Pasul etrierilor`,
+    status: stirrupStepStatus,
+    value: `факт ${stirrup_spacing} мм (лимит по сейсмике ${Math.round(maxStirrupStep)} мм)`,
+    norm: "Eurocode 2 & NCM: В сейсмических зонах 7-8 баллов и местах стыков рабочая поперечная арматура связывается хомутами с шагом не более 10d рабочих длин."
+  });
+
+  // Rule 7: Concrete cover
+  const requiredCover = 40;
+  const coverStatus = protective_layer_bottom >= requiredCover ? "PASS" : "FAIL";
+  audit_checks.push({
+    criterion: `${mainElemPrefix_ru} Защитный слой бетона c_nom / Stratul de acoperire ac`,
+    status: coverStatus,
+    value: `снизу ${protective_layer_bottom} мм / сбоку ${protective_layer_side} мм`,
+    norm: "NCM EN 1992-1-1: Для железобетонных конструкций фундаментов в активной сырой среде грунта (класс XC2) защитная оболочка должна составлять не менее 40 мм."
+  });
+
+  // Rule 8: Anchorage Length
+  const baseAnchorageReq = 35 * main_bar_diameter;
+  audit_checks.push({
+    criterion: `${mainElemPrefix_ru} Анкеровка продольной арматуры на опорах l,bd`,
+    status: "PASS",
+    value: `заделка анкеров не менее ${Math.round(baseAnchorageReq)} мм`,
+    norm: "СП 63.13330 / Eurocode 2: Расчетная длина анкеровки l,bd необходима для полной передачи растягивающего усилия со стержней периодического профиля на бетон."
+  });
+
+  // Rule 9: Lap Length
+  const lapReq = defLapLengthMultiplier * main_bar_diameter;
+  const lapStatus = lap_length >= lapReq ? "PASS" : "FAIL";
+  audit_checks.push({
+    criterion: `${mainElemPrefix_ru} Растянутый нахлест в стыках без сварки l,0`,
+    status: lapStatus,
+    value: `перепуск стержней ${lap_length} мм (расчет по сейсмике ${Math.round(lapReq)} мм)`,
+    norm: "СНиП 52-01 / NCM EN 1992-1-1: Длина стыкования стержней внахлестку без сварки составляет от 40d до 55d в зависимости от требований сейсмической надежности."
+  });
+
+  // Rule 10: Corner reinforcement
+  const hasL_bars = corner_reinforcement && l_bars && (l_bars_count > 0);
+  const cornerCheckStatus = hasL_bars ? "PASS" : (corner_reinforcement ? "FAIL" : "WARNING");
+  const cornerCheckMsg = hasL_bars 
+    ? `Г-образные стык-детали d${main_bar_diameter} в количестве ${l_bars_count} шт установлены.`
+    : (corner_reinforcement 
+       ? "КРИТИЧЕСКАЯ ОШИБКА: Усиление углов активно, но Г-образные элементы отсутствуют (0 шт)!"
+       : "Специальное угловое усиление отключено в настройках");
+
+  audit_checks.push({
+    criterion: `${isSlab ? "Плита" : "Ростверк"}: Армирование внешних углов (L-детали / Г-образные)`,
+    status: cornerCheckStatus,
+    value: cornerCheckMsg,
+    norm: "СП 50-101-2004: Угловое соединение лент простым перекрещиванием перепускаемых стержней категорически запрещено. Требуются Г-образные анкерные связи с шагом 12d."
+  });
+
+  // Rule 11: Intersection reinforcement
+  const hasU_bars = corner_reinforcement && u_bars && (u_bars_count > 0);
+  const intersectionStatus = hasU_bars ? "PASS" : "WARNING";
+  audit_checks.push({
+    criterion: `${isSlab ? "Плита" : "Ростверк"}: Армирование пересечений Т-образных узлов (П-детали)`,
+    status: intersectionStatus,
+    value: hasU_bars ? `П-образные хомуты-зажимы установлены (${u_bars_count} шт)` : "Т-образные пересечения без П-образных соединителей",
+    norm: "NCM EN 1992-1-1 разд 9.6: Концевая заделка стыков примыкания несущих элементов во внешних и внутренних узлах монолита усиливается П-образными гнутыми замками."
+  });
+
+  // Rule 12: T-connections anchorage
+  const tAnchorageStatus = (corner_reinforcement && l_bars) ? "PASS" : "WARNING";
+  audit_checks.push({
+    criterion: `${isSlab ? "Плита" : "Ростверк"}: Анкеровка сопряжений в Т-образных пересечениях`,
+    status: tAnchorageStatus,
+    value: (corner_reinforcement && l_bars) ? "Связная длина перекрытия выполнена" : "Конструктивная анкеровка узлов не подтверждена",
+    norm: "СП 63.13330.2012 / Eurocode 2: Пересечения продольных арматурных стержней в Т-образных узлах связываются контурными фиксаторами с заделкой на l,bd."
+  });
+
+  // Rule 13: Technical starter bars
+  const hasStarterBars = starter_bars && (starter_bars_count > 0);
+  const starterStatus = hasStarterBars ? "PASS" : "WARNING";
+  audit_checks.push({
+    criterion: `${mainElemPrefix_ru} Армирование технологических выпусков арматурных шпилек`,
+    status: starterStatus,
+    value: hasStarterBars ? `Выпуски из фундамента d12 активны в количестве ${starter_bars_count} шт.` : "Выпускные анкеры не предусмотрены",
+    norm: "NCM EN 1998-1 / Eurocode 8: Монолитное жесткое сопряжение нижнего распределительного пояса кладки или цокольных колонн с телом фундамента требует выпусков d12 с шагом не более 1.2м."
+  });
+
+  if (isPiles) {
+    const pileCoverStatus = protective_layer_bottom >= 50 ? "PASS" : "WARNING";
+    audit_checks.push({
+      criterion: "Сваи: Проверка защитного слоя буронабивного ствола в контакте с грунтом",
+      status: pileCoverStatus,
+      value: `защитный слой ствола сваи составляет ${protective_layer_bottom} мм`,
+      norm: "NCM F.02.02-2008: Защитный слой бетона для подземных свайных железобетонных конструкций, погруженных непосредственно в грунты без подготовки, составляет не менее 50 мм."
+    });
+  }
+
+  return {
+    foundation_type: fndId,
+    rebar_class_main,
+    rebar_class_secondary,
+    main_bar_diameter,
+    secondary_bar_diameter,
+    longitudinal_bars_count,
+    top_belt_count,
+    bottom_belt_count,
+    stirrup_spacing,
+    protective_layer_bottom,
+    protective_layer_side,
+    protective_layer_top,
+    lap_length,
+    corner_reinforcement,
+    u_bars,
+    l_bars,
+    starter_bars,
+    chairs_count,
+    spacers_count,
+    layout_scheme_ru,
+    layout_scheme_ro,
+    waste_percent,
+    main_bars_weight_kg: Math.round(main_bars_weight_kg),
+    secondary_bars_weight_kg: Math.round(secondary_bars_weight_kg),
+    additional_elements_weight_kg: Math.round(additional_elements_weight_kg),
+    total_rebar_weight_kg: Math.round(total_rebar_weight),
+    anchorage_length: Math.round(baseAnchorageReq),
+    frogs_count,
+    frogs_spacing,
+    corner_reinforcements_count,
+    intersection_reinforcements_count,
+    seismic_zone: seismicPoints === 6 ? "6_POINTS" : seismicPoints === 7 ? "7_POINTS" : "8_POINTS",
+    seismic_class: seismicClassLabel,
+    seismic_factor: seismic_scale_factor,
+    audit_checks,
+    sources,
+
+    // Parametric length and weight breakdowns
+    l_bars_count,
+    u_bars_count,
+    starter_bars_count,
+    longitudinal_total_length_m: Math.round(longitudinal_total_length_m * 10) / 10,
+    transverse_total_length_m: Math.round(transverse_total_length_m * 10) / 10,
+    clamps_total_length_m: Math.round(clamps_total_length_m * 10) / 10,
+    starters_total_length_m: Math.round(starters_total_length_m * 10) / 10,
+    anchorages_total_length_m: Math.round(anchorages_total_length_m * 10) / 10,
+    laps_total_length_m: Math.round(laps_total_length_m * 10) / 10,
+    longitudinal_total_weight_kg: Math.round(longitudinal_total_weight_kg),
+    clamps_total_weight_kg: Math.round(clamps_total_weight_kg),
+    reinforcements_total_weight_kg: Math.round(reinforcements_total_weight_kg),
+    starters_total_weight_kg: Math.round(starters_total_weight_kg),
+    anchorages_total_weight_kg: Math.round(anchorages_total_weight_kg),
+    laps_total_weight_kg: Math.round(laps_total_weight_kg)
+  };
+}
 
 // 1. Moldova Regional Constants (NCM G.01.01 & СНиП II-7-81*)
 export const REGION_DATA: Record<MoldovaRegion, RegionDetails> = {
@@ -1589,21 +2359,10 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const excavationCostStripMDL = Math.round(excavationVolumeM3Strip * COST_RATES.EXCAVATION_MDL_M3);
   
   // 1.5 Рабочая арматура по СНиПу (минимум 0.1% от сечения ж/б элемента)
-  // При метровой высоте ленты требуется 6 продольных стержней рабочей арматуры
-  const numLongBarsStrip = avgTotalHeight >= 1.0 ? 6 : 4;
-  const rebarLongitudinalDiameterStrip = (totalFactoredWeightTons > 150 || input.wallMaterial === BuildingWallMaterial.KOTELET) ? 14 : 12;
-  const rebarLongWeightPerMeter = rebarLongitudinalDiameterStrip === 14 ? 1.21 : 0.888; // кг на 1 пог.м.
-  const rebarLongitudinalKgStrip = L_total * numLongBarsStrip * 1.12 * rebarLongWeightPerMeter; // 12% на нахлесты
-  
-  // Поперечные хомуты d8мм А240/А500 с шагом 300мм
-  const clampsCountStrip = Math.ceil(L_total / 0.3);
-  const clampPerimeterStrip = 2 * (requiredStripWidthM - 0.08) + 2 * (avgTotalHeight - 0.08) + 0.25; // периметр хомута
-  const rebarTransverseKgStrip = clampsCountStrip * clampPerimeterStrip * 0.395; // 0.395 кг/м для d8
-  
-  // Повысим армирование до реальных структурных норм РМ (с завышением под сейсмику Вранча)
-  const baseRebarStrip = rebarLongitudinalKgStrip + rebarTransverseKgStrip;
-  const seismicMinRebarStrip = stripConcreteVolumeM3 * 58; // минимум 58 кг на м3 бетона для армированного жесткого ребра
-  const reinforcementBarKgStrip = Math.round(Math.max(baseRebarStrip, seismicMinRebarStrip) * soilRebarMultiplier);
+  const rStrip = resolveReinforcementParams(input, "strip", { perimeter, footingArea, depthM: stripDepthM, concreteVolumeM3: stripConcreteVolumeM3 });
+  const reinforcementBarKgStrip = Math.round(rStrip.total_rebar_weight_kg || 0);
+  const rebarLongitudinalKgStrip = Math.round(rStrip.main_bars_weight_kg || 0);
+  const rebarTransverseKgStrip = Math.round((rStrip.secondary_bars_weight_kg || 0) + (rStrip.additional_elements_weight_kg || 0));
   const rebarBindingCostStripMDL = Math.round(reinforcementBarKgStrip * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
   
   // 1.6 Гидроизоляция и утепление
@@ -1630,8 +2389,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     sandGravelWeightTons: Math.round(sandGravelWeightTons * 10) / 10,
     rebarLongitudinalKg: Math.round(rebarLongitudinalKgStrip),
     rebarTransverseKg: Math.round(rebarTransverseKgStrip),
-    rebarLongitudinalDiameter: rebarLongitudinalDiameterStrip,
-    rebarTransverseDiameter: 8,
+    rebarLongitudinalDiameter: rStrip.main_bar_diameter,
+    rebarTransverseDiameter: rStrip.secondary_bar_diameter,
     hasDrainage,
     drainagePipeM,
     drainageGeotextileM2,
@@ -1713,17 +2472,11 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const formworkM2Slab = perimeter * (slabDepthM + plinthHeightDiff + 0.15);
   const formworkBoardsCountSlab = Math.ceil(formworkM2Slab / 0.9);
   
-  // Армирование плиты двойной сеткой 200x200мм рабочей арматуры
-  const rebarLongDiameterSlab = (totalFactoredWeightTons > 150 || structuralFloors >= 2) ? 12 : 10;
-  const rebarLongWeightSlab = rebarLongDiameterSlab === 12 ? 0.888 : 0.617;
-  
-  // Расчет пог.м рабочей арматуры в двух сетках с шагом 200мм (5 прутьев на метр)
-  const singleLayerBars = ((input.width / 0.2) + 1) * input.length + ((input.length / 0.2) + 1) * input.width;
-  const rebarLongitudinalKgSlab = 2 * singleLayerBars * 1.15 * rebarLongWeightSlab; // 15% нахлест и торцевые П-образные хомуты
-  
-  // Фиксаторы шага сеток ("лягушки" из d8 А240, 1 шт на 1 м²)
-  const rebarTransverseKgSlab = footingArea * 1.0 * 0.8 * 0.395; // 0.8м арматуры d8 на каждую лягушку
-  const reinforcementBarKgSlab = Math.round((rebarLongitudinalKgSlab + rebarTransverseKgSlab) * soilRebarMultiplier);
+  // Армирование плиты двойной сеткой рабочей арматуры
+  const rSlab = resolveReinforcementParams(input, "slab", { perimeter, footingArea, depthM: slabDepthM, concreteVolumeM3: (footingArea * slabDepthM) + slabPlinthConcreteVolumeM3 });
+  const reinforcementBarKgSlab = Math.round(rSlab.total_rebar_weight_kg || 0);
+  const rebarLongitudinalKgSlab = Math.round(rSlab.main_bars_weight_kg || 0);
+  const rebarTransverseKgSlab = Math.round((rSlab.secondary_bars_weight_kg || 0) + (rSlab.additional_elements_weight_kg || 0));
   const rebarBindingCostSlabMDL = Math.round(reinforcementBarKgSlab * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
   
   const slabWaterproofM2 = footingArea * 1.15; // гидроизоляция под подошву клином с нахлестом
@@ -1768,8 +2521,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     sandGravelWeightTons: Math.round(sandGravelWeightSlabTons * 10) / 10,
     rebarLongitudinalKg: Math.round(rebarLongitudinalKgSlab),
     rebarTransverseKg: Math.round(rebarTransverseKgSlab),
-    rebarLongitudinalDiameter: rebarLongDiameterSlab,
-    rebarTransverseDiameter: 8,
+    rebarLongitudinalDiameter: rSlab.main_bar_diameter,
+    rebarTransverseDiameter: rSlab.secondary_bar_diameter,
     hasDrainage,
     drainagePipeM,
     drainageGeotextileM2,
@@ -1860,19 +2613,11 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const pileSandVolume = perimeter * beamWidthM * 0.10;
   const sandGravelWeightPileTons = pileSandVolume * 1.6;
   
-  // Армирование свай: 4 стержня вертикальной d12 А500С в каждую сваю с выпуском по 30см в ростверк
-  const rebarLongVerticalPileKg = pileCount * 4 * (2.2 + 0.3) * 1.1 * 0.888;
-  const rebarTransverseSpiralPileKg = pileCount * 4.5;
-  
-  // Армирование ростверка: 4 горизонтальных стержня d12 А500С
-  const rebarLongHorizontalBeamKg = perimeter * 4 * 1.12 * 0.888;
-  const clampsCountBeam = Math.ceil(perimeter / 0.3);
-  const clampPerimeterBeam = 2 * (beamWidthM - 0.08) + 2 * (beamHeightM - 0.08) + 0.20;
-  const rebarTransverseBeamKg = clampsCountBeam * clampPerimeterBeam * 0.395;
-  
-  const rebarLongitudinalKgPile = rebarLongVerticalPileKg + rebarLongHorizontalBeamKg;
-  const rebarTransverseKgPile = rebarTransverseSpiralPileKg + rebarTransverseBeamKg;
-  const reinforcementBarKgPile = Math.round((rebarLongitudinalKgPile + rebarTransverseKgPile) * soilRebarMultiplier);
+  // Армирование свай и ростверка по физической схеме NCM / EC2
+  const rPiles = resolveReinforcementParams(input, "piles", { perimeter, footingArea, depthM: 2.2, concreteVolumeM3: pileStripConcreteVolume });
+  const reinforcementBarKgPile = Math.round(rPiles.total_rebar_weight_kg || 0);
+  const rebarLongitudinalKgPile = Math.round(rPiles.main_bars_weight_kg || 0);
+  const rebarTransverseKgPile = Math.round((rPiles.secondary_bars_weight_kg || 0) + (rPiles.additional_elements_weight_kg || 0));
   const rebarBindingCostPileMDL = Math.round(reinforcementBarKgPile * COST_RATES.REBAR_BINDING_LABOR_MDL_KG);
   
   const pileWaterproofM2 = perimeter * (beamWidthM + 2 * beamHeightM);
@@ -1969,7 +2714,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   // --- OPTION 4: КЛАССИЧЕСКАЯ МОНОЛИТНАЯ ПЛИТА (classic_slab) ---
   const classicSlabDepthM = 0.25;
   const classicSlabConcreteM3 = footingArea * classicSlabDepthM * soilConcreteMultiplier;
-  const classicSlabRebarKg = footingArea * 24 * soilRebarMultiplier;
+  const rClassicSlab = resolveReinforcementParams(input, "classic_slab", { perimeter, footingArea, depthM: classicSlabDepthM, concreteVolumeM3: classicSlabConcreteM3 });
+  const classicSlabRebarKg = Math.round(rClassicSlab.total_rebar_weight_kg || 0);
   const classicSlabSandM3 = footingArea * 0.3 * (1 + slopeFrac * 0.5);
   const classicSlabWaterproofingM2 = footingArea * 1.15;
   const classicSlabFormworkM2 = perimeter * classicSlabDepthM;
@@ -1977,7 +2723,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   
   const classicSlabMaterials: MaterialRequirement = {
     concreteVolumeM3: Math.ceil(classicSlabConcreteM3 * 10) / 10,
-    reinforcementBarKg: Math.round(classicSlabRebarKg),
+    reinforcementBarKg: classicSlabRebarKg,
     sandGravelM3: Math.ceil(classicSlabSandM3 * 10) / 10,
     waterproofingM2: Math.ceil(classicSlabWaterproofingM2),
     insulationM3: 0,
@@ -1985,10 +2731,10 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     formworkBoardsCount: Math.ceil(classicSlabFormworkM2 / 0.9),
     excavationVolumeM3: Math.ceil(classicSlabExcavationM3),
     sandGravelWeightTons: Math.round(classicSlabSandM3 * 1.6 * 10) / 10,
-    rebarLongitudinalKg: Math.round(classicSlabRebarKg * 0.7),
-    rebarTransverseKg: Math.round(classicSlabRebarKg * 0.3),
-    rebarLongitudinalDiameter: 12,
-    rebarTransverseDiameter: 8,
+    rebarLongitudinalKg: Math.round(rClassicSlab.main_bars_weight_kg || 0),
+    rebarTransverseKg: Math.round((rClassicSlab.secondary_bars_weight_kg || 0) + (rClassicSlab.additional_elements_weight_kg || 0)),
+    rebarLongitudinalDiameter: rClassicSlab.main_bar_diameter,
+    rebarTransverseDiameter: rClassicSlab.secondary_bar_diameter,
     hasDrainage,
     drainagePipeM,
     drainageGeotextileM2,
@@ -2016,7 +2762,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const mzlfTotalHeight = mzlfDepthM + mzlfHeightAboveGroundM;
   const mzlfWidthM = Math.max(0.4, Math.ceil(requiredStripWidthM * 0.8 * 10) / 10);
   const mzlfConcreteVolumeM3 = L_total * mzlfWidthM * mzlfTotalHeight * soilConcreteMultiplier;
-  const mzlfRebarKg = L_total * 13 * soilRebarMultiplier;
+  const rMzlf = resolveReinforcementParams(input, "mzlf", { perimeter, footingArea, depthM: mzlfDepthM, concreteVolumeM3: mzlfConcreteVolumeM3 });
+  const mzlfRebarKg = Math.round(rMzlf.total_rebar_weight_kg || 0);
   const mzlfSandM3 = L_total * mzlfWidthM * 0.2 * (1 + slopeFrac * 0.5);
   const mzlfExcavationM3 = L_total * (mzlfWidthM + 0.3) * mzlfDepthM;
   const mzlfFormworkM2 = L_total * 2 * (mzlfHeightAboveGroundM + 0.1);
@@ -2031,7 +2778,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
 
   const mzlfMaterials: MaterialRequirement = {
     concreteVolumeM3: Math.ceil(mzlfConcreteVolumeM3 * 10) / 10,
-    reinforcementBarKg: Math.round(mzlfRebarKg),
+    reinforcementBarKg: mzlfRebarKg,
     sandGravelM3: Math.ceil(mzlfSandM3 * 10) / 10,
     waterproofingM2: Math.ceil(mzlfWaterproofingM2),
     insulationM3: Math.ceil(mzlfInsulationM3 * 10) / 10,
@@ -2039,10 +2786,10 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     formworkBoardsCount: Math.ceil(mzlfFormworkM2 / 0.9),
     excavationVolumeM3: Math.ceil(mzlfExcavationM3),
     sandGravelWeightTons: Math.round(mzlfSandM3 * 1.6 * 10) / 10,
-    rebarLongitudinalKg: Math.round(mzlfRebarKg * 0.65),
-    rebarTransverseKg: Math.round(mzlfRebarKg * 0.35),
-    rebarLongitudinalDiameter: 12,
-    rebarTransverseDiameter: 8,
+    rebarLongitudinalKg: Math.round(rMzlf.main_bars_weight_kg || 0),
+    rebarTransverseKg: Math.round((rMzlf.secondary_bars_weight_kg || 0) + (rMzlf.additional_elements_weight_kg || 0)),
+    rebarLongitudinalDiameter: rMzlf.main_bar_diameter,
+    rebarTransverseDiameter: rMzlf.secondary_bar_diameter,
     hasDrainage,
     drainagePipeM,
     drainageGeotextileM2,
@@ -2092,7 +2839,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const drilledPilesCount = Math.max(14, Math.ceil(perimeter / 1.6));
   const drilledPilesDepthM = 2.5;
   const drilledPilesConcreteVolumeM3 = (drilledPilesCount * (Math.PI * 0.15 * 0.15 * drilledPilesDepthM) + perimeter * 0.4 * 0.45) * soilConcreteMultiplier;
-  const drilledPilesRebarKg = (drilledPilesCount * 13 + perimeter * 14) * soilRebarMultiplier;
+  const rDrilledPiles = resolveReinforcementParams(input, "drilled_piles", { perimeter, footingArea, depthM: drilledPilesDepthM, concreteVolumeM3: drilledPilesConcreteVolumeM3 });
+  const drilledPilesRebarKg = Math.round(rDrilledPiles.total_rebar_weight_kg || 0);
   const drilledPilesSandM3 = perimeter * 0.4 * 0.15 * (1 + slopeFrac * 0.5);
   const drilledPilesExcavationM3 = drilledPilesCount * (Math.PI * 0.15 * 0.15 * drilledPilesDepthM) + perimeter * 0.4 * 0.3;
   const drilledPilesFormworkM2 = perimeter * 2 * 0.45;
@@ -2100,7 +2848,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
 
   const drilledPilesMaterials: MaterialRequirement = {
     concreteVolumeM3: Math.ceil(drilledPilesConcreteVolumeM3 * 10) / 10,
-    reinforcementBarKg: Math.round(drilledPilesRebarKg),
+    reinforcementBarKg: drilledPilesRebarKg,
     sandGravelM3: Math.ceil(drilledPilesSandM3 * 10) / 10,
     waterproofingM2: Math.ceil(drilledPilesWaterproofingM2),
     insulationM3: 0,
@@ -2108,10 +2856,10 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     formworkBoardsCount: Math.ceil(drilledPilesFormworkM2 / 0.9),
     excavationVolumeM3: Math.ceil(drilledPilesExcavationM3),
     sandGravelWeightTons: Math.round(drilledPilesSandM3 * 1.6 * 10) / 10,
-    rebarLongitudinalKg: Math.round(drilledPilesRebarKg * 0.7),
-    rebarTransverseKg: Math.round(drilledPilesRebarKg * 0.3),
-    rebarLongitudinalDiameter: 12,
-    rebarTransverseDiameter: 8,
+    rebarLongitudinalKg: Math.round(rDrilledPiles.main_bars_weight_kg || 0),
+    rebarTransverseKg: Math.round((rDrilledPiles.secondary_bars_weight_kg || 0) + (rDrilledPiles.additional_elements_weight_kg || 0)),
+    rebarLongitudinalDiameter: rDrilledPiles.main_bar_diameter,
+    rebarTransverseDiameter: rDrilledPiles.secondary_bar_diameter,
     hasDrainage,
     drainagePipeM,
     drainageGeotextileM2,
@@ -2135,7 +2883,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
 
   // --- OPTION 8: МОНОЛИТНАЯ РЕБРИСТАЯ ПЛИТА (ribbed_slab) ---
   const ribbedSlabConcreteVolumeM3 = (footingArea * 0.16 + L_total * 0.3 * 0.3) * soilConcreteMultiplier;
-  const ribbedSlabRebarKg = (footingArea * 15 + L_total * 14) * soilRebarMultiplier;
+  const rRibbedSlab = resolveReinforcementParams(input, "ribbed_slab", { perimeter, footingArea, depthM: 0.4, concreteVolumeM3: ribbedSlabConcreteVolumeM3 });
+  const ribbedSlabRebarKg = Math.round(rRibbedSlab.total_rebar_weight_kg || 0);
   const ribbedSlabSandM3 = footingArea * 0.25 * (1 + slopeFrac * 0.5);
   const ribbedSlabWaterproofingM2 = footingArea * 1.2;
   const ribbedSlabFormworkM2 = perimeter * 0.45 + L_total * 0.3;
@@ -2143,7 +2892,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   
   const ribbedSlabMaterials: MaterialRequirement = {
     concreteVolumeM3: Math.ceil(ribbedSlabConcreteVolumeM3 * 10) / 10,
-    reinforcementBarKg: Math.round(ribbedSlabRebarKg),
+    reinforcementBarKg: ribbedSlabRebarKg,
     sandGravelM3: Math.ceil(ribbedSlabSandM3 * 10) / 10,
     waterproofingM2: Math.ceil(ribbedSlabWaterproofingM2),
     insulationM3: Math.ceil(perimeter * 0.45 * 0.05 * 10) / 10,
@@ -2151,10 +2900,10 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     formworkBoardsCount: Math.ceil(ribbedSlabFormworkM2 / 0.9),
     excavationVolumeM3: Math.ceil(ribbedSlabExcavationM3),
     sandGravelWeightTons: Math.round(ribbedSlabSandM3 * 1.6 * 10) / 10,
-    rebarLongitudinalKg: Math.round(ribbedSlabRebarKg * 0.7),
-    rebarTransverseKg: Math.round(ribbedSlabRebarKg * 0.3),
-    rebarLongitudinalDiameter: 12,
-    rebarTransverseDiameter: 8,
+    rebarLongitudinalKg: Math.round(rRibbedSlab.main_bars_weight_kg || 0),
+    rebarTransverseKg: Math.round((rRibbedSlab.secondary_bars_weight_kg || 0) + (rRibbedSlab.additional_elements_weight_kg || 0)),
+    rebarLongitudinalDiameter: rRibbedSlab.main_bar_diameter,
+    rebarTransverseDiameter: rRibbedSlab.secondary_bar_diameter,
     hasDrainage,
     drainagePipeM,
     drainageGeotextileM2,
@@ -2180,7 +2929,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const columnCount = Math.max(10, Math.ceil(perimeter / 2.6));
   const columnDepthM = 1.6;
   const columnConcreteVolumeM3 = (columnCount * (0.4 * 0.4 * columnDepthM) + perimeter * 0.3 * 0.4) * soilConcreteMultiplier;
-  const columnRebarKg = (columnCount * 9 + perimeter * 12) * soilRebarMultiplier;
+  const rColumn = resolveReinforcementParams(input, "column_footing", { perimeter, footingArea, depthM: columnDepthM, concreteVolumeM3: columnConcreteVolumeM3 });
+  const columnRebarKg = Math.round(rColumn.total_rebar_weight_kg || 0);
   const columnSandM3 = columnCount * 0.1;
   const columnExcavationM3 = columnCount * (0.6 * 0.6 * columnDepthM);
   const columnFormworkM2 = columnCount * 4 * 0.4 * columnDepthM + perimeter * 2 * 0.4;
@@ -2188,7 +2938,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
 
   const columnMaterials: MaterialRequirement = {
     concreteVolumeM3: Math.ceil(columnConcreteVolumeM3 * 10) / 10,
-    reinforcementBarKg: Math.round(columnRebarKg),
+    reinforcementBarKg: columnRebarKg,
     sandGravelM3: Math.ceil(columnSandM3 * 10) / 10,
     waterproofingM2: Math.ceil(columnWaterproofingM2),
     insulationM3: 0,
@@ -2196,10 +2946,10 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     formworkBoardsCount: Math.ceil(columnFormworkM2 / 0.9),
     excavationVolumeM3: Math.ceil(columnExcavationM3),
     sandGravelWeightTons: Math.round(columnSandM3 * 1.6 * 10) / 10,
-    rebarLongitudinalKg: Math.round(columnRebarKg * 0.75),
-    rebarTransverseKg: Math.round(columnRebarKg * 0.25),
-    rebarLongitudinalDiameter: 12,
-    rebarTransverseDiameter: 6,
+    rebarLongitudinalKg: Math.round(rColumn.main_bars_weight_kg || 0),
+    rebarTransverseKg: Math.round((rColumn.secondary_bars_weight_kg || 0) + (rColumn.additional_elements_weight_kg || 0)),
+    rebarLongitudinalDiameter: rColumn.main_bar_diameter,
+    rebarTransverseDiameter: rColumn.secondary_bar_diameter,
     hasDrainage: false,
     drainagePipeM: 0,
     drainageGeotextileM2: 0,
@@ -2225,7 +2975,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
   const tisePileCount = Math.max(12, Math.ceil(perimeter / 1.7));
   const tisePileDepthM = 2.2;
   const tisePileConcreteM3 = (tisePileCount * (Math.PI * 0.125 * 0.125 * tisePileDepthM + 0.045) + perimeter * 0.3 * 0.45) * soilConcreteMultiplier;
-  const tiseRebarKg = (tisePileCount * 14 + perimeter * 13) * soilRebarMultiplier;
+  const rTise = resolveReinforcementParams(input, "tise", { perimeter, footingArea, depthM: tisePileDepthM, concreteVolumeM3: tisePileConcreteM3 });
+  const tiseRebarKg = Math.round(rTise.total_rebar_weight_kg || 0);
   const tiseSandM3 = tisePileCount * 0.05;
   const tiseExcavationM3 = tisePileCount * (Math.PI * 0.125 * 0.125 * tisePileDepthM + 0.05) + perimeter * 0.3 * 0.15;
   const tiseFormworkM2 = perimeter * 2 * 0.45 + tisePileCount * 0.5;
@@ -2233,7 +2984,7 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
 
   const tiseMaterials: MaterialRequirement = {
     concreteVolumeM3: Math.ceil(tisePileConcreteM3 * 10) / 10,
-    reinforcementBarKg: Math.round(tiseRebarKg),
+    reinforcementBarKg: tiseRebarKg,
     sandGravelM3: Math.ceil(tiseSandM3 * 10) / 10,
     waterproofingM2: Math.ceil(tiseWaterproofingM2),
     insulationM3: 0,
@@ -2241,10 +2992,10 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     formworkBoardsCount: Math.ceil(tiseFormworkM2 / 0.9),
     excavationVolumeM3: Math.ceil(tiseExcavationM3),
     sandGravelWeightTons: Math.round(tiseSandM3 * 1.6 * 10) / 10,
-    rebarLongitudinalKg: Math.round(tiseRebarKg * 0.7),
-    rebarTransverseKg: Math.round(tiseRebarKg * 0.35),
-    rebarLongitudinalDiameter: 12,
-    rebarTransverseDiameter: 8,
+    rebarLongitudinalKg: Math.round(rTise.main_bars_weight_kg || 0),
+    rebarTransverseKg: Math.round((rTise.secondary_bars_weight_kg || 0) + (rTise.additional_elements_weight_kg || 0)),
+    rebarLongitudinalDiameter: rTise.main_bar_diameter,
+    rebarTransverseDiameter: rTise.secondary_bar_diameter,
     hasDrainage,
     drainagePipeM,
     drainageGeotextileM2,
@@ -2417,7 +3168,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     riskScore: stripRiskScore,
     energyScore: stripEnergyScore,
     geologyScore: stripGeologyScore,
-    totalScore: finalStripReliability
+    totalScore: finalStripReliability,
+    reinforcement: resolveReinforcementParams(input, "strip", { perimeter, footingArea, depthM: stripDepthM, concreteVolumeM3: stripMaterials.concreteVolumeM3 })
   });
   
   options.push({
@@ -2440,7 +3192,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     riskScore: slabRiskScore,
     energyScore: slabEnergyScore,
     geologyScore: slabGeologyScore,
-    totalScore: finalSlabReliability
+    totalScore: finalSlabReliability,
+    reinforcement: resolveReinforcementParams(input, "slab", { perimeter, footingArea, depthM: slabDepthM, concreteVolumeM3: slabMaterials.concreteVolumeM3 })
   });
   
   options.push({
@@ -2463,7 +3216,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     riskScore: pileRiskScore,
     energyScore: pileEnergyScore,
     geologyScore: pileGeologyScore,
-    totalScore: finalPileReliability
+    totalScore: finalPileReliability,
+    reinforcement: resolveReinforcementParams(input, "piles", { perimeter, footingArea, depthM: 2.2, concreteVolumeM3: pileMaterials.concreteVolumeM3 })
   });
 
   options.push({
@@ -2496,7 +3250,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     riskScore: classicSlabRiskScore,
     energyScore: classicSlabEnergyScore,
     geologyScore: classicSlabGeologyScore,
-    totalScore: classicSlabReliability
+    totalScore: classicSlabReliability,
+    reinforcement: resolveReinforcementParams(input, "classic_slab", { perimeter, footingArea, depthM: classicSlabDepthM, concreteVolumeM3: classicSlabMaterials.concreteVolumeM3 })
   });
 
   options.push({
@@ -2529,7 +3284,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     riskScore: mzlfRiskScore,
     energyScore: mzlfEnergyScore,
     geologyScore: mzlfGeologyScore,
-    totalScore: mzlfReliability
+    totalScore: mzlfReliability,
+    reinforcement: resolveReinforcementParams(input, "mzlf", { perimeter, footingArea, depthM: mzlfDepthM, concreteVolumeM3: mzlfMaterials.concreteVolumeM3 })
   });
 
   options.push({
@@ -2562,7 +3318,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     riskScore: stripWithSlabRiskScore,
     energyScore: stripWithSlabEnergyScore,
     geologyScore: stripWithSlabGeologyScore,
-    totalScore: stripWithSlabReliability
+    totalScore: stripWithSlabReliability,
+    reinforcement: resolveReinforcementParams(input, "strip_with_slab", { perimeter, footingArea, depthM: stripDepthM, concreteVolumeM3: stripWithSlabMaterials.concreteVolumeM3 })
   });
 
   options.push({
@@ -2595,7 +3352,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     riskScore: drilledPilesRiskScore,
     energyScore: drilledPilesEnergyScore,
     geologyScore: drilledPilesGeologyScore,
-    totalScore: drilledPilesReliability
+    totalScore: drilledPilesReliability,
+    reinforcement: resolveReinforcementParams(input, "drilled_piles", { perimeter, footingArea, depthM: drilledPilesDepthM, concreteVolumeM3: drilledPilesMaterials.concreteVolumeM3 })
   });
 
   options.push({
@@ -2628,7 +3386,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     riskScore: ribbedSlabRiskScore,
     energyScore: ribbedSlabEnergyScore,
     geologyScore: ribbedSlabGeologyScore,
-    totalScore: ribbedSlabReliability
+    totalScore: ribbedSlabReliability,
+    reinforcement: resolveReinforcementParams(input, "ribbed_slab", { perimeter, footingArea, depthM: 0.45, concreteVolumeM3: ribbedSlabMaterials.concreteVolumeM3 })
   });
 
   options.push({
@@ -2661,7 +3420,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     riskScore: columnRiskScore,
     energyScore: columnEnergyScore,
     geologyScore: columnGeologyScore,
-    totalScore: columnReliability
+    totalScore: columnReliability,
+    reinforcement: resolveReinforcementParams(input, "column_footing", { perimeter, footingArea, depthM: columnDepthM, concreteVolumeM3: columnMaterials.concreteVolumeM3 })
   });
 
   options.push({
@@ -2694,7 +3454,8 @@ export function calculateFoundation(input: CalculatorInput): CalculationResults 
     riskScore: tiseRiskScore,
     energyScore: tiseEnergyScore,
     geologyScore: tiseGeologyScore,
-    totalScore: tiseReliability
+    totalScore: tiseReliability,
+    reinforcement: resolveReinforcementParams(input, "tise", { perimeter, footingArea, depthM: tisePileDepthM, concreteVolumeM3: tiseMaterials.concreteVolumeM3 })
   });
   
   // 10. RISKS PERCENTAGE ANALYSIS BASED ON WATER-TABLE, SOIL, REGION
@@ -3509,6 +4270,136 @@ export function generateBIMEntities(
         norm: "Закон №721/1996 Республики Молдова о качестве в строительстве: Обязательное визирование всех скрытых работ"
       }
     ]
+  });
+
+  // Dynamic Reinforcement Checks
+  const rCheck = resolveReinforcementParams(input, id, {
+    perimeter,
+    footingArea,
+    depthM,
+    concreteVolumeM3: m.concreteVolumeM3
+  });
+
+  const reinforcementChecks: BIMQualityCheck[] = [];
+
+  // Check 1: Main Bar Diameter
+  let mainDiameterCheckStatus: "CRITICAL" | "PASS" | "WARNING" | "FAIL" = "PASS";
+  let mainDiameterCheckText = `Предусмотрен диаметр d${rCheck.main_bar_diameter}мм`;
+  const buildingWeight = input.width * input.length * (input.floors || 1) * 1.5;
+  const isHeavy = buildingWeight > 150 || input.wallMaterial === BuildingWallMaterial.KOTELET;
+
+  if (id === "strip" || id === "mzlf" || id === "strip_with_slab" || id === "piles" || id === "drilled_piles" || id === "tise") {
+    if (rCheck.main_bar_diameter < 12) {
+      mainDiameterCheckStatus = "WARNING";
+      mainDiameterCheckText = `Занижен диаметр рабочей арматуры d${rCheck.main_bar_diameter}мм (минимум d12мм по СП 63.13330)`;
+    } else if (isHeavy && rCheck.main_bar_diameter < 14) {
+      mainDiameterCheckStatus = "WARNING";
+      mainDiameterCheckText = `Для тяжелых стен рекомендуется диаметр рабочей арматуры d14мм (задано d${rCheck.main_bar_diameter}мм)`;
+    }
+  } else if (id === "slab" || id === "classic_slab" || id === "ribbed_slab") {
+    if (rCheck.main_bar_diameter < 10) {
+      mainDiameterCheckStatus = "WARNING";
+      mainDiameterCheckText = `Занижен диаметр арматурной сетки d${rCheck.main_bar_diameter}мм (минимум d10мм для плитных фундаментов)`;
+    } else if (isHeavy && rCheck.main_bar_diameter < 12) {
+      mainDiameterCheckStatus = "WARNING";
+      mainDiameterCheckText = `Рекомендуется армирование сеткой d12мм при тяжелых нагрузках (задано d${rCheck.main_bar_diameter}мм)`;
+    }
+  }
+  reinforcementChecks.push({
+    criterion: "Диаметр рабочей арматуры по нагрузкам",
+    status: mainDiameterCheckStatus,
+    value: `d${rCheck.main_bar_diameter}мм (класс ${rCheck.rebar_class_main})`,
+    norm: "СП 63.13330.2018 / СНиП 52-01: Диаметр несущих рабочих стержней подбирается исходя из класса нагрузок и жесткости элемента"
+  });
+
+  // Check 2: Longitudinal Bars Count
+  if (id === "strip" || id === "mzlf" || id === "strip_with_slab") {
+    let countCheckStatus: "CRITICAL" | "PASS" | "WARNING" | "FAIL" = "PASS";
+    let countCheckText = `Установлено ${rCheck.longitudinal_bars_count} продольных стержней`;
+    if (rCheck.longitudinal_bars_count < 4) {
+      countCheckStatus = "FAIL";
+      countCheckText = `Критический дефицит продольного армирования (${rCheck.longitudinal_bars_count} шт). Требуется не менее 4 стержней`;
+    } else if (depthM >= 1.0 && rCheck.longitudinal_bars_count < 6) {
+      countCheckStatus = "WARNING";
+      countCheckText = `При высоте ленты >=1м рекомендуется не менее 6 продольных стержней (задано ${rCheck.longitudinal_bars_count} шт)`;
+    }
+    reinforcementChecks.push({
+      criterion: "Кол-во продольных стержней в ленточном сечении",
+      status: countCheckStatus,
+      value: `${rCheck.longitudinal_bars_count} шт.`,
+      norm: "СП 63.13330 / СНиП II-21-75: Продольное конструктивное армирование балок высотой более 150 мм - минимум 4 стержня в поясах"
+    });
+  }
+
+  // Check 3: Stirrup/Secondary spacing
+  let spacingCheckStatus: "CRITICAL" | "PASS" | "WARNING" | "FAIL" = "PASS";
+  let spacingCheckText = `Шаг поперечной арматуры ${rCheck.stirrup_spacing}мм`;
+  if (rCheck.stirrup_spacing > 300) {
+    spacingCheckStatus = "WARNING";
+    spacingCheckText = `Превышен шаг хомутов: ${rCheck.stirrup_spacing}мм при норме не более 300мм`;
+  } else if (rCheck.stirrup_spacing > 15 * rCheck.main_bar_diameter) {
+    const maxAllowed = 15 * rCheck.main_bar_diameter;
+    spacingCheckStatus = "WARNING";
+    spacingCheckText = `Шаг хомутов ${rCheck.stirrup_spacing}мм превышает предельный шаг 15d (${maxAllowed}мм)`;
+  }
+  reinforcementChecks.push({
+    criterion: "Предельный шаг хомутов / поперечного армирования",
+    status: spacingCheckStatus,
+    value: `шаг ${rCheck.stirrup_spacing} мм`,
+    norm: "СП 63.13330.2018: Шаг поперечной арматуры во внецентренно сжатых элементах должен составлять не более 15d и не более 300(400) мм"
+  });
+
+  // Check 4: Concrete cover thickness
+  let coverCheckStatus: "CRITICAL" | "PASS" | "WARNING" | "FAIL" = "PASS";
+  let coverCheckText = `Защитный слой: снизу ${rCheck.protective_layer_bottom}мм, сбоку ${rCheck.protective_layer_side}мм`;
+  if (rCheck.protective_layer_bottom < 35 || rCheck.protective_layer_side < 35) {
+    coverCheckStatus = "FAIL";
+    coverCheckText = `Критический малый защитный слой (${rCheck.protective_layer_bottom}мм). Опасность быстрой коррозии в грунте`;
+  } else if (rCheck.protective_layer_bottom < 40) {
+    coverCheckStatus = "WARNING";
+    coverCheckText = `Рекомендуется защитный слой не менее 40мм при отсутствии бетонной подготовки (задано ${rCheck.protective_layer_bottom}мм)`;
+  }
+  reinforcementChecks.push({
+    criterion: "Защитный слой монолитного бетона для арматуры в грунте",
+    status: coverCheckStatus,
+    value: `низ ${rCheck.protective_layer_bottom}мм / бок ${rCheck.protective_layer_side}мм`,
+    norm: "NCM EN 1992-1-1 / СНиП 2.03.01: Защитный слой рабочей арматуры в грунте без подготовки - от 40мм до 70мм"
+  });
+
+  // Check 5: Corner anchorage checks
+  if (id === 'strip' || id === 'mzlf' || id === 'strip_with_slab' || id === 'piles') {
+    reinforcementChecks.push({
+      criterion: "Анкерный узел угловых сопряжений (L-стержни / П-хомуты)",
+      status: rCheck.corner_reinforcement && (rCheck.l_bars || rCheck.u_bars) ? "PASS" : "WARNING",
+      value: rCheck.corner_reinforcement ? "Предусмотрено анкерование" : "Анкеровка отсутствует",
+      norm: "СП 50-101-2004: Угловые стыки ленточных монолитов требуют специального П- или L-образного анкерования во избежание разрывов углов при сейсмике"
+    });
+  }
+
+  entities.push({
+    id: "REINFORCEMENT_WORKS",
+    nameRu: "Технологическое армирование монолитной конструкции",
+    nameRo: "Armarea structurii de beton monolit și carcase",
+    parameters: {
+      "Рабочий класс арматурной стали": `${rCheck.rebar_class_main} (несущая)`,
+      "Диаметр рабочей несущей арматуры": `d${rCheck.main_bar_diameter} мм`,
+      "Конструктивная поперечная арматура": `${rCheck.rebar_class_secondary} d${rCheck.secondary_bar_diameter} мм`,
+      "Шаг поперечной решетки хомутов": `${rCheck.stirrup_spacing} мм`,
+      "Узлы специального сопряжения углов": rCheck.corner_reinforcement ? "L- и U-образные анкеры" : "Обычная вязка внахлест",
+      "Длина нахлеста продольных стержней": `${rCheck.lap_length} мм`
+    },
+    volumes: {
+      "Расход рабочей несущей стали": `${Math.round(m.reinforcementBarKg)} кг`,
+      "Объем установленных пластиковых фиксаторов": `${rCheck.spacers_count} шт`
+    },
+    materials: [
+      { name: `Арматурная сталь периодического профиля класс ${rCheck.rebar_class_main}`, qty: Math.round(m.reinforcementBarKg * 0.8), unit: "кг", cost: Math.round(m.reinforcementBarKg * 0.8 * 22) },
+      { name: `Арматура гладкая хомутная класс ${rCheck.rebar_class_secondary}`, qty: Math.round(m.reinforcementBarKg * 0.2), unit: "кг", cost: Math.round(m.reinforcementBarKg * 0.2 * 22) },
+      { name: "Пластиковые фиксаторы защитного слоя (звездочки/стульчики)", qty: rCheck.spacers_count, unit: "шт", cost: Math.round(rCheck.spacers_count * 2.5) }
+    ],
+    costMDL: Math.round(m.reinforcementBarKg * 22 + rCheck.spacers_count * 2.5),
+    dependencies: ["COMPACTION_TEST"],
+    qualityChecks: reinforcementChecks
   });
 
   return entities.map((item, idx) => ({

@@ -129,6 +129,30 @@ export interface CalculatorInput {
   includeSubDesign?: boolean;
   includeSupervision?: boolean;
   projectReservePercent?: number;
+
+  // Reinforcement manual overrides
+  rebarClassMain?: string;
+  rebarClassSecondary?: string;
+  mainBarDiameter?: number;
+  secondaryBarDiameter?: number;
+  longitudinalBarsCount?: number;
+  topBeltCount?: number;
+  bottomBeltCount?: number;
+  stirrupSpacing?: number;
+  protectiveLayerBottom?: number;
+  protectiveLayerSide?: number;
+  protectiveLayerTop?: number;
+  lapLength?: number;
+  cornerReinforcement?: boolean;
+  uBars?: boolean;
+  lBars?: boolean;
+  starterBars?: boolean;
+
+  // Seismic and automatic reinforcement mode fields (Stage 4 & Stage 10)
+  seismicZone?: string; // "6_POINTS" | "7_POINTS" | "8_POINTS"
+  seismicClass?: string; // "CLASS_I" | "CLASS_II" | "CLASS_III"
+  seismicFactor?: number; // e.g. 1.0, 1.25, 1.5
+  reinforcementChoice?: "AUTO" | "RECOMMENDED" | "USER";
 }
 
 // Calculated weights, pressures, sizing, specifications, and costs
@@ -535,6 +559,9 @@ export interface FoundationOption {
   Normative_ID?: string;
   Calculation_ID?: string;
   Inspection_ID?: string;
+
+  // Reinforcement resolved parameters
+  reinforcement?: ResolvedReinforcement;
 }
 
 export interface CalculationResults {
@@ -599,6 +626,85 @@ export interface CalculationResults {
   blindArea: BlindAreaModel;
   risksList: RiskItem[];
   explanations: OptionExplanation[];
+}
+
+export interface ResolvedReinforcement {
+  foundation_type: string;
+  rebar_class_main: string;
+  rebar_class_secondary: string;
+  main_bar_diameter: number;
+  secondary_bar_diameter: number;
+  longitudinal_bars_count: number;
+  top_belt_count: number;
+  bottom_belt_count: number;
+  stirrup_spacing: number;
+  protective_layer_bottom: number;
+  protective_layer_side: number;
+  protective_layer_top: number;
+  lap_length: number;
+  corner_reinforcement: boolean;
+  u_bars: boolean;
+  l_bars: boolean;
+  starter_bars: boolean;
+  chairs_count: number;
+  spacers_count: number;
+
+  // Detailing and physical calculation reporting fields (NCM Eurocode 2 matching)
+  layout_scheme_ru?: string;
+  layout_scheme_ro?: string;
+  waste_percent?: number;
+  main_bars_weight_kg?: number;
+  secondary_bars_weight_kg?: number;
+  additional_elements_weight_kg?: number;
+  total_rebar_weight_kg?: number;
+  anchorage_length?: number;
+  frogs_count?: number;
+  frogs_spacing?: number;
+  corner_reinforcements_count?: number;
+  intersection_reinforcements_count?: number;
+  seismic_zone?: string;
+  seismic_class?: string;
+  seismic_factor?: number;
+  audit_checks?: BIMQualityCheck[];
+
+  // Parametric length and weight breakdown tracking (M0LDOVA-10)
+  l_bars_count?: number;
+  u_bars_count?: number;
+  starter_bars_count?: number;
+  longitudinal_total_length_m?: number;
+  transverse_total_length_m?: number;
+  clamps_total_length_m?: number;
+  starters_total_length_m?: number;
+  anchorages_total_length_m?: number;
+  laps_total_length_m?: number;
+  longitudinal_total_weight_kg?: number;
+  clamps_total_weight_kg?: number;
+  reinforcements_total_weight_kg?: number;
+  starters_total_weight_kg?: number;
+  anchorages_total_weight_kg?: number;
+  laps_total_weight_kg?: number;
+
+  sources: {
+    foundation_type: "USER" | "AUTO";
+    rebar_class_main: "USER" | "AUTO";
+    rebar_class_secondary: "USER" | "AUTO";
+    main_bar_diameter: "USER" | "AUTO";
+    secondary_bar_diameter: "USER" | "AUTO";
+    longitudinal_bars_count: "USER" | "AUTO";
+    top_belt_count: "USER" | "AUTO";
+    bottom_belt_count: "USER" | "AUTO";
+    stirrup_spacing: "USER" | "AUTO";
+    protective_layer_bottom: "USER" | "AUTO";
+    protective_layer_side: "USER" | "AUTO";
+    protective_layer_top: "USER" | "AUTO";
+    lap_length: "USER" | "AUTO";
+    corner_reinforcement: "USER" | "AUTO";
+    u_bars: "USER" | "AUTO";
+    l_bars: "USER" | "AUTO";
+    starter_bars: "USER" | "AUTO";
+    chairs_count: "AUTO";
+    spacers_count: "AUTO";
+  };
 }
 
 export interface ChatMessage {

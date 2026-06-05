@@ -1,6 +1,6 @@
 {
-  "name": "HomeExpert Foundation Engineering Platform",
-  "description": "Professional engineering foundation calculator and geotechnical safety auditor for the Republic of Moldova conforming to NCM and Eurocode standards.",
+  "name": "HomeExpert",
+  "description": "Инженерные расчеты фундаментов и конструкций, аудит весовых нагрузок и экспорт отчетов",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

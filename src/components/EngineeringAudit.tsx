@@ -122,28 +122,46 @@ export default function EngineeringAudit({ input, results, selectedOption }: Eng
   // ----------------------------------------------------
   const qcChecks = [];
 
-  // QC 1: Rebar density per m3 of concrete
+  // QC 1: Rebar density per m3 of concrete (dynamic target by foundation type)
   const rebarDensity = concreteM3 > 0 ? (rebarKg / concreteM3) : 0;
   let rebarStatus: "PASS" | "WARNING" | "FAIL" = "PASS";
   let rebarText = "";
-  if (rebarDensity < 55) {
+  let minTarget = 50;
+  let warningTarget = 65;
+  let maxTarget = 160;
+
+  if (selectedOption.id === "slab") {
+    minTarget = 45;
+    warningTarget = 55;
+    maxTarget = 120;
+  } else if (selectedOption.id === "strip") {
+    minTarget = 40;
+    warningTarget = 50;
+    maxTarget = 130;
+  } else {
+    minTarget = 50;
+    warningTarget = 60;
+    maxTarget = 150;
+  }
+
+  if (rebarDensity < minTarget) {
     rebarStatus = "FAIL";
-    rebarText = `Недостаточный процент армирования по СНиП РМ! Удельный вес арматуры всего ${rebarDensity.toFixed(1)} кг/м³ (норма >= 75)`;
-  } else if (rebarDensity < 75) {
+    rebarText = `Недостаточный процент армирования по нормативам ДБН/СП! Удельный вес арматуры составляет ${rebarDensity.toFixed(1)} кг/м³ (требуется >= ${warningTarget} кг/м³ для устойчивости)`;
+  } else if (rebarDensity < warningTarget) {
     rebarStatus = "WARNING";
-    rebarText = `Нижний предел армирования. Удельный вес ${rebarDensity.toFixed(1)} кг/м³ (норма 75-120 кг/м³ застроек)`;
-  } else if (rebarDensity > 175) {
+    rebarText = `Нижний технологический предел армирования. Удельный вес арматуры ${rebarDensity.toFixed(1)} кг/м³ (рекомендуется ${warningTarget}-${maxTarget} кг/м³ для сейсмических зон)`;
+  } else if (rebarDensity > maxTarget) {
     rebarStatus = "WARNING";
-    rebarText = `Переармирование! Уд. вес ${rebarDensity.toFixed(1)} кг/м³ (эффективность падает, существенно увеличивает смету)`;
+    rebarText = `Высокая плотность армирования: ${rebarDensity.toFixed(1)} кг/м³ (конструктивно допустимо, но удорожает сметную стоимость)`;
   } else {
     rebarStatus = "PASS";
-    rebarText = `Оптимальный каркас жесткости: ${rebarDensity.toFixed(1)} кг марочной стали на 1 м³ бетона. Соответствует NCM F.02.02.`;
+    rebarText = `Оптимальный пространственный каркас: ${rebarDensity.toFixed(1)} кг качественной стали А500С на 1 м³ бетона. Полное соответствие ДБН В.2.6-98 / СП 63.13330.`;
   }
   qcChecks.push({
     id: "qc_rebar",
     title: "Насыщенность арматурного каркаса (Плотность стали)",
     metric: `${rebarDensity.toFixed(1)} кг/м³ бетона`,
-    target: "75 - 140 кг/м³",
+    target: `${warningTarget} - ${maxTarget} кг/м³`,
     status: rebarStatus,
     text: rebarText
   });

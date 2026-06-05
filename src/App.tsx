@@ -30,11 +30,13 @@ import {
   HardHat,
   FileSpreadsheet
 } from "lucide-react";
-import { MoldovaRegion, SoilType, BuildingWallMaterial, SlabMaterial, RoofType, CalculatorInput, CalculationResults, ChatMessage, CostEstimate } from "./types";
+import { MoldovaRegion, SoilType, BuildingWallMaterial, SlabMaterial, RoofType, CalculatorInput, CalculationResults, ChatMessage, CostEstimate, ResolvedReinforcement } from "./types";
 import { calculateFoundation, REGION_DATA, SOIL_DATA, WALL_MATERIAL_DATA, SLAB_DATA, ROOF_DATA, COST_RATES } from "./utils/calc";
 import Header from "./components/Header";
 import WeightDistributionAudit from "./components/WeightDistributionAudit";
 import EngineeringAudit from "./components/EngineeringAudit";
+import OwnerGuide from "./components/OwnerGuide";
+import FoundationBlueprint, { drawToCanvasBase64 } from "./components/FoundationBlueprint";
 import { exportToExcel, exportAllToExcel } from "./utils/excelExport";
 import {
   ResponsiveContainer,
@@ -892,7 +894,19 @@ export default function App() {
   const [budgetViewMode, setBudgetViewMode] = useState<'single' | 'compare'>('single');
 
   // Sub-tab state for advanced decision support engine
-  const [activeEngTab, setActiveEngTab] = useState<'risks' | 'geology' | 'utilities' | 'tech_ops' | 'explainable'>('risks');
+  const [activeEngTab, setActiveEngTab] = useState<'risks' | 'geology' | 'utilities' | 'tech_ops' | 'explainable' | 'owner_guide' | 'reinforcement'>('reinforcement');
+
+  // Reinforcement Customization Overrides (Stage 4 & Stage 10)
+  const [reinforcementChoice, setReinforcementChoice] = useState<"AUTO" | "RECOMMENDED" | "USER">("AUTO");
+  const [rebarClassMainOverride, setRebarClassMainOverride] = useState<string>("");
+  const [rebarClassSecondaryOverride, setRebarClassSecondaryOverride] = useState<string>("");
+  const [mainBarDiameterOverride, setMainBarDiameterOverride] = useState<number>(0);
+  const [secondaryBarDiameterOverride, setSecondaryBarDiameterOverride] = useState<number>(0);
+  const [longitudinalBarsCountOverride, setLongitudinalBarsCountOverride] = useState<number>(0);
+  const [stirrupSpacingOverride, setStirrupSpacingOverride] = useState<number>(0);
+  const [protectiveLayerBottomOverride, setProtectiveLayerBottomOverride] = useState<number>(0);
+  const [protectiveLayerSideOverride, setProtectiveLayerSideOverride] = useState<number>(0);
+  const [cornerReinforcementOverride, setCornerReinforcementOverride] = useState<boolean | undefined>(undefined);
 
   // Chat Interface States
   const [chatInput, setChatInput] = useState<string>("");
@@ -1075,7 +1089,17 @@ export default function App() {
     includeVAT,
     includeSubDesign,
     includeSupervision,
-    projectReservePercent
+    projectReservePercent,
+    reinforcementChoice,
+    rebarClassMain: rebarClassMainOverride || undefined,
+    rebarClassSecondary: rebarClassSecondaryOverride || undefined,
+    mainBarDiameter: mainBarDiameterOverride > 0 ? mainBarDiameterOverride : undefined,
+    secondaryBarDiameter: secondaryBarDiameterOverride > 0 ? secondaryBarDiameterOverride : undefined,
+    longitudinalBarsCount: longitudinalBarsCountOverride > 0 ? longitudinalBarsCountOverride : undefined,
+    stirrupSpacing: stirrupSpacingOverride > 0 ? stirrupSpacingOverride : undefined,
+    protectiveLayerBottom: protectiveLayerBottomOverride > 0 ? protectiveLayerBottomOverride : undefined,
+    protectiveLayerSide: protectiveLayerSideOverride > 0 ? protectiveLayerSideOverride : undefined,
+    cornerReinforcement: cornerReinforcementOverride
   };
 
   const results: CalculationResults = calculateFoundation(currentInput);
@@ -1095,7 +1119,14 @@ export default function App() {
     if (recommended) {
       setActiveFndId(recommended.id);
     }
-  }, [region, width, length, floors, wallMaterial, slabMaterial, roofType, soilType, groundwaterDepth, futureFlooringExtension, hasBasement, landSlope, includeVAT, includeSubDesign, includeSupervision, projectReservePercent]);
+  }, [
+    region, width, length, floors, wallMaterial, slabMaterial, roofType, soilType, 
+    groundwaterDepth, futureFlooringExtension, hasBasement, landSlope, includeVAT, 
+    includeSubDesign, includeSupervision, projectReservePercent,
+    rebarClassMainOverride, rebarClassSecondaryOverride, mainBarDiameterOverride,
+    secondaryBarDiameterOverride, longitudinalBarsCountOverride, stirrupSpacingOverride,
+    protectiveLayerBottomOverride, protectiveLayerSideOverride, cornerReinforcementOverride
+  ]);
 
   const selectedOption = results.options.find(o => o.id === activeFndId) || results.options[0];
 
@@ -2841,6 +2872,9 @@ export default function App() {
               </div>
             </div>
 
+            {/* CAD-BIM Structural Blueprint Drawing View */}
+            <FoundationBlueprint selectedOption={selectedOption} results={results} />
+
             {/* Expanded Detailed Budget breakdown in clean Table */}
             <div className="mt-4 pt-4 border-t border-slate-100">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
@@ -2903,13 +2937,25 @@ export default function App() {
                     onClick={async () => {
                       try {
                         setIsExporting(true);
+                        // Generate the CAD base64 snapshot on the fly
+                        const base64Blueprint = drawToCanvasBase64(
+                          selectedOption.id,
+                          results.input.width,
+                          selectedOption.depthM,
+                          results.input.wallMaterial,
+                          results.input.region
+                        );
+
                         await exportToExcel(
                           results.input,
                           results,
                           selectedOption,
                           landSlope,
                           groundwaterDepth,
-                          getCategoryDetailedItems
+                          getCategoryDetailedItems,
+                          undefined,
+                          undefined,
+                          base64Blueprint
                         );
                       } catch (err) {
                         console.error("Failed to export Excel file", err);
@@ -3985,6 +4031,15 @@ export default function App() {
               <div className="flex bg-slate-100 p-1 rounded-xl select-none text-[10px] font-extrabold max-w-full overflow-x-auto gap-0.5 shadow-inner">
                 <button
                   type="button"
+                  onClick={() => setActiveEngTab('reinforcement')}
+                  className={`py-1 px-2.5 text-center rounded-lg cursor-pointer transition flex items-center gap-1 ${
+                    activeEngTab === 'reinforcement' ? "bg-blue-600 text-white shadow-xs" : "text-blue-700 hover:bg-blue-50/50"
+                  }`}
+                >
+                  🏗️ Армирование (BIM)
+                </button>
+                <button
+                  type="button"
                   onClick={() => setActiveEngTab('risks')}
                   className={`py-1 px-2 text-center rounded-lg cursor-pointer transition ${
                     activeEngTab === 'risks' ? "bg-white text-emerald-600 shadow-xs" : "text-slate-500 hover:text-slate-750"
@@ -4028,8 +4083,564 @@ export default function App() {
                 >
                   🎓 ИИ-Обоснование
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveEngTab('owner_guide')}
+                  className={`py-1 px-2.5 text-center rounded-lg cursor-pointer transition flex items-center gap-1 font-bold ${
+                    activeEngTab === 'owner_guide' ? "bg-blue-600 text-white shadow-xs" : "text-blue-600 hover:bg-blue-50/50"
+                  }`}
+                >
+                  👮‍♂️ Руководство Собственника
+                </button>
               </div>
             </div>
+
+            {/* TAB CONTENT: REINFORCEMENT SPECIAL MODULE (Stage 4 & Stage 10) */}
+            {activeEngTab === 'reinforcement' && (() => {
+              const rData = (selectedOption.reinforcement || {
+                rebar_class_main: "A500C",
+                rebar_class_secondary: "A240",
+                main_bar_diameter: 12,
+                secondary_bar_diameter: 8,
+                longitudinal_bars_count: 4,
+                top_belt_count: 2,
+                bottom_belt_count: 2,
+                stirrup_spacing: 200,
+                protective_layer_bottom: 40,
+                protective_layer_side: 40,
+                protective_layer_top: 40,
+                lap_length: 480,
+                corner_reinforcement: true,
+                u_bars: true,
+                l_bars: true,
+                starter_bars: true,
+                chairs_count: 100,
+                spacers_count: 500,
+                sources: {
+                  rebar_class_main: "AUTO",
+                  rebar_class_secondary: "AUTO",
+                  main_bar_diameter: "AUTO",
+                  secondary_bar_diameter: "AUTO",
+                  longitudinal_bars_count: "AUTO",
+                  stirrup_spacing: "AUTO",
+                  protective_layer_bottom: "AUTO",
+                  protective_layer_side: "AUTO",
+                  corner_reinforcement: "AUTO"
+                },
+                audit_checks: [],
+                seismic_zone: "7 POINTS",
+                seismic_class: "7 баллов",
+                seismic_factor: 1.15,
+                layout_scheme_ru: "",
+                layout_scheme_ro: ""
+              }) as ResolvedReinforcement;
+
+              const reinforcementWork = selectedOption.bimEntities?.find((e: any) => e.id === "REINFORCEMENT_WORKS") || { qualityChecks: [] };
+              const rechecks = reinforcementWork.qualityChecks;
+
+              const resetReinforcementOverrides = () => {
+                setRebarClassMainOverride("");
+                setRebarClassSecondaryOverride("");
+                setMainBarDiameterOverride(0);
+                setSecondaryBarDiameterOverride(0);
+                setLongitudinalBarsCountOverride(0);
+                setStirrupSpacingOverride(0);
+                setProtectiveLayerBottomOverride(0);
+                setProtectiveLayerSideOverride(0);
+                setCornerReinforcementOverride(undefined);
+              };
+
+              const getSourceBadge = (source: string) => {
+                if (source === "USER") {
+                  return <span className="bg-amber-100 text-amber-800 text-[8.5px] font-extrabold px-1.5 py-0.5 rounded border border-amber-200">РУЧНОЙ ВВОД (USER)</span>;
+                }
+                if (source === "DEFAULT") {
+                  return <span className="bg-emerald-100 text-emerald-800 text-[8.5px] font-extrabold px-1.5 py-0.5 rounded border border-emerald-200">ПО УМОЛЧАНИЮ (DEFAULT)</span>;
+                }
+                return <span className="bg-blue-100 text-blue-800 text-[8.5px] font-extrabold px-1.5 py-0.5 rounded border border-blue-200">РАСЧЕТ ВЕСА (AUTO)</span>;
+              };
+
+              return (
+                <div className="space-y-6 animate-fade-in text-slate-800">
+                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                      <strong className="text-xs text-blue-900 block font-display tracking-tight uppercase">🏗️ Проектирование и заклиночное армирование</strong>
+                      <span className="text-[10px] text-blue-700 leading-normal block mt-0.5">
+                        Настройте конфигурации стальных каркасов для фундамента <strong>{selectedOption.type}</strong>. Все изменения автоматически пересчитывают объемы стали, стоимость работ и влияют на надежность конструкции в КЭМ-модели.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={resetReinforcementOverrides}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
+                    >
+                      🔄 Сбросить параметры
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    {/* Left side: Interactive override form */}
+                    <div className="lg:col-span-7 bg-slate-50/50 border border-slate-200 rounded-[20px] p-5 space-y-4">
+                      <h3 className="text-xs font-black uppercase text-slate-705 pb-2 border-b border-slate-200/60 tracking-wider">
+                        Настройки арматурной спецификации
+                      </h3>
+
+                      {/* СЕЛЕКТОР РЕЖИМА ВЫБОРА */}
+                      <div className="bg-slate-100 p-3 rounded-xl border border-slate-200">
+                        <span className="block text-[9.5px] font-black text-slate-500 uppercase tracking-wider mb-2">
+                          Режим построения каркаса и армирования / Mod selectare schemă armare
+                        </span>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { key: "AUTO", name: "🤖 ИИ Авторасчет", desc: "Строгий расчет по NCM & EC2" },
+                            { key: "RECOMMENDED", name: "📋 Наш стандарт", desc: "Типовые надежные схемы РМ" },
+                            { key: "USER", name: "🛠️ Свой выбор", desc: "Разблокировать редактирование" }
+                          ].map(mode => (
+                            <button
+                              key={mode.key}
+                              type="button"
+                              onClick={() => setReinforcementChoice(mode.key as any)}
+                              className={`p-2 rounded-xl border text-left cursor-pointer transition ${
+                                reinforcementChoice === mode.key
+                                  ? "bg-slate-900 border-slate-900 text-white shadow-sm"
+                                  : "bg-white border-slate-200 text-slate-700 hover:text-slate-850 hover:bg-slate-50"
+                              }`}
+                            >
+                              <div className="text-[10px] font-bold">{mode.name}</div>
+                              <div className={`text-[8px] leading-tight mt-0.5 ${reinforcementChoice === mode.key ? "text-slate-300" : "text-slate-400"}`}>{mode.desc}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Class Main */}
+                        <div>
+                          <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                            Класс несущей рабочей стали
+                          </label>
+                          <select
+                            disabled={reinforcementChoice !== "USER"}
+                            className={`w-full border rounded-xl py-2 px-3 text-xs outline-none font-medium text-slate-800 ${reinforcementChoice !== "USER" ? "bg-slate-100 cursor-not-allowed opacity-75" : "bg-white cursor-pointer focus:border-blue-500"}`}
+                            value={rebarClassMainOverride}
+                            onChange={(e) => setRebarClassMainOverride(e.target.value)}
+                          >
+                            <option value="">Автоматически ({rData.rebar_class_main})</option>
+                            <option value="A500C">A500C (Горячекатаная периодическая)</option>
+                            <option value="A400">A400 (Классическая рифленая)</option>
+                            <option value="A300">A300 (Устаревшая)</option>
+                            <option value="COMPOSITE">Композитная полимерная (АСП)</option>
+                          </select>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="text-[9px] text-slate-450">Используется для продольных поясов</span>
+                            {getSourceBadge(rData.sources.rebar_class_main)}
+                          </div>
+                        </div>
+
+                        {/* Class Secondary */}
+                        <div>
+                          <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                            Класс конструктивной стали (хомуты)
+                          </label>
+                          <select
+                            disabled={reinforcementChoice !== "USER"}
+                            className={`w-full border rounded-xl py-2 px-3 text-xs outline-none font-medium text-slate-800 ${reinforcementChoice !== "USER" ? "bg-slate-100 cursor-not-allowed opacity-75" : "bg-white cursor-pointer focus:border-blue-500"}`}
+                            value={rebarClassSecondaryOverride}
+                            onChange={(e) => setRebarClassSecondaryOverride(e.target.value)}
+                          >
+                            <option value="">Автоматически ({rData.rebar_class_secondary})</option>
+                            <option value="A240">A240 (Гладкая монтажная)</option>
+                            <option value="A500C">A500C (Периодическая жесткая)</option>
+                            <option value="COMPOSITE">Композитная гладкая</option>
+                          </select>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="text-[9px] text-slate-450">Используется для хомутов и сеток</span>
+                            {getSourceBadge(rData.sources.rebar_class_secondary)}
+                          </div>
+                        </div>
+
+                        {/* Main Diameter */}
+                        <div>
+                          <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                            Диаметр рабочей арматуры, мм
+                          </label>
+                          <select
+                            disabled={reinforcementChoice !== "USER"}
+                            className={`w-full border rounded-xl py-2 px-3 text-xs outline-none font-medium text-slate-800 ${reinforcementChoice !== "USER" ? "bg-slate-100 cursor-not-allowed opacity-75" : "bg-white cursor-pointer focus:border-blue-500"}`}
+                            value={mainBarDiameterOverride || ""}
+                            onChange={(e) => setMainBarDiameterOverride(parseInt(e.target.value) || 0)}
+                          >
+                            <option value="">Автоматически ({rData.main_bar_diameter} мм)</option>
+                            <option value="8">d8 мм</option>
+                            <option value="10">d10 мм</option>
+                            <option value="12">d12 мм (Стандартный минимум)</option>
+                            <option value="14">d14 мм (Усиленная под кирпич)</option>
+                            <option value="16">d16 мм (Сверхпрочная)</option>
+                            <option value="18">d18 мм (Промышленная)</option>
+                          </select>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="text-[9px] text-slate-450">Продольно несущие стержни</span>
+                            {getSourceBadge(rData.sources.main_bar_diameter)}
+                          </div>
+                        </div>
+
+                        {/* Secondary Diameter */}
+                        <div>
+                          <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                            Диаметр хомутной арматуры, мм
+                          </label>
+                          <select
+                            disabled={reinforcementChoice !== "USER"}
+                            className={`w-full border rounded-xl py-2 px-3 text-xs outline-none font-medium text-slate-800 ${reinforcementChoice !== "USER" ? "bg-slate-100 cursor-not-allowed opacity-75" : "bg-white cursor-pointer focus:border-blue-500"}`}
+                            value={secondaryBarDiameterOverride || ""}
+                            onChange={(e) => setSecondaryBarDiameterOverride(parseInt(e.target.value) || 0)}
+                          >
+                            <option value="">Автоматически ({rData.secondary_bar_diameter} мм)</option>
+                            <option value="6">d6 мм (Тонкая)</option>
+                            <option value="8">d8 мм (Рекомендуемая)</option>
+                            <option value="10">d10 мм (Жесткая под высокие балки)</option>
+                            <option value="12">d12 мм</option>
+                          </select>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="text-[9px] text-slate-450">Хомуты, связывающие каркас</span>
+                            {getSourceBadge(rData.sources.secondary_bar_diameter)}
+                          </div>
+                        </div>
+
+                        {/* Longitudinal Count */}
+                        <div>
+                          <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                            Общее число продольных стержней
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min="0"
+                              max="24"
+                              disabled={reinforcementChoice !== "USER"}
+                              className={`w-full border rounded-xl py-2 px-3 pr-12 text-xs text-slate-800 outline-none font-bold ${reinforcementChoice !== "USER" ? "bg-slate-100 cursor-not-allowed opacity-75" : "bg-white focus:border-blue-500"}`}
+                              value={longitudinalBarsCountOverride || ""}
+                              placeholder={`Расчетное (${rData.longitudinal_bars_count} шт)`}
+                              onChange={(e) => setLongitudinalBarsCountOverride(parseInt(e.target.value) || 0)}
+                            />
+                            <span className="absolute right-3 top-2 text-[10px] font-bold text-slate-400">шт</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="text-[9px] text-slate-450">Для ленты (мин. 4 стержня по СНиП)</span>
+                            {getSourceBadge(rData.sources.longitudinal_bars_count)}
+                          </div>
+                        </div>
+
+                        {/* Stirrup Spacing */}
+                        <div>
+                          <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                            Шаг поперечных хомутов, мм
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="50"
+                              min="50"
+                              disabled={reinforcementChoice !== "USER"}
+                              className={`w-full border rounded-xl py-2 px-3 pr-12 text-xs text-slate-800 outline-none font-bold ${reinforcementChoice !== "USER" ? "bg-slate-100 cursor-not-allowed opacity-75" : "bg-white focus:border-blue-500"}`}
+                              value={stirrupSpacingOverride || ""}
+                              placeholder={`Расчетный (${rData.stirrup_spacing} мм)`}
+                              onChange={(e) => setStirrupSpacingOverride(parseInt(e.target.value) || 0)}
+                            />
+                            <span className="absolute right-3 top-2 text-[10px] font-bold text-slate-400">мм</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="text-[9px] text-slate-450">Шаг вязки хомутных сеток</span>
+                            {getSourceBadge(rData.sources.stirrup_spacing)}
+                          </div>
+                        </div>
+
+                        {/* Protective bottom */}
+                        <div>
+                          <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                            Защитный слой снизу (до грунта)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="5"
+                              min="10"
+                              disabled={reinforcementChoice !== "USER"}
+                              className={`w-full border rounded-xl py-2 px-3 pr-12 text-xs text-slate-800 outline-none font-bold ${reinforcementChoice !== "USER" ? "bg-slate-100 cursor-not-allowed opacity-75" : "bg-white focus:border-blue-500"}`}
+                              value={protectiveLayerBottomOverride || ""}
+                              placeholder={`Проектный (${rData.protective_layer_bottom} мм)`}
+                              onChange={(e) => setProtectiveLayerBottomOverride(parseInt(e.target.value) || 0)}
+                            />
+                            <span className="absolute right-3 top-2 text-[10px] font-bold text-slate-400">мм</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="text-[9px] text-slate-450">Мин. 40мм без тощей подготовки</span>
+                            {getSourceBadge(rData.sources.protective_layer_bottom)}
+                          </div>
+                        </div>
+
+                        {/* Protective side */}
+                        <div>
+                          <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                            Защитный слой сбоку (до опалубки)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="5"
+                              min="10"
+                              disabled={reinforcementChoice !== "USER"}
+                              className={`w-full border rounded-xl py-2 px-3 pr-12 text-xs text-slate-800 outline-none font-bold ${reinforcementChoice !== "USER" ? "bg-slate-100 cursor-not-allowed opacity-75" : "bg-white focus:border-blue-500"}`}
+                              value={protectiveLayerSideOverride || ""}
+                              placeholder={`Проектный (${rData.protective_layer_side} мм)`}
+                              onChange={(e) => setProtectiveLayerSideOverride(parseInt(e.target.value) || 0)}
+                            />
+                            <span className="absolute right-3 top-2 text-[10px] font-bold text-slate-400">мм</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="text-[9px] text-slate-450">Мин. 35-40мм для защиты от влаги</span>
+                            {getSourceBadge(rData.sources.protective_layer_side)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Corner Anchorage Switch */}
+                      <div className="pt-3 border-t border-slate-200/60 flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-slate-700 block">Угловое Г- и П-образное анкерование</span>
+                          <span className="text-[9.5px] text-slate-450 block font-medium">Специальные угловые замки вместо вязки нахлестом по СП 50-101</span>
+                        </div>
+                        <div className="flex bg-slate-205 p-0.5 rounded-lg select-none font-sans font-black text-[9px] gap-1">
+                          <button
+                            type="button"
+                            disabled={reinforcementChoice !== "USER"}
+                            onClick={() => setCornerReinforcementOverride(true)}
+                            className={`px-2.5 py-1 rounded cursor-pointer transition ${cornerReinforcementOverride === true ? "bg-blue-600 text-white shadow-xs animate-pulse-once" : "text-slate-500"}`}
+                          >
+                            ДА
+                          </button>
+                          <button
+                            type="button"
+                            disabled={reinforcementChoice !== "USER"}
+                            onClick={() => setCornerReinforcementOverride(false)}
+                            className={`px-2.5 py-1 rounded cursor-pointer transition ${cornerReinforcementOverride === false ? "bg-red-650 text-white shadow-xs" : "text-slate-500"}`}
+                          >
+                            НЕТ
+                          </button>
+                          <button
+                            type="button"
+                            disabled={reinforcementChoice !== "USER"}
+                            onClick={() => setCornerReinforcementOverride(undefined)}
+                            className={`px-2.5 py-1 rounded cursor-pointer transition ${cornerReinforcementOverride === undefined ? "bg-white text-slate-800 shadow-xs" : "text-slate-500"}`}
+                          >
+                            АВТО
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right side: Real-time validation monitor & BIM report */}
+                    <div className="lg:col-span-5 flex flex-col justify-between bg-white border border-slate-205 rounded-[20px] p-5 shadow-xs">
+                      <div>
+                        <h3 className="text-xs font-black uppercase text-slate-705 pb-2 border-b border-slate-100 tracking-wider mb-3">
+                          Монитор нормативного контроля качества
+                        </h3>
+
+                        <div className="space-y-3 overflow-y-auto max-h-[360px] pr-1.5 scrollbar-thin">
+                          {/* Main checks representation */}
+                          {(rData.audit_checks && rData.audit_checks.length > 0 ? rData.audit_checks : rechecks).map((check: any, cidx: number) => {
+                            let badgeStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                            let statusText = "PASS";
+                            if (check.status === "WARNING") {
+                              badgeStyle = "bg-amber-50 text-amber-800 border-amber-200";
+                              statusText = "WARN";
+                            } else if (check.status === "FAIL") {
+                              badgeStyle = "bg-rose-50 text-rose-800 border-rose-200";
+                              statusText = "FAIL";
+                            }
+                            return (
+                              <div key={cidx} className="p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl flex items-start gap-2.5">
+                                <span className={`px-1.5 py-0.5 rounded text-[8.5px] font-black tracking-wider border shrink-0 ${badgeStyle}`}>
+                                  {statusText}
+                                </span>
+                                <div className="space-y-1">
+                                  <div className="font-bold text-slate-850 text-[10.5px] leading-tight">{check.criterion}</div>
+                                  <div className="font-mono text-[9.5px] font-black text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded inline-block">
+                                    Факт: {check.value}
+                                  </div>
+                                  <div className="text-[8.5px] text-slate-500 leading-tight italic">
+                                    Норма: {check.norm}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {(!rData.audit_checks || rData.audit_checks.length === 0) && rechecks.length === 0 && (
+                            <div className="text-center py-8 text-slate-450 text-[10px]">
+                              Для данного типа фундамента спецификация проверок будет сформирована после инициализации.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-5 pt-4 border-t border-slate-100 bg-slate-50 p-3 rounded-xl space-y-1.5 text-[10px] text-slate-500 font-medium">
+                        <div className="flex justify-between">
+                          <span>Общий расход арматуры А500С:</span>
+                          <strong className="text-slate-800 font-mono">
+                            {rData.sources ? Math.round(selectedOption.materials.reinforcementBarKg || 0).toLocaleString() : "0"} кг
+                          </strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Вязальная стальная проволока:</span>
+                          <strong className="text-slate-850 font-mono">
+                            {rData.sources ? Math.round((selectedOption.materials.reinforcementBarKg || 0) * 0.015).toLocaleString() : "0"} кг
+                          </strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Защитные стульчики / фиксаторы:</span>
+                          <strong className="text-slate-850 font-mono">{rData.spacers_count} шт</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Длина нахлестных стыков стержней:</span>
+                          <strong className="text-slate-850 font-mono">{rData.lap_length} мм (40-50d)</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Схематический чертеж (Layout scheme) и сейсмический модуль */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+                    {/* Сейсмичность */}
+                    <div className="p-5 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-[20px] space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🌋</span>
+                        <div>
+                          <h4 className="text-xs font-black uppercase text-amber-900 tracking-wider">Сейсмически-конструктивный модуль РМ</h4>
+                          <span className="text-[9px] text-amber-700 block leading-snug">
+                            Усиления по СНиП II-7-81* и NCM Республики Молдова
+                          </span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200 text-center">
+                          <span className="text-[8px] uppercase font-bold text-slate-500 block mb-0.5">Сейсмическая зона</span>
+                          <span className="font-mono text-xs font-black text-amber-955">{rData.seismic_zone || "7 POINTS"}</span>
+                        </div>
+                        <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200 text-center">
+                          <span className="text-[8px] uppercase font-bold text-slate-500 block mb-0.5">Класс (MSK-64)</span>
+                          <span className="font-mono text-xs font-black text-amber-955">{rData.seismic_class || "7 баллов"}</span>
+                        </div>
+                        <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200 text-center">
+                          <span className="text-[8px] uppercase font-bold text-slate-500 block mb-0.5">Коэффициент К_сейсм</span>
+                          <span className="font-mono text-xs font-black text-amber-955">×{rData.seismic_factor || 1.15}</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-amber-850 leading-snug select-text">
+                        Из-за близости сейсмоактивного очага Враца в Молдове, расчетное сопротивление арматурных стыков увязано по нормам сейсмической безопасности. Продольные арматурные пояса снабжены Г- и П-образными дополнительными анкерами на всех стыках и углах застройки. Сейсмический коэффициент увеличения составляет {Math.round(((rData.seismic_factor || 1) - 1.0) * 100)}%.
+                      </p>
+                    </div>
+
+                    {/* Схема чертежа в текстовом КЭМ виде */}
+                    <div className="p-5 bg-slate-900 text-slate-100 border border-slate-800 rounded-[20px] space-y-3 font-mono">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-blue-400">📊</span>
+                          <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">Спецификация укладки / Schemă așezare</h4>
+                        </div>
+                        <span className="text-[8.5px] font-extrabold bg-blue-500/10 text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded">
+                          BIM_DRAWING
+                        </span>
+                      </div>
+                      
+                      <div className="text-[10px] space-y-2 select-text">
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase font-bold">Официальный СНиП Чертеж (Русский):</span>
+                          <p className="text-slate-200 italic leading-snug bg-slate-920/60 p-2 border border-slate-800 rounded-lg">{rData.layout_scheme_ru || "Раскладка стандартная"}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase font-bold">Desen tehnic oficial (Română):</span>
+                          <p className="text-slate-350 italic leading-snug bg-slate-920/60 p-2 border border-slate-800 rounded-lg">{rData.layout_scheme_ro || "- "}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* OWNER GUIDE & CHIEF SUPERVISION CHECKLIST */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+                    {/* OWNER GUIDE (Инструкция владельца) */}
+                    <div className="p-5 bg-white border border-slate-205 rounded-[20px] space-y-3 shadow-xs">
+                      <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+                        <span className="text-xl">👩‍💼</span>
+                        <div>
+                          <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider">Руководство Застройщика (Owner Guide)</h4>
+                          <span className="text-[9px] text-slate-450 block font-medium uppercase tracking-wider">
+                            Как самостоятельно проверить армирование фундамента
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-[10.5px] text-slate-600 space-y-2 overflow-y-auto max-h-[300px] pr-1.5 select-text leading-normal">
+                        <p className="font-bold text-slate-850">1. Верификация сечений и количества арматуры:</p>
+                        <p className="pl-3 border-l border-slate-200">
+                          Проверьте количество продольной арматуры по спецификации (должно быть ровно <strong>{rData.longitudinal_bars_count || 4} шт.</strong> класса S500/A500C диаметром <strong>d{rData.main_bar_diameter} мм</strong>). Убедитесь, что строители не произвели самовольную замену диаметров в целях сомнительной экономии.
+                        </p>
+                        
+                        <p className="font-bold text-slate-850">2. Дистанция хомутов и угловые зоны:</p>
+                        <p className="pl-3 border-l border-slate-200">
+                          Шаг поперечных хомутов в средних зонах каркаса должен составлять ровно <strong>{rData.stirrup_spacing} мм</strong>. На приопорных угловых участках (в пределах 1 метра от сопряжения) шаг хомутов обязательно уменьшается в два раза — пересчитайте количество лично рулеткой!
+                        </p>
+
+                        <p className="font-bold text-slate-850">3. Проверка защитных слоев бетона:</p>
+                        <p className="pl-3 border-l border-slate-200">
+                          Стержни ни в коем случае не должны соприкасаться с опалубкой или лежать на грунте. Каркас должен укладываться на специализированные пластиковые фиксаторы («стульчики») высотой не менее <strong>{rData.protective_layer_bottom} мм</strong> на дне и не менее <strong>{rData.protective_layer_side} мм</strong> по бокам. Подручные средства (деревянные бруски, куски кирпича) запрещены!
+                        </p>
+
+                        <p className="font-bold text-slate-850">4. Проверка поддерживающих столиков (лягушек):</p>
+                        <p className="pl-3 border-l border-slate-200">
+                          Нахлест продольных плетей по длине должен составлять минимум <strong>{rData.lap_length} мм</strong>. Нахлесты разных стержней устраивают «вразбежку» (не допускайте стыковки всех стержней в одном месте). Убедитесь в наличии поддерживающих «лягушек» (не менее <strong>{rData.chairs_count || 0} шт.</strong>) для обеспечения жесткости верхних сеток.
+                        </p>
+                        
+                        <p className="font-bold text-rose-600 bg-rose-50 p-2.5 rounded-lg text-[9.5px] leading-snug">
+                          ⚠️ <strong>Опасный дефект застройщика:</strong> Сварка арматуры класса А500С в обычных построечных условиях ослабляет металл. Соединения каркасов должны производиться исключительно ручной вязкой стальной вязальной проволокой!
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* TECHNICAL SUPERVISION CHECKLIST (Чек-лист технадзора) */}
+                    <div className="p-5 bg-white border border-slate-205 rounded-[20px] space-y-3 shadow-xs">
+                      <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+                        <span className="text-xl">📋</span>
+                        <div>
+                          <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider">Чек-лист Технадзора перед заливкой</h4>
+                          <span className="text-[9px] text-slate-450 block font-medium uppercase tracking-wider">
+                            Строительный надзор и акты по СНиП 3.03.01-87
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-[10.5px] text-slate-650 space-y-2.5 overflow-y-auto max-h-[300px] pr-1.5 select-text leading-tight">
+                        {[
+                          { title: "[ ] Контроль диаметров и сортности сплава", desc: `Заверить класс стержней А500С ф${rData.main_bar_diameter} мм и укладку хомутовой обвязки ф${rData.secondary_bar_diameter} мм. Контролировать штангенциркулем соответствие проекту.` },
+                          { title: "[ ] Стыковая нахлестка и перепуск стержней", desc: `Промерить перекрытия наращиваемых плетей. Перепуск должен составлять не менее ${rData.lap_length} мм со смещением мест стыков вразбежку.` },
+                          { title: "[ ] Жесткие угловые Г- и П-образные сопряжения со стенками", desc: `Углы застройки усиливаются загибаемыми Г-образными анкерами d${rData.main_bar_diameter} и П-образными монтажными элементами d${rData.secondary_bar_diameter}. Обычный вяз нахлестом по прямой линии на углу СТРОГО ЗАПРЕЩЕН.` },
+                          { title: "[ ] Расстановка пластиковых ограничителей зазоров бетона", desc: `Зафиксировать наличие защитных фиксаторов на дне и боковинах каркаса. Использовано не менее ${rData.spacers_count} защитных опор.` },
+                          { title: "[ ] Выдерживание заложенного шага вязки хомутов", desc: `Шаг обвязки хомутами строго выдержан в размере ${rData.stirrup_spacing} мм вдоль всей оси. В угловых зонах шаг хомутов учащен вдвое.` },
+                          { title: "[ ] Санитарный строительный контроль траншеи / опалубки", desc: "Удалить пыль, грязь, лед, ржавчину со стержней. Убедиться в отсутствии следов масел и древесной щепы на дне." },
+                          { title: "[ ] Выпуск стартовых монолитных анкеров-выпусков", desc: `Спроектировать и установить выпуски связи под колонны или несущие надфундаментные стены в соответствии с Eurocode 2.` },
+                          { title: "[ ] Составление фотопротокола и оформление Актов скрытых работ", desc: "Произвести комплексную фотосъемку уложенных каркасов и подписать Акт освидетельствования скрытых работ до начала приёма бетонной смеси." }
+                        ].map((item, idx) => (
+                          <div key={idx} className="pb-2 border-b border-slate-100 last:border-b-0">
+                            <span className="font-extrabold text-slate-800 text-[10px] block mb-0.5">{item.title}</span>
+                            <span className="text-[9px] text-slate-500 block">{item.desc}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* TAB CONTENT: 1. RISK ASSESSMENT LEDGER (Stage 2 & 10) */}
             {activeEngTab === 'risks' && (
@@ -4456,6 +5067,22 @@ export default function App() {
                 </div>
               </div>
             )}
+
+            {activeEngTab === 'owner_guide' && (
+              <div className="space-y-4 animate-fade-in">
+                <OwnerGuide
+                  selectedOption={selectedOption}
+                  results={results}
+                  scopeSettings={scopeSettings}
+                  onToggleScopeProp={toggleScopeProp}
+                  landSlope={landSlope}
+                  groundwaterDepth={groundwaterDepth}
+                  includeSubDesign={includeSubDesign}
+                  includeVAT={includeVAT}
+                  includeSupervision={includeSupervision}
+                />
+              </div>
+            )}
           </div>
 
           {/* EUROCODE & NCM STRUCTURAL LOAD DESIGNS & COMBINATIONS PASSPORT */}
@@ -4842,7 +5469,7 @@ export default function App() {
               {/* Stat 3: Formula Typo Sins */}
               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/50 text-center">
                 <span className="text-[9px] text-slate-400 block font-bold uppercase tracking-wider">Двойные формулы ("=="):</span>
-                <strong className="text-emerald-600 text-xl font-mono block mt-1">О</strong>
+                <strong className="text-emerald-600 text-xl font-mono block mt-1">0</strong>
                 <span className="text-[9.5px] text-emerald-450 block mt-0.5 font-medium">100% исправлено на "="</span>
               </div>
 
