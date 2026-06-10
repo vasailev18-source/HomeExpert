@@ -1,6 +1,6 @@
 {
-  "name": "HomeExpert",
-  "description": "Инженерные расчеты фундаментов и конструкций, аудит весовых нагрузок и экспорт отчетов",
+  "name": "",
+  "description": "",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -5,16 +5,16 @@
 
 export enum MoldovaRegion {
   CENTER = "CENTER", // Кишинёв, Орхей
-  NORTH = "NORTH",   // Бэлць, Бричень
-  SOUTH = "SOUTH",   // Кагул, Комрат
+  NORTH = "NORTH", // Бэлць, Бричень
+  SOUTH = "SOUTH", // Кагул, Комрат
 }
 
 export interface RegionDetails {
   name: string;
   cities: string;
   frostDepth: number; // in meters (e.g. 0.8)
-  snowLoad: number;   // in kPa / kN/m2 (e.g. 0.9)
-  windLoad: number;   // in kPa (e.g. 0.36)
+  snowLoad: number; // in kPa / kN/m2 (e.g. 0.9)
+  windLoad: number; // in kPa (e.g. 0.36)
   seismicPoints: number; // Richter points (e.g. 7)
   seismicCoeff: number; // Seismic coefficient A (e.g. 0.1)
   beltMandatory: boolean; // Is antiseismic belt required?
@@ -22,10 +22,10 @@ export interface RegionDetails {
 
 export enum BuildingWallMaterial {
   GASOBETON = "GASOBETON", // Газобетонные блоки (~400-600 kg/m3)
-  KOTELET = "KOTELET",     // Молдавский котелец (limestone ~1800-2000 kg/m3)
-  BRICK = "BRICK",         // Полнотелый/пустотелый кирпич (~1600-1800 kg/m3)
-  KERAMZIT = "KERAMZIT",   // Керамзитобетонные блоки (~1200 kg/m3)
-  FRAME = "FRAME",         // Деревянный каркас (~200 kg/m3)
+  KOTELET = "KOTELET", // Молдавский котелец (limestone ~1800-2000 kg/m3)
+  BRICK = "BRICK", // Полнотелый/пустотелый кирпич (~1600-1800 kg/m3)
+  KERAMZIT = "KERAMZIT", // Керамзитобетонные блоки (~1200 kg/m3)
+  FRAME = "FRAME", // Деревянный каркас (~200 kg/m3)
 }
 
 export interface WallMaterialDetails {
@@ -38,8 +38,10 @@ export interface WallMaterialDetails {
 
 export enum SlabMaterial {
   MONOLITH = "MONOLITH", // Монолитный ж/б (2500 kg/m3)
-  HOLLOW_CORE = "HOLLOW_CORE", // Круглопустотные плиты (1500 kg/m3)
+  HOLLOW_CORE = "HOLLOW_CORE", // Круглопустотные плиты (ПК - 1500 kg/m3)
+  PB_SLAB = "PB_SLAB", // Плиты ПБ (Экструдерные - 1600 kg/m3)
   TIMBER = "TIMBER", // Деревянные балки (250 kg/m3)
+  COMBINED = "COMBINED", // Комбинированные (Сборно-монолитные - 1300 kg/m3)
 }
 
 export interface SlabDetails {
@@ -52,8 +54,11 @@ export interface SlabDetails {
 export enum RoofType {
   GABLE_METAL = "GABLE_METAL", // Двускатная / Металлочерепица
   HIP_CERAMIC = "HIP_CERAMIC", // Вальмовая / Керамическая черепица
-  FLAT_PVC = "FLAT_PVC",     // Плоская / ПВХ мембрана
-  SHED_BOARD = "SHED_BOARD",   // Односкатная / Профнастил
+  HIP_METAL = "HIP_METAL", // Вальмовая / Металлочерепица (популярно)
+  GABLE_SHINGLE = "GABLE_SHINGLE", // Двускатная / Мягкая битумная черепица
+  FLAT_PVC = "FLAT_PVC", // Плоская / ПВХ мембрана
+  SHED_BOARD = "SHED_BOARD", // Односкатная / Профнастил
+  COMPOSITE_TILE = "COMPOSITE_TILE", // Композитная черепица
 }
 
 export interface RoofDetails {
@@ -64,30 +69,30 @@ export interface RoofDetails {
 }
 
 export enum SoilType {
-  SAND = "SAND",               // Песок средний (Nisip mediu)
-  SILTY_SAND = "SILTY_SAND",   // Песок пылеватый (Nisip fin/lutos)
-  SANDY_LOAM = "SANDY_LOAM",   // Супесь (Nisip lutos)
-  LOAM = "LOAM",               // Суглинок (Luto-argilos)
-  CLAY = "CLAY",               // Глина (Argilă)
-  LOESS = "LOESS",             // Лёсс / Просадочный суглинок (Cernoziom lëssoid)
-  FILLED = "FILLED",           // Насыпной грунт (Pământ de umplutură)
-  ROCK = "ROCK",               // Скальный грунт (Rocă stâncoasă)
+  SAND = "SAND", // Песок средний (Nisip mediu)
+  SILTY_SAND = "SILTY_SAND", // Песок пылеватый (Nisip fin/lutos)
+  SANDY_LOAM = "SANDY_LOAM", // Супесь (Nisip lutos)
+  LOAM = "LOAM", // Суглинок (Luto-argilos)
+  CLAY = "CLAY", // Глина (Argilă)
+  LOESS = "LOESS", // Лёсс / Просадочный суглинок (Cernoziom lëssoid)
+  FILLED = "FILLED", // Насыпной грунт (Pământ de umplutură)
+  ROCK = "ROCK", // Скальный грунт (Rocă stâncoasă)
 }
 
 export interface SoilDetails {
   id: SoilType;
   name: string;
   resistanceKPa: number; // R average in kPa
-  Rmin: number;          // Minimum bearing capacity (kPa)
-  Ravg: number;          // Average bearing capacity (kPa)
-  Rmax: number;          // Maximum bearing capacity (kPa)
-  Emin: number;          // Minimum soil deformation modulus in MPa
-  Eavg: number;          // Average soil deformation modulus in MPa
-  Emax: number;          // Maximum soil deformation modulus in MPa
-  density: number;       // Soil bulk density in kg/m3
-  poissonRatio: number;  // Poisson ratio
+  Rmin: number; // Minimum bearing capacity (kPa)
+  Ravg: number; // Average bearing capacity (kPa)
+  Rmax: number; // Maximum bearing capacity (kPa)
+  Emin: number; // Minimum soil deformation modulus in MPa
+  Eavg: number; // Average soil deformation modulus in MPa
+  Emax: number; // Maximum soil deformation modulus in MPa
+  density: number; // Soil bulk density in kg/m3
+  poissonRatio: number; // Poisson ratio
   settlementCoeff: number; // Dimensionless settlement coefficient omega
-  frostHeaveSensitivity: string;  // "Низкая" | "Умеренная" | "Высокая"
+  frostHeaveSensitivity: string; // "Низкая" | "Умеренная" | "Высокая"
   groundwaterSensitivity: string; // "Низкая" | "Умеренная" | "Высокая"
   description: string;
   heavingRisk: number; // value from 0 to 1
@@ -95,32 +100,56 @@ export interface SoilDetails {
 }
 
 // Structural properties needed for calculation
+export enum GlazingType {
+  STANDARD = "STANDARD", // Стандартное остекление (15% от площади стен)
+  PANORAMIC = "PANORAMIC", // Панорамное остекление (35% от площади стен)
+}
+
+export enum FacadeType {
+  WET = "WET", // "Мокрый фасад" (Утеплитель + Декоративная штукатурка)
+  VENTILATED = "VENTILATED", // Вентилируемый фасад (Керамогранит / Фиброцемент / HPL)
+  FACE_BRICK = "FACE_BRICK", // Облицовочный кирпич
+}
+
 export interface CalculatorInput {
   projectId?: string;
+  buildingType?: "HOUSE" | "GARAGE";
+  hasPit?: boolean;
+  buildQuality?: "ECONOMY" | "STANDARD" | "PREMIUM"; // Уровень отделки и качества
   region: MoldovaRegion;
   customSoilType?: SoilType;
   customSoilResistance?: number; // User custom inputs if any
-  
+
   // House geometry
   width: number; // meters
   length: number; // meters
   floors: number; // 1, 1.5 (мансарда counts as 1.5), 2, 3, 3.5 (3 floors + mansard)
   floorHeight: number; // meters (default 3.0)
   totalArea: number; // precalculated width * length * floors
-  
+
   // Building structural components
   wallMaterial: BuildingWallMaterial;
   slabMaterial: SlabMaterial;
   roofType: RoofType;
+  glazingType: GlazingType;
+  facadeTech: FacadeType;
+  hvacSystem?: string;
+  ventSystem?: string;
+  waterSystem?: string;
+  sewageSystem?: string;
+  elecSystem?: string;
+  lowVoltSystem?: string;
+  finishSystem?: string;
+  windowSystem?: string;
   futureFlooringExtension: boolean; // Will double the floors calculation load for the foundation
-  
+
   // Geotechnical
   soilType: SoilType;
   groundwaterDepth: number; // meters, e.g. 1.5
   safetyFactor: number; // e.g. 1.8
   landSlope: number; // land slope in percent (e.g. 0 to 15%)
   hasGeologyReport?: boolean; // If false/undefined, final foundation recommendation is blocked
-  
+
   // Basement choice
   hasBasement: boolean;
 
@@ -158,6 +187,7 @@ export interface CalculatorInput {
 // Calculated weights, pressures, sizing, specifications, and costs
 export interface MaterialRequirement {
   concreteVolumeM3: number;
+  fbsBlocksCount?: number;
   reinforcementBarKg: number;
   sandGravelM3: number;
   waterproofingM2: number;
@@ -180,14 +210,14 @@ export interface MaterialRequirement {
   drainageWells400Count?: number; // d400 sediment inspection wells
   drainageCollectorWell?: number; // Main collections well pcs (KS-10 concrete rings)
   drainageSubmersiblePump?: number; // Drainage pump pcs
-  
+
   // Engineering Networks
   engineeringNetWaterIntakeLengthM?: number; // Water intake HDPE length in m
   engineeringNetSewerageOutletsPcs?: number; // Sewerage discharge outlets
   engineeringNetPowerDuctLengthM?: number; // Corrugated electrical duct length
   engineeringNetWeakDuctLengthM?: number; // Weak-current PVC conduit length
   engineeringNetSpareDuctLengthM?: number; // Spare HDPE conduit length
-  
+
   // Grounding safety loop
   groundingSteelStripM?: number; // Steel strip length in m
   groundingEarthRodsPcs?: number; // Earth vertical electrodes count
@@ -197,7 +227,7 @@ export interface MaterialRequirement {
   backfillVolumeM3?: number; // retaining wall pockets volume
   backfillCompactionCoeff?: number; // compaction coefficient
   backfillCompactionRuns?: number; // vibrating plate passes equivalent
-  
+
   // Waterproof protection
   waterproofProtMembraneM2?: number; // Dimpled insulation protection membrane m2
 
@@ -219,7 +249,7 @@ export interface CostEstimate {
   sandCushionCostMDL: number;
   waterproofInsulationCostMDL: number;
   formworkCostMDL: number;
-  
+
   // Ultra-detailed breakdown costs
   excavationCostMDL?: number; // Heavy crawler excavator & manual touchups
   rebarBindingCostMDL?: number; // Wire binding, mesh layout labor
@@ -227,13 +257,13 @@ export interface CostEstimate {
   slopeComplicationCostMDL?: number; // Slope work, stepping, retaining structures
   roughFloorCostMDL?: number; // Integrated rough concrete floor cost breakdown
   pileDrillingCostMDL?: number; // Explicit drilling cost for piles in MDL
-  
+
   // Advanced engineering costs (Moldovan Market rates)
   engineeringNetworksCostMDL?: number; // d110 sewer conduits, PE water pipelines, conduits
   groundingSystemCostMDL?: number; // hot-dip galvanized strip safety contour
   backfillCompactionCostMDL?: number; // backfilling excavation pockets with layered compaction
   waterproofProtectionCostMDL?: number; // dimpled HDPE protective membrane sheet + profiles
-  
+
   materialsSubtotalMDL: number;
   constructionLaborCostMDL: number;
   machineryLogisticsCostMDL: number;
@@ -245,7 +275,7 @@ export interface CostEstimate {
   geologyCostMDL?: number;
   supervisionCostMDL?: number;
   expertiseCostMDL?: number;
-  
+
   totalCostMDL: number;
 }
 
@@ -528,6 +558,71 @@ export interface OptionExplanation {
   verdict: string;
 }
 
+export interface CAPEX {
+  constructionCostMDL: number;
+  installationCostMDL: number;
+  deliveryCostMDL: number;
+  machineryCostMDL: number;
+  totalMDL: number;
+}
+
+export interface OPEX {
+  heatingAnnualCostMDL: number;
+  coolingAnnualCostMDL: number;
+  maintenanceAnnualCostMDL: number;
+  repairsAnnualCostMDL: number;
+  equipmentReplacementAnnualMDL: number;
+  totalAnnualMDL: number;
+  cost10YearsMDL: number;
+  cost20YearsMDL: number;
+  cost30YearsMDL: number;
+}
+
+export interface FinancialModel {
+  paybackPeriodYears: number;
+  energySavingsAnnualMDL: number;
+  NPV_MDL: number;
+  ROI_Percent: number;
+  accumulatedBenefit30YearsMDL: number;
+}
+
+export interface NormativeCheck {
+  normativeDocument: string; // e.g. "NCM F.02.02-2006"
+  clause: string; // e.g. "п. 5.1.2"
+  calculationDetails: string;
+  isPass: boolean;
+}
+
+export interface OptionJustification {
+  reasons: string[];
+  engineeringComparison: string[];
+  economicComparison: string[];
+  normativeChecks: NormativeCheck[];
+}
+
+export interface RiskAnalysis {
+  constructionRisk: number; // 0-10
+  financialRisk: number; // 0-10
+  operationalRisk: number; // 0-10
+  normativeRisk: number; // 0-10
+  overallProjectRating: number; // 0-100
+}
+
+export interface SeismicData {
+  seismicZone: number; // 7, 8, 9
+  soilCategory: string; // e.g. "II", "III"
+  behaviorFactor: number; // q
+  designAcceleration: number; // ag (e.g. 0.2g)
+  designLoads: number;
+}
+
+export interface ThermalCalculation {
+  thermalResistanceR: number; // m2K/W
+  uValue: number; // W/m2K
+  heatLossW: number;
+  annualEnergyKWh: number;
+}
+
 export interface FoundationOption {
   id: string; // recommended, economic, maximum
   type: string; // e.g. Ленточный монолитный
@@ -544,7 +639,15 @@ export interface FoundationOption {
   widthM: number;
   depthM: number;
   bimEntities: BIMEntity[];
-  
+
+  // Proof-based fields
+  justification?: OptionJustification;
+  capex?: CAPEX;
+  opex?: OPEX;
+  financialModel?: FinancialModel;
+  thermal?: ThermalCalculation;
+  riskAnalysis?: RiskAnalysis;
+
   costScore?: number;
   riskScore?: number;
   energyScore?: number;
@@ -564,30 +667,82 @@ export interface FoundationOption {
   reinforcement?: ResolvedReinforcement;
 }
 
+export interface WallCalculationResult {
+  columnsCount: number;
+  concreteColumnsM3: number;
+  seismicBeltLengthM: number;
+  concreteBeltM3: number;
+  totalConcreteM3: number;
+  rebarKg: number;
+  wallAreaGrossM2: number;
+  wallAreaNetM2: number;
+  blocksVolumeM3: number;
+  blocksCount: number;
+  mortarVolumeM3: number;
+  blocksCostMDL: number;
+  concreteCostMDL: number;
+  rebarCostMDL: number;
+  masonryRebarKg: number;
+  masonryRebarCostMDL: number;
+  ventChannelsCount: number;
+  ventBlocksCount: number;
+  ventBlocksCostMDL: number;
+  materialsCostMDL: number;
+  laborCostMDL: number;
+  totalCostMDL: number;
+  needsColumns: boolean;
+  needsBelts: boolean;
+  seismicity: number;
+  isFrame: boolean;
+  wallThicknessM: number;
+}
+
+export interface WhiteBoxCalculationResult {
+  roofAreaM2: number;
+  roofCostMDL: number;
+  glazingAreaM2: number;
+  windowsCostMDL: number;
+  facadeAreaM2: number;
+  facadeCostMDL: number;
+
+  // Phase 2 Internal works ("Real White Box")
+  hasStairs: boolean;
+  stairsCostMDL: number;
+  floorsScreedAreaM2: number;
+  floorsScreedCostMDL: number;
+  internalPlasterAreaM2: number;
+  internalPlasterCostMDL: number;
+  slabCostMDL: number; // For inter-floor slabs
+
+  totalWhiteBoxCostMDL: number;
+}
+
 export interface CalculationResults {
   input: CalculatorInput;
-  
+  walls?: WallCalculationResult;
+  whiteBox?: WhiteBoxCalculationResult;
+
   // Dead loads computed
   wallWeightTons: number;
   slabWeightTons: number;
   roofWeightTons: number;
   deadLoadSubtotalTons: number;
-  
+
   // Live loads (operational)
   liveLoadTons: number;
-  
+
   // Climatic loads
   snowLoadTons: number;
   windLoadTons: number;
-  
+
   // Seismic equivalent shearing force
   seismicForceTons: number;
-  seismicPGA: number;            // Peak ground acceleration (g)
+  seismicPGA: number; // Peak ground acceleration (g)
   seismicImportanceFactor: number; // Gamma_I NCM/Eurocode
   seismicGroundTypeFactor: number; // S parameter
-  seismicBehaviorFactor: number;   // q parameter
-  seismicAmplification: number;    // Beta spectral amplification
-  
+  seismicBehaviorFactor: number; // q parameter
+  seismicAmplification: number; // Beta spectral amplification
+
   // Final composite Design Weight (including future loads if toggle is active)
   totalFactoredWeightTons: number;
 
@@ -595,24 +750,24 @@ export interface CalculationResults {
   scenarioASnowDominantTons: number; // Scenario A: Snow Dominant
   scenarioBLiveDominantTons: number; // Scenario B: Live Load Dominant
   seismicMassCombinationTons: number; // Accidental/Seismic Mass Combination
-  
+
   // Required bearing area
   bearingAreaRequiredM2: number;
-  
+
   // Ground resistance R
   soilBearingCapacityKPa: number;
-  
+
   // Settlement Analysis Metrics (Stage 5)
-  settlementTotalMM: number;       // S total (mm)
-  settlementDiffMM: number;        // Delta S differential (mm)
-  settlementUnequal: number;       // i (dimensionless fraction, mm/mm)
-  settlementRiskCoeff: number;     // Kr risk factor (S / S_limit)
-  settlementLimitMM: number;       // S_limit (mm)
+  settlementTotalMM: number; // S total (mm)
+  settlementDiffMM: number; // Delta S differential (mm)
+  settlementUnequal: number; // i (dimensionless fraction, mm/mm)
+  settlementRiskCoeff: number; // Kr risk factor (S / S_limit)
+  settlementLimitMM: number; // S_limit (mm)
   requiresGeotechnicalSurvey: boolean;
-  
+
   // Foundation options comparisons
   options: FoundationOption[];
-  
+
   // Geotechnical risks
   frostHeavingPercent: number;
   collapsibilityPercent: number;

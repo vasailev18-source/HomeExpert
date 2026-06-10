@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { CalculatorInput, CalculationResults, FoundationOption, MoldovaRegion } from "../types";
 import { resolveReinforcementParams, getRebarWeightPerMeter } from "./calc";
+import { addWallSubsystemModules, addSlabSubsystemModules, addRoofSubsystemModules, addFacadeSubsystemModules, addHvacSubsystemModules, addElectricalSubsystemModules } from "./excelSubsystems";
 
 // Helper/format utility functions
 export function getRegionLabel(region: string): string {
@@ -162,7 +163,7 @@ export function buildASCIIBlueprint(input: CalculatorInput, fbId: string): strin
 }
 
 // Styling utilities
-const applySheetHeader = (ws: ExcelJS.Worksheet, title: string, colsCount: number = 8, bg: string = "FF0F172A") => {
+export const applySheetHeader = (ws: ExcelJS.Worksheet, title: string, colsCount: number = 8, bg: string = "FF0F172A") => {
   ws.views = [{ showGridLines: true }];
   const endColLetter = String.fromCharCode(65 + colsCount - 1);
   ws.mergeCells(`A2:${endColLetter}2`);
@@ -174,7 +175,7 @@ const applySheetHeader = (ws: ExcelJS.Worksheet, title: string, colsCount: numbe
   ws.getRow(2).height = 32;
 };
 
-const applyTableHeaders = (ws: ExcelJS.Worksheet, row: number, headers: string[], bg: string = "FF1E3A8A") => {
+export const applyTableHeaders = (ws: ExcelJS.Worksheet, row: number, headers: string[], bg: string = "FF1E3A8A") => {
   headers.forEach((h, i) => {
     const colName = String.fromCharCode(65 + i);
     const cell = ws.getCell(`${colName}${row}`);
@@ -1277,6 +1278,232 @@ export async function generateExcelWorkbook(
   });
 
 
+  // --- SHEET 5.1: КОРОБКА И СТЕНЫ (WALLS) ---
+  if (results.walls) {
+    const wallsSheet = workbook.addWorksheet("Коробка (Walls)");
+    wallsSheet.getColumn(1).width = 4;
+    wallsSheet.getColumn(2).width = 40;
+    wallsSheet.getColumn(3).width = 25;
+    wallsSheet.getColumn(4).width = 15;
+
+    applySheetHeader(wallsSheet, "🧱 СМЕТНЫЙ РАСЧЕТ И КОЛИЧЕСТВЕНИК СТЕНОВОЙ КОРОБКИ (СНИП РМ NCM F.03.02-2005)", 4, "FF7C3AED");
+    applyTableHeaders(wallsSheet, 4, [
+      "ID",
+      "Наименование элемента или этапа коробки",
+      "Количественный показатель",
+      "Ед.изм."
+      ], "FF5B21B6");
+
+    let rowCursor = 5;
+    const addWallRow = (title: string, val: any, unit: string) => {
+      wallsSheet.getCell(`B${rowCursor}`).value = title;
+      wallsSheet.getCell(`C${rowCursor}`).value = val;
+      wallsSheet.getCell(`D${rowCursor}`).value = unit;
+
+      wallsSheet.getCell(`B${rowCursor}`).font = { name: "Calibri", size: 9 };
+      wallsSheet.getCell(`C${rowCursor}`).font = { name: "Consolas", size: 9, bold: true, color: { argb: "FF0F172A" } };
+      wallsSheet.getCell(`C${rowCursor}`).alignment = { horizontal: "right" };
+      wallsSheet.getCell(`D${rowCursor}`).font = { name: "Calibri", size: 8.5, color: { argb: "FF475569" } };
+      
+      const isEven = rowCursor % 2 === 0;
+      const bgHex = isEven ? "FFF5F3FF" : "FFFFFFFF";
+      ["B","C","D"].forEach(c => {
+         wallsSheet.getCell(`${c}${rowCursor}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgHex } };
+         wallsSheet.getCell(`${c}${rowCursor}`).border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+      });
+      wallsSheet.getRow(rowCursor).height = 20;
+      rowCursor++;
+    };
+
+    wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+    writeCell(wallsSheet, `B${rowCursor}`, "1. СТЕНОВОЙ КОМПЛЕКТ (БЛОКИ И КЛАДКА)", { font: { bold: true, color: { argb: "FF4C1D95" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFEDE9FE" } } });
+    rowCursor++;
+    addWallRow(`Площадь стен брутто (с проемами${input.roofType === 'GABLE_METAL' ? ' и фронтонами' : ''})`, results.walls.wallAreaGrossM2, "м²");
+    addWallRow("Площадь стен нетто (чистая)", results.walls.wallAreaNetM2, "м²");
+    addWallRow("Проектная толщина стены", results.walls.wallThicknessM * 1000, "мм");
+    addWallRow("Чистый строительный объем кладки", results.walls.blocksVolumeM3, "м³");
+    addWallRow("Количество блоков (шт)", results.walls.blocksCount, "шт");
+
+    wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+    writeCell(wallsSheet, `B${rowCursor}`, "2. ЖЕЛЕЗОБЕТОННЫЙ СЕЙСМОКАРКАС / АРМИРОВАНИЕ", { font: { bold: true, color: { argb: "FF4C1D95" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFEDE9FE" } } });
+    rowCursor++;
+    if (results.walls.needsColumns) {
+      addWallRow("Колонны (сердечники ж/б)", results.walls.columnsCount, "шт");
+      addWallRow("Количество бетона на колонны", results.walls.concreteColumnsM3, "м³");
+    } else {
+      addWallRow("Сейсмокаркас (Колонны)", "Не требуется", "-");
+    }
+    
+    if (results.walls.needsBelts) {
+      addWallRow("Метраж монолитного армопояса", results.walls.seismicBeltLengthM, "м.п.");
+      addWallRow("Объем бетона на армопояс (С16/20)", results.walls.concreteBeltM3, "м³");
+      addWallRow("Арматура (каркас сердечников и поясов)", results.walls.rebarKg, "кг");
+    }
+    if (!results.walls.isFrame) {
+      addWallRow("Кладочная сетка (Стеклопластик/Базальт)", results.walls.masonryRebarKg, "кг/м");
+    }
+    if (results.walls.ventChannelsCount > 0) {
+      addWallRow("Вентканалы / Дымоходы (Керамоблоки)", `${results.walls.ventChannelsCount} стояков / ${results.walls.ventBlocksCount} блоков`, "кмпл.");
+    }
+
+    wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+    writeCell(wallsSheet, `B${rowCursor}`, "3. БЮДЖЕТНАЯ ОЦЕНКА КОРОБКИ", { font: { bold: true, color: { argb: "FF4C1D95" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFDDD6FE" } } });
+    rowCursor++;
+    addWallRow("Стоимость стеновых блоков", results.walls.blocksCostMDL, "MDL");
+    if (results.walls.needsColumns || results.walls.needsBelts) {
+       addWallRow("Стоимость бетона каркаса/поясов", results.walls.concreteCostMDL, "MDL");
+       addWallRow("Стоимость стальной арматуры", results.walls.rebarCostMDL, "MDL");
+    }
+    if (!results.walls.isFrame) {
+       addWallRow("Стоимость кладочной сетки", results.walls.masonryRebarCostMDL, "MDL");
+    }
+    if (results.walls.ventChannelsCount > 0) {
+       addWallRow("Стоимость вентблоков", results.walls.ventBlocksCostMDL, "MDL");
+    }
+    addWallRow("Стоимость монтажных/кладочных работ", results.walls.laborCostMDL, "MDL");
+    addWallRow("ИТОГО СМЕТА КОРОБКИ:", results.walls.totalCostMDL, "MDL");
+
+    rowCursor++;
+    wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+    writeCell(wallsSheet, `B${rowCursor}`, "💡 ЧЕК-ЛИСТ ПРИЕМКИ СТЕН И СКРЫТЫХ РАБОТ (NCM F.03.02-2005)", { font: { bold: true, color: { argb: "FF065F46" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFD1FAE5" } } });
+    rowCursor++;
+    
+    const checklistItems = [];
+    if (!results.walls.isFrame) {
+        checklistItems.push("Армирование рядов кладки: каждые 600 мм (обычно каждый 3-ий ряд) уложена кладочная сетка. Нахлест не менее 150 мм.");
+        checklistItems.push("Защитный слой раствора: толщина растворного шва не превышает 15 мм, сетка полностью утоплена.");
+    }
+    if (results.walls.needsColumns) {
+        checklistItems.push("Анкеровка кладки: в местах примыкания кладки к колоннам выпущены связи (арматура/сетка) в тело колонны.");
+        checklistItems.push("Выпуски из фундамента: жесткая связка (нахлест) арматуры плиты/ленты с колоннами (не менее 40 диаметров, ~50 см).");
+    }
+    if (results.walls.needsBelts) {
+        checklistItems.push("Сейсмопояс (Армопояс): замкнут по всему периметру стен. В углах стоят П/Г-образные хомуты.");
+    }
+    if (!results.walls.isFrame) {
+        checklistItems.push("Опирание перемычек: опирание ЖБ перемычек на стену строго не менее 250 мм с каждой стороны.");
+    }
+    if (results.walls.ventChannelsCount > 0) {
+        checklistItems.push("Вентканалы и дымоходы: чистые (отсутствие раствора внутри), строго вертикальны. В дымоходах есть гильзы.");
+    }
+    checklistItems.push("Геометрия: отклонение стены по вертикали не более 10 мм на 1 этаж (проверка 2м правилом или лазером).");
+    
+    checklistItems.forEach((text, idx) => {
+        wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+        writeCell(wallsSheet, `B${rowCursor}`, `[ ] ${text}`, { font: { name: "Calibri", size: 9 }, alignment: { wrapText: true, vertical: "top" } });
+        wallsSheet.getRow(rowCursor).height = 30;
+        rowCursor++;
+    });
+
+    // ----------------------------------------------------
+    // -------------- БЕЛЫЙ ВАРИАНТ ДОМА ------------------
+    // ----------------------------------------------------
+    if (results.whiteBox) {
+        rowCursor++;
+        wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+        writeCell(wallsSheet, `B${rowCursor}`, "4. КРОВЛЯ, ОСТЕКЛЕНИЕ, ФАСАД И ОТДЕЛКА (Вариант БЕЛЫЙ)", { font: { bold: true, color: { argb: "FF0369A1" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0F2FE" } } });
+        rowCursor++;
+
+        addWallRow("Площадь кровли (с учетом свесов)", results.whiteBox.roofAreaM2, "м²");
+        addWallRow("Стоимость готовой кровли (" + (input.roofType === 'GABLE_METAL' ? 'М/Ч' : input.roofType === 'HIP_CERAMIC' ? 'Керамика' : 'Плоская') + ")", results.whiteBox.roofCostMDL, "MDL");
+        
+        addWallRow("Площадь остекления (" + (input.glazingType === 'PANORAMIC' ? 'Панорамное' : 'Стандартное') + ")", results.whiteBox.glazingAreaM2, "м²");
+        addWallRow("Стоимость окон с теплым монтажом", results.whiteBox.windowsCostMDL, "MDL");
+
+        addWallRow("Площадь фасада", results.whiteBox.facadeAreaM2, "м²");
+        addWallRow("Стоимость отделки фасада (" + (input.facadeTech === 'WET' ? 'Мокрый' : input.facadeTech === 'VENTILATED' ? 'Вентилируемый' : 'Облицовочный кирпич') + ")", results.whiteBox.facadeCostMDL, "MDL");
+
+        addWallRow("Стоимость перекрытий (" + (input.slabMaterial === 'MONOLITH' ? 'Монолитные' : input.slabMaterial === 'HOLLOW_CORE' ? 'Сборные ПБК' : 'Легкие деревянные') + ")", results.whiteBox.slabCostMDL, "MDL");
+        addWallRow("Стоимость Ж/Б лестниц (" + (results.whiteBox.hasStairs ? 'Включены' : 'Нет') + ")", results.whiteBox.stairsCostMDL, "MDL");
+        
+        addWallRow("Площадь стяжки (внутренние полы с утеплением)", results.whiteBox.floorsScreedAreaM2, "м²");
+        addWallRow("Стоимость стяжки пола", results.whiteBox.floorsScreedCostMDL, "MDL");
+        
+        addWallRow("Внутренняя штукатурка стен (площадь)", results.whiteBox.internalPlasterAreaM2, "м²");
+        addWallRow("Стоимость внутренней штукатурки", results.whiteBox.internalPlasterCostMDL, "MDL");
+
+        rowCursor++;
+        wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+        writeCell(wallsSheet, `B${rowCursor}`, "💰 ИТОГО ДОМ В БЕЛОМ ВАРИАНТЕ (СТЕНЫ + КРОВЛЯ + ОКНА + ФАСАД + ПЕРЕКРЫТИЯ + ОТДЕЛКА): " + (results.walls.totalCostMDL + results.whiteBox.totalWhiteBoxCostMDL).toLocaleString() + " MDL", { font: { bold: true, color: { argb: "FF065F46" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFD1FAE5" } } });
+        rowCursor += 2;
+
+        wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+        writeCell(wallsSheet, `B${rowCursor}`, "💡 ЧЕК-ЛИСТ ПРИЕМКИ БЕЛОГО ВАРИАНТА (NCM F.03.02-2005)", { font: { bold: true, color: { argb: "FF0369A1" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0F2FE" } } });
+        rowCursor++;
+
+        const whiteBoxChecklist = [
+            "Кровля (Дерево & Металл): Все деревянные элементы стропильной системы обработаны огнебиозащитой.",
+            "Крепление мауэрлата: жесткое крепление к монолитному Ж/Б армопоясу анкерами/шпильками с шагом до 1000 мм.",
+            "Пленки: наличие вентилируемого зазора (контррейки) над гидроветрозащитной мембраной.",
+            "Теплый монтаж окон: применение ПСУЛ ленты снаружи и паронепроницаемой мембраны внутри.",
+            input.glazingType === 'PANORAMIC' ? "Панорамные фасады: монтаж на специальных теплых подставочных профилях (пеностекло/чистый ПВХ). Шаг анкеровки до 600 мм." : "Окна базовые: жесткий крепеж на пластины/анкера.",
+            "Цокольный капельник: наличие цокольной стартовой планки разрывающей пенопласт цоколя и фасадный утеплитель (нет каппилярного подсоса влаги из земли)."
+        ];
+        if (input.facadeTech === 'VENTILATED') {
+            whiteBoxChecklist.push("Вентфасад: воздушный зазор не менее 40 мм для свободной циркуляции воздуха и просушки минваты.");
+        }
+
+        whiteBoxChecklist.forEach((text) => {
+            wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+            writeCell(wallsSheet, `B${rowCursor}`, `[ ] ${text}`, { font: { name: "Calibri", size: 9 }, alignment: { wrapText: true, vertical: "top" } });
+            wallsSheet.getRow(rowCursor).height = 30;
+            rowCursor++;
+        });
+    }
+
+    // ----------------------------------------------------
+    // -------------- ДОПОЛНИТЕЛЬНЫЕ РАБОТЫ ----------------
+    // ----------------------------------------------------
+    if (results.backfill || results.blindArea || results.concreteCuring || results.utilities) {
+        rowCursor++;
+        wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+        writeCell(wallsSheet, `B${rowCursor}`, "5. ДОПОЛНИТЕЛЬНЫЕ РАБОТЫ ПО ПЕРИМЕТРУ / УХОД", { font: { bold: true, color: { argb: "FF9D174D" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFFCE7F3" } } });
+        rowCursor++;
+
+        if (results.concreteCuring) {
+            addWallRow("Уход за бетоном (тепло-влажностный, пленка)", results.concreteCuring.totalCostMDL, "MDL");
+        }
+        if (results.backfill) {
+            addWallRow(`Обратная засыпка пазух (${results.backfill.netBackfillVolumeM3} м³ / Трамбовка)`, results.backfill.totalCostMDL, "MDL");
+        }
+        if (results.blindArea) {
+            addWallRow(`Утепленная отмостка (${results.blindArea.areaM2} м²)`, results.blindArea.totalCostMDL, "MDL");
+        }
+        if (results.utilities) {
+            addWallRow("Инженерные коммуникации (Вода, Кан, Свет, Слаботочки)", results.utilities.totalCostMDL, "MDL");
+        }
+
+        let totalAddMDL = 0;
+        if (results.concreteCuring) totalAddMDL += results.concreteCuring.totalCostMDL;
+        if (results.backfill) totalAddMDL += results.backfill.totalCostMDL;
+        if (results.blindArea) totalAddMDL += results.blindArea.totalCostMDL;
+        if (results.utilities) totalAddMDL += results.utilities.totalCostMDL;
+
+        rowCursor++;
+        wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+        writeCell(wallsSheet, `B${rowCursor}`, "💰 ИТОГО ДОПОЛНИТЕЛЬНЫЕ РАБОТЫ: " + totalAddMDL.toLocaleString() + " MDL", { font: { bold: true, color: { argb: "FF065F46" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFD1FAE5" } } });
+        rowCursor += 2;
+    }
+
+    // ----------------------------------------------------
+    // -------------- ГЛОБАЛЬНЫЙ ИТОГ КОРОБКИ ------------
+    // ----------------------------------------------------
+    let grandTotalMDL = (mainOpt.costEstimate?.totalCostMDL || 0) + (results.walls?.totalCostMDL || 0) + (results.whiteBox?.totalWhiteBoxCostMDL || 0);
+    if (results.concreteCuring) grandTotalMDL += results.concreteCuring.totalCostMDL;
+    if (results.backfill) grandTotalMDL += results.backfill.totalCostMDL;
+    if (results.blindArea) grandTotalMDL += results.blindArea.totalCostMDL;
+    if (results.utilities) grandTotalMDL += results.utilities.totalCostMDL;
+
+    rowCursor++;
+    wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+    writeCell(wallsSheet, `B${rowCursor}`, `🏗️ ГЛОБАЛЬНАЯ ИТОГОВАЯ СТОИМОСТЬ "БЕЛОГО ВАРИАНТА": ${grandTotalMDL.toLocaleString()} MDL`, { font: { bold: true, color: { argb: "FFFFFFFF" }, size: 12 }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFB91C1C" } }, alignment: { horizontal: 'center' }});
+    wallsSheet.getRow(rowCursor).height = 36;
+    rowCursor++;
+    wallsSheet.mergeCells(`B${rowCursor}:D${rowCursor}`);
+    writeCell(wallsSheet, `B${rowCursor}`, "(ФУНДАМЕНТ + СТЕНЫ КАРКАС + КРОВЛЯ + ОКНА + ФАСАД + КОММУНИКАЦИИ + ДОП. РАБОТЫ ПО ПЕРИМЕТРУ)", { font: { italic: true, color: { argb: "FFB91C1C" }, size: 9 }, alignment: { horizontal: 'center'} });
+
+  }
+
   // --- SHEET 6: DASHBOARD (Проектная панель) ---
   const dashSheet = workbook.addWorksheet("Dashboard");
   dashSheet.getColumn(1).width = 4;
@@ -1420,6 +1647,7 @@ export async function generateExcelWorkbook(
   });
 
   addCalculationsSheet(workbook, input, results);
+  addEngineeringProofSheet(workbook, results);
   addNormativesSheet(workbook);
   addReinforcementSheet(workbook, input, mainOpt);
   addReinforcementCalcSheet(workbook, input, mainOpt);
@@ -1444,6 +1672,13 @@ export async function generateExcelWorkbook(
   if (mainOpt && blueprintImageBase64) {
     addBlueprintDrawingSheet(workbook, mainOpt, blueprintImageBase64);
   }
+
+  addWallSubsystemModules(workbook, input, results);
+  addSlabSubsystemModules(workbook, input, results);
+  addRoofSubsystemModules(workbook, input, results);
+  addFacadeSubsystemModules(workbook, input, results);
+  addHvacSubsystemModules(workbook, input, results);
+  addElectricalSubsystemModules(workbook, input, results);
 
   return workbook;
 }
@@ -4152,3 +4387,66 @@ export function addSystemAuditSheet(workbook: ExcelJS.Workbook) {
 }
 
 
+
+export function addEngineeringProofSheet(workbook: ExcelJS.Workbook, results: CalculationResults) {
+  const ws = workbook.addWorksheet("Расчетное обоснование");
+  ws.views = [{ showGridLines: true }];
+
+  ws.getColumn(1).width = 4;   // Spacing
+  ws.getColumn(2).width = 30;  // Система / Раздел
+  ws.getColumn(3).width = 25;  // Норматив
+  ws.getColumn(4).width = 20;  // Пункт документа
+  ws.getColumn(5).width = 40;  // Детали расчета (Calculation Details)
+  ws.getColumn(6).width = 15;  // Результат проверки
+
+  applySheetHeader(ws, "Расчётное обоснование (Eurocode & NCM Compliance)", 6, "FF1E3A8A");
+  
+  applyTableHeaders(ws, 4, [
+    "Система / Технология",
+    "Нормативный документ",
+    "Пункт нормативного документа",
+    "Расчёт",
+    "Результат"
+  ], "FF1E40AF");
+
+  let currentRow = 5;
+
+  if (results && results.options) {
+    results.options.forEach((opt: any) => {
+      if (!opt.justification || opt.justification.normativeChecks.length === 0) return;
+
+      // Header for option
+      ws.mergeCells(`B${currentRow}:F${currentRow}`);
+      const hdrCell = ws.getCell(`B${currentRow}`);
+      hdrCell.value = `📍 ${opt.nameRu || opt.type}`;
+      hdrCell.font = { name: "Calibri", size: 10, bold: true, color: { argb: "FF0F172A" } };
+      hdrCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+      currentRow++;
+
+      // Data rows
+      opt.justification.normativeChecks.forEach((check: any) => {
+        writeCell(ws, `B${currentRow}`, opt.type);
+        writeCell(ws, `C${currentRow}`, check.normativeDocument, { font: { bold: true } });
+        writeCell(ws, `D${currentRow}`, check.clause, { font: { italic: true } });
+        writeCell(ws, `E${currentRow}`, check.calculationDetails, { font: { name: "Consolas", size: 9 } });
+        
+        const statusCell = ws.getCell(`F${currentRow}`);
+        statusCell.value = check.isPass ? "PASS ✔️" : "FAIL ❌";
+        statusCell.font = { bold: true, color: check.isPass ? { argb: "FF166534" } : { argb: "FF991B1B" } };
+        statusCell.alignment = { horizontal: "center" };
+
+        const bgHex = (currentRow % 2 === 0) ? "FFF8FAFC" : "FFFFFFFF";
+        ["B","C","D","E","F"].forEach(col => {
+          const cell = ws.getCell(`${col}${currentRow}`);
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgHex } };
+          cell.border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+        });
+
+        currentRow++;
+      });
+      
+      // Add gap between options
+      currentRow++;
+    });
+  }
+}
